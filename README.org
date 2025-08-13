@@ -1,0 +1,224 @@
+#+TITLE: ε-prolog - Prolog Engine in Emacs Lisp
+#+AUTHOR: Masaya Taniguchi
+
+* Overview
+
+ε-prolog (~eprolog~) is a complete Prolog engine implementation written in pure Emacs Lisp. It provides a fully functional Prolog system integrated into the Emacs environment, offering traditional Prolog programming capabilities with seamless Lisp interoperability.
+
+* Features
+
+** Core Prolog Engine
+- Complete unification algorithm with occurs check
+- Backtracking and choice points with proper cut (!) semantics
+- Clause database management for facts and rules
+- Interactive query execution with solution enumeration
+
+** Built-in Predicates
+- Unification: ~=~, ~==~
+- Type checking: ~atom/1~, ~atomic/1~, ~var/1~, ~ground/1~, ~number/1~, ~string/1~
+- Control: ~fail/0~, ~!/0~, ~true/0~, ~false/0~, ~not/1~
+- Logical operators: ~and/1-4~, ~or/1-4~, ~if/2-3~
+- List operations: ~member/2~, ~append/2-3~, ~maplist/2-5~
+- Meta-call: ~call/1+~
+- Arithmetic: ~is/2~ which is an alias of ~lisp/2+~
+- Lisp integration: ~lisp/2+~, ~lisp!/1+~, ~lispp/1+~
+
+** Advanced Features
+- Definite Clause Grammar (DCG) support
+- Spy/debugging functionality for tracing execution
+- Dynamic parameters for Prolog-Lisp state sharing
+- Anonymous variable handling
+- Variable renaming for clause application
+
+* Installation
+
+Place =eprolog.el= in your Emacs load path and add to your configuration:
+
+#+BEGIN_SRC emacs-lisp
+(require 'eprolog)
+#+END_SRC
+
+* Quick Start
+
+** Defining Facts and Rules
+
+#+BEGIN_SRC emacs-lisp
+;; Define facts
+(eprolog-define-prolog-predicate parent (tom bob))
+(eprolog-define-prolog-predicate parent (tom liz))
+(eprolog-define-prolog-predicate parent (bob ann))
+(eprolog-define-prolog-predicate parent (bob pat))
+(eprolog-define-prolog-predicate parent (pat jim))
+
+;; Define rules
+(eprolog-define-prolog-predicate grandparent (_x _z)
+  (parent _x _y)
+  (parent _y _z))
+
+;; Query the database
+(eprolog-query (grandparent tom _x))
+;; Returns: _x = ann, _x = pat
+#+END_SRC
+
+** Using Built-in Predicates
+
+#+BEGIN_SRC emacs-lisp
+;; List operations
+(eprolog-query (member _x (a b c)))
+;; Returns: _x = a, _x = b, _x = c
+
+;; Append lists
+(eprolog-query (append (1 2) (3 4) _result))
+;; Returns: _result = (1 2 3 4)
+
+;; Type checking
+(eprolog-query (atom foo))  ; Succeeds
+(eprolog-query (var _x))    ; Succeeds
+(eprolog-query (number 42)) ; Succeeds
+#+END_SRC
+
+** Lisp Integration
+
+#+BEGIN_SRC emacs-lisp
+;; Call Lisp code from Prolog
+(eprolog-query (lisp _result (+ 1 2 3)))
+;; Returns: _result = 6
+
+;; Use Lisp predicates
+(eprolog-query (lispp (> 5 3)))  ; Succeeds
+(eprolog-query (lispp (< 5 3)))  ; Fails
+
+;; Side effects with lisp!
+(eprolog-query (lisp! (message "Hello from Prolog!")))
+#+END_SRC
+
+** Definite Clause Grammars
+
+#+BEGIN_SRC emacs-lisp
+;; Define a simple grammar
+(eprolog-define-grammar! s np vp)
+(eprolog-define-grammar! np det noun)
+(eprolog-define-grammar! vp verb np)
+(eprolog-define-grammar! det "the")
+(eprolog-define-grammar det "a")
+(eprolog-define-grammar! noun "cat")
+(eprolog-define-grammar noun "dog")
+(eprolog-define-grammar! verb "chases")
+(eprolog-define-grammar verb "sees")
+
+;; Parse a sentence
+(eprolog-query (phrase s ("the" "cat" "chases" "a" "dog")))
+;; Succeeds
+#+END_SRC
+
+* API Reference
+
+** Predicate Definition
+
+*** eprolog-define-prolog-predicate
+Define a Prolog clause (fact or rule) and add it to the database.
+
+#+BEGIN_SRC emacs-lisp
+(eprolog-define-prolog-predicate name (arg1 arg2 ...) goal1 goal2 ...)
+#+END_SRC
+
+*** eprolog-define-prolog-predicate!
+Define a Prolog clause, replacing existing clauses with the same arity.
+
+#+BEGIN_SRC emacs-lisp
+(eprolog-define-prolog-predicate! name (arg1 arg2 ...) goal1 goal2 ...)
+#+END_SRC
+
+*** eprolog-define-lisp-predicate
+Define a predicate implemented in Emacs Lisp.
+
+#+BEGIN_SRC emacs-lisp
+(eprolog-define-lisp-predicate name (arg1 arg2 ...)
+  ;; Lisp code returning success or failure object
+  )
+#+END_SRC
+
+** Query Execution
+
+*** eprolog-query
+Execute an interactive Prolog query.
+
+#+BEGIN_SRC emacs-lisp
+(eprolog-query goal1 goal2 ...)
+#+END_SRC
+
+*** eprolog-solve
+Programmatically solve goals with success/failure callbacks.
+
+#+BEGIN_SRC emacs-lisp
+(eprolog-solve goals
+  (lambda (bindings) ...) ; on-success
+  (lambda () ...))        ; on-failure
+#+END_SRC
+
+** DCG Support
+
+*** eprolog-define-grammar
+Define a DCG rule, adding to existing rules.
+
+#+BEGIN_SRC emacs-lisp
+(eprolog-define-grammar non-terminal element1 element2 ...)
+#+END_SRC
+
+*** eprolog-define-grammar!
+Define a DCG rule, replacing existing rules with the same arity.
+
+#+BEGIN_SRC emacs-lisp
+(eprolog-define-grammar! non-terminal element1 element2 ...)
+#+END_SRC
+
+* Debugging
+
+Enable spy mode to trace predicate execution:
+
+#+BEGIN_SRC emacs-lisp
+;; Add predicates to spy list
+(setq *eprolog-spy-predicates* '(grandparent parent))
+
+;; Set spy mode
+(setq *eprolog-spy-mode* 'prompt) ; or 'always or 'disabled
+
+;; Run query with tracing
+(eprolog-query (grandparent tom _x))
+#+END_SRC
+
+* Implementation Details
+
+ε-prolog implements a complete Prolog engine with:
+
+- **Unification**: Standard unification algorithm with optional occurs check
+- **Proof Search**: Depth-first search with backtracking via continuations
+- **Cut Implementation**: Proper cut semantics using exception handling
+- **Variable Scoping**: Automatic variable renaming for clause application
+- **Success/Failure Types**: Explicit representation of computation results
+
+The engine uses continuation-passing style for backtracking, making the implementation both elegant and efficient within Emacs Lisp's constraints.
+
+* License
+
+ε-prolog is released under the GNU General Public License v3.0. See LICENSE.org for details.
+
+* Historical Note
+
+This implementation has an interesting lineage.
+It originally derives from Peter Norvig's Prolog implementation in [[https://github.com/norvig/paip-lisp][Paradigms of Artificial Intelligence Programming]] (MIT licensed).
+The code was first reimplemented in Scheme as [[https://github.com/tani/athena][Athena]], then ported back to Common Lisp,
+and finally adapted for Emacs Lisp as ε-prolog.
+Each iteration refined the implementation while maintaining the core algorithmic elegance of the original.
+
+* Contributing
+
+Contributions are welcome! Please feel free to submit issues and pull requests.
+
+* Author
+
+Masaya Taniguchi
+
+* Acknowledgments
+
+This implementation draws inspiration from classical Prolog systems and modern functional programming techniques, adapted specifically for the Emacs Lisp environment.
