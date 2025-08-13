@@ -191,11 +191,11 @@ Enable spy mode to trace predicate execution:
 
 ε-prolog implements a complete Prolog engine with:
 
-- **Unification**: Standard unification algorithm with optional occurs check
-- **Proof Search**: Depth-first search with backtracking via continuations
-- **Cut Implementation**: Proper cut semantics using exception handling
-- **Variable Scoping**: Automatic variable renaming for clause application
-- **Success/Failure Types**: Explicit representation of computation results
+- Unification: Standard unification algorithm with optional occurs check
+- Proof Search: Depth-first search with backtracking via continuations
+- Cut Implementation: Proper cut semantics using exception handling
+- Variable Scoping: Automatic variable renaming for clause application
+- Success/Failure Types: Explicit representation of computation results
 
 The engine uses continuation-passing style for backtracking, making the implementation both elegant and efficient within Emacs Lisp's constraints.
 
@@ -206,7 +206,7 @@ The engine uses continuation-passing style for backtracking, making the implemen
 * Historical Note
 
 This implementation has an interesting lineage.
-It originally derives from Peter Norvig's Prolog implementation in [[https://github.com/norvig/paip-lisp][Paradigms of Artificial Intelligence Programming]] (MIT licensed).
+It originally derives from Peter Norvig's Prolog implementation in [[https://github.com/norvig/paip-lisp][Paradigms of Artificial Intelligence Programming]] ([[https://github.com/norvig/paip-lisp/blob/9cea73837e439d331fe78d7b585e994c7113aac2/LICENSE][MIT licensed]]).
 The code was first reimplemented in Scheme as [[https://github.com/tani/athena][Athena]], then ported back to Common Lisp,
 and finally adapted for Emacs Lisp as ε-prolog.
 Each iteration refined the implementation while maintaining the core algorithmic elegance of the original.
