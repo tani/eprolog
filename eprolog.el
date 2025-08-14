@@ -657,6 +657,8 @@ Example: (eprolog-define-prolog-predicate grandparent (_x _z) (parent _x _y) (pa
   (declare (indent defun))
   (let ((clause (cons (cons name args) body)))
     `(eprolog--add-clause (eprolog--replace-anonymous-variables ',clause))))
+(defalias 'eprolog-define-predicate 'eprolog-define-prolog-predicate)
+
 
 (defmacro eprolog-define-prolog-predicate! (name args &rest body)
   "Define a Prolog clause, replacing any existing clauses with the same arity.
@@ -687,6 +689,7 @@ Shows variable bindings for each solution found.
 
 Example: (eprolog-query (parent _x _y)) finds all parent relationships."
   `(eprolog--run (eprolog--replace-anonymous-variables ',goals)))
+(defalias 'eprolog-define-predicate! 'eprolog-define-prolog-predicate!)
 
 ;;; Core Built-in Predicates (Phase 2)
 

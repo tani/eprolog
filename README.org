@@ -40,18 +40,22 @@ Place =eprolog.el= in your Emacs load path and add to your configuration:
 
 * Quick Start
 
+ε-prolog provides convenient aliases for commonly used functions:
+- =eprolog-define-predicate= for =eprolog-define-prolog-predicate=
+- =eprolog-define-predicate!= for =eprolog-define-prolog-predicate!=
+
 ** Defining Facts and Rules
 
 #+BEGIN_SRC emacs-lisp
-;; Define facts
-(eprolog-define-prolog-predicate parent (tom bob))
-(eprolog-define-prolog-predicate parent (tom liz))
-(eprolog-define-prolog-predicate parent (bob ann))
-(eprolog-define-prolog-predicate parent (bob pat))
-(eprolog-define-prolog-predicate parent (pat jim))
+;; Define facts (using convenient alias)
+(eprolog-define-predicate parent (tom bob))
+(eprolog-define-predicate parent (tom liz))
+(eprolog-define-predicate parent (bob ann))
+(eprolog-define-predicate parent (bob pat))
+(eprolog-define-predicate parent (pat jim))
 
 ;; Define rules
-(eprolog-define-prolog-predicate grandparent (_x _z)
+(eprolog-define-predicate grandparent (_x _z)
   (parent _x _y)
   (parent _y _z))
 
@@ -122,12 +126,16 @@ Define a Prolog clause (fact or rule) and add it to the database.
 (eprolog-define-prolog-predicate name (arg1 arg2 ...) goal1 goal2 ...)
 #+END_SRC
 
+*Alias:* =eprolog-define-predicate=
+
 *** eprolog-define-prolog-predicate!
 Define a Prolog clause, replacing existing clauses with the same arity.
 
 #+BEGIN_SRC emacs-lisp
 (eprolog-define-prolog-predicate! name (arg1 arg2 ...) goal1 goal2 ...)
 #+END_SRC
+
+*Alias:* =eprolog-define-predicate!=
 
 *** eprolog-define-lisp-predicate
 Define a predicate implemented in Emacs Lisp.
