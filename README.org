@@ -156,9 +156,21 @@ Execute an interactive Prolog query.
 #+END_SRC
 
 *** eprolog-solve
-Programmatically solve goals with success/failure callbacks.
+Programmatically solve goals with optional keyword callbacks.
 
 #+BEGIN_SRC emacs-lisp
+;; Basic usage - just solve goals, ignore results
+(eprolog-solve goals)
+
+;; With success callback only
+(eprolog-solve goals :success (lambda (bindings) ...))
+
+;; With both callbacks
+(eprolog-solve goals 
+  :success (lambda (bindings) ...)
+  :failure (lambda () ...))
+
+;; Legacy positional arguments still supported
 (eprolog-solve goals
   (lambda (bindings) ...) ; on-success
   (lambda () ...))        ; on-failure

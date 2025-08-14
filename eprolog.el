@@ -568,10 +568,12 @@ interactive queries initiated by `eprolog-query'."
   (cl-block query-exit
     (eprolog-solve
      goals
+     :success
      (lambda (solution)
        (eprolog--display-solution solution)
        (unless (y-or-n-p "Continue?")
          (cl-return-from query-exit)))
+     :failure
      (lambda ()
        (eprolog--printf "\nNo")
        (cl-return-from query-exit)))))
@@ -595,15 +597,28 @@ Returns non-nil if TERM is ground, nil otherwise."
 
 ;;; PUBLIC API
 
-(defun eprolog-solve (goals on-success on-failure)
-  "Solve GOALS and call ON-SUCCESS for each solution, ON-FAILURE when exhausted.
+(defun eprolog-solve (goals &rest args)
+  "Solve GOALS and call callbacks for each solution.
 GOALS is the list of goals to solve.
-ON-SUCCESS is a function called with variable bindings for each solution found.
-ON-FAILURE is called once when no more solutions exist.
+
+Optional keyword arguments:
+:success ON-SUCCESS - Function called with variable bindings for each solution found.
+                     Defaults to a no-op function.
+:failure ON-FAILURE - Function called once when no more solutions exist.
+                     Defaults to a no-op function.
 
 This is the core solution iterator that drives the proof search and handles
-solution enumeration through backtracking."
-  (cl-labels ((initial-continuation ()
+solution enumeration through backtracking.
+
+Examples:
+  (eprolog-solve '((parent tom _x)))                    ; Just solve, ignore results
+  (eprolog-solve '((parent tom _x)) :success #'print)   ; Print each solution
+  (eprolog-solve '((parent tom _x)) 
+                 :success (lambda (bindings) (message \"Found: %S\" bindings))
+                 :failure (lambda () (message \"No more solutions\")))"
+  (let* ((on-success (or (plist-get args :success) (lambda (_))))
+         (on-failure (or (plist-get args :failure) (lambda ()))))
+    (cl-labels ((initial-continuation ()
                 (eprolog--call-with-current-choice-point
                  (lambda (choice-point)
                    (let* ((prepared-goals (eprolog--replace-anonymous-variables goals)))
@@ -615,9 +630,9 @@ solution enumeration through backtracking."
                   (mapcar make-binding-pair query-variables)))
               (execute-success-continuation (result)
                 (funcall (eprolog--success-continuation result))))
-    (cl-do ((result (initial-continuation) (execute-success-continuation result)))
-        ((not (eprolog--success-p result)) (funcall on-failure))
-      (funcall on-success (retrieve-success-bindings result)))))
+      (cl-do ((result (initial-continuation) (execute-success-continuation result)))
+          ((not (eprolog--success-p result)) (funcall on-failure))
+        (funcall on-success (retrieve-success-bindings result))))))
 
 ;;; Predicate definition utility
 
