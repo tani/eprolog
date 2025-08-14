@@ -74,12 +74,12 @@ Here are the fundamental examples that demonstrate how to define facts, rules, a
 
 To run all tests from the command line, execute:
 #+BEGIN_SRC bash :eval no
-emacs -batch -l eprolog.el -l USAGE.org -f ert-run-tests-batch-and-exit
+emacs -batch -l eprolog.el -l BOOK.el -f ert-run-tests-batch-and-exit
 #+END_SRC
 
 Or to run tests interactively within Emacs:
 #+BEGIN_SRC emacs-lisp :eval never :tangle no
-(org-babel-load-file "USAGE.org")
+(org-babel-load-file "BOOK.org")
 (ert-run-tests-interactively t)
 #+END_SRC
 
