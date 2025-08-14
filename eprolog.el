@@ -61,12 +61,12 @@
 
 ;;; Failure and success types
 
-(cl-defstruct eprolog-failure
+(cl-defstruct eprolog--failure
   "Represents a failed Prolog computation.
 Used throughout the engine to indicate when unification, goal proving,
 or other operations cannot succeed.")
 
-(cl-defstruct eprolog-success
+(cl-defstruct eprolog--success
   "Represents a successful Prolog computation.
 BINDINGS is an alist of variable-value pairs from unification.
 CONTINUATION is a function that, when called, attempts to find
@@ -130,10 +130,10 @@ predicates to maintain state across Prolog goals.")
   "Wrap RESULT so that any future cut with TAG is caught and handled.
 If RESULT is a success, its continuation is wrapped; wrapping is
 applied recursively to all subsequent successes."
-  (if (eprolog-success-p result)
-      (let ((bindings (eprolog-success-bindings result))
-            (cont     (eprolog-success-continuation result)))
-        (make-eprolog-success
+  (if (eprolog--success-p result)
+      (let ((bindings (eprolog--success-bindings result))
+            (cont     (eprolog--success-continuation result)))
+        (make-eprolog--success
          :bindings bindings
          :continuation
          (lambda ()
@@ -199,7 +199,7 @@ Returns a failure object if BINDINGS is a failure, otherwise returns
 the expression with all bound variables replaced by their values.
 Recursively processes compound expressions (lists)."
   (cond
-   ((eprolog-failure-p bindings) (make-eprolog-failure))
+   ((eprolog--failure-p bindings) (make-eprolog--failure))
    ((null bindings) expression)
    ((consp expression)
     (cons (eprolog--substitute-bindings bindings (car expression) visited)
@@ -287,7 +287,7 @@ Used internally by the main `eprolog--unify' function."
     (let ((bound-term (eprolog--lookup-variable value bindings)))
       (eprolog--unify variable bound-term bindings)))
    ((and *eprolog-occurs-check* (eprolog--occurs-check-p variable value bindings))
-    (make-eprolog-failure))
+    (make-eprolog--failure))
    (t (cons (cons variable value) bindings))))
 
 (defun eprolog--unify (term1 term2 bindings)
@@ -302,14 +302,14 @@ Returns updated bindings on success, or a failure object on failure.
 This is the main unification function implementing the standard Prolog
 unification algorithm."
   (cond
-   ((eprolog-failure-p bindings) (make-eprolog-failure))
+   ((eprolog--failure-p bindings) (make-eprolog--failure))
    ((equal term1 term2) bindings)
    ((eprolog--variable-p term1) (eprolog--unify-var term1 term2 bindings))
    ((eprolog--variable-p term2) (eprolog--unify-var term2 term1 bindings))
    ((and (consp term1) (consp term2))
     (let ((car-bindings (eprolog--unify (car term1) (car term2) bindings)))
       (eprolog--unify (cdr term1) (cdr term2) car-bindings)))
-   (t (make-eprolog-failure))))
+   (t (make-eprolog--failure))))
 
 ;;; Clause database operations
 
@@ -433,9 +433,9 @@ Returns the result of executing THUNK."
             (eprolog--spy-message "CALL" goal bindings))
           (setq result (funcall thunk)))
       (when show-p
-        (if (or (not result) (eprolog-failure-p result))
+        (if (or (not result) (eprolog--failure-p result))
             (eprolog--spy-message "FAIL" goal bindings)
-          (eprolog--spy-message "EXIT" goal (eprolog-success-bindings result)))))
+          (eprolog--spy-message "EXIT" goal (eprolog--success-bindings result)))))
     result))
 
 ;;; Prover engine
@@ -449,10 +449,10 @@ Returns success with terminal continuation if all goals are proven,
 otherwise delegates to `eprolog--prove-goal' for the goal sequence. 
 Base case for empty goal lists returns success with a terminal continuation."
   (cond
-   ((eprolog-failure-p bindings) (make-eprolog-failure))
+   ((eprolog--failure-p bindings) (make-eprolog--failure))
    ((null goals)
-    (let ((terminal-cont (lambda () (make-eprolog-failure))))
-      (make-eprolog-success :bindings bindings :continuation terminal-cont)))
+    (let ((terminal-cont (lambda () (make-eprolog--failure))))
+      (make-eprolog--success :bindings bindings :continuation terminal-cont)))
    (t (eprolog--prove-goal goals bindings))))
 
 (defun eprolog--insert-choice-point (clause choice-point)
@@ -487,8 +487,8 @@ Returns success object on success, failure object on failure."
          (clause-head (car renamed-clause))
          (clause-body (cdr renamed-clause))
          (new-bindings (eprolog--unify goal-for-unify clause-head bindings)))
-    (if (eprolog-failure-p new-bindings)
-        (make-eprolog-failure)
+    (if (eprolog--failure-p new-bindings)
+        (make-eprolog--failure)
       (eprolog--prove-goal-sequence (append clause-body remaining-goals) new-bindings))))
 
 (defun eprolog--merge-continuations (continuation-a continuation-b)
@@ -501,12 +501,12 @@ or produces no more solutions, tries CONTINUATION-B. This is the core
 backtracking mechanism that enables trying alternative solutions."
   (lambda ()
     (let ((result-a (funcall continuation-a)))
-      (if (or (not result-a) (eprolog-failure-p result-a))
+      (if (or (not result-a) (eprolog--failure-p result-a))
           (funcall continuation-b)
-        (let* ((bindings (eprolog-success-bindings result-a))
-               (result-continuation (eprolog-success-continuation result-a))
+        (let* ((bindings (eprolog--success-bindings result-a))
+               (result-continuation (eprolog--success-continuation result-a))
                (new-continuation (eprolog--merge-continuations result-continuation continuation-b)))
-          (make-eprolog-success :bindings bindings :continuation new-continuation))))))
+          (make-eprolog--success :bindings bindings :continuation new-continuation))))))
 
 (defun eprolog--search-matching-clauses (goals bindings all-clauses)
   "Search through ALL-CLAUSES to find matches for the first goal in GOALS.
@@ -520,17 +520,17 @@ Returns success object with continuation for backtracking, or failure if no clau
    (lambda (choice-point)
      (cl-labels ((try-one-by-one (clauses-to-try)
                    (if (null clauses-to-try)
-                       (make-eprolog-failure)
+                       (make-eprolog--failure)
                      (let* ((current-clause (eprolog--insert-choice-point (car clauses-to-try) choice-point))
                             (remaining-clauses (cdr clauses-to-try))
                             (try-next-clause (lambda () (try-one-by-one remaining-clauses)))
                             (result (eprolog--apply-clause-to-goal goals bindings current-clause)))
-                       (if (eprolog-failure-p result)
+                       (if (eprolog--failure-p result)
                            (funcall try-next-clause)
-                         (let* ((result-bindings (eprolog-success-bindings result))
-                                (result-continuation (eprolog-success-continuation result))
+                         (let* ((result-bindings (eprolog--success-bindings result))
+                                (result-continuation (eprolog--success-continuation result))
                                 (new-continuation (eprolog--merge-continuations result-continuation try-next-clause)))
-                           (make-eprolog-success :bindings result-bindings :continuation new-continuation)))))))
+                           (make-eprolog--success :bindings result-bindings :continuation new-continuation)))))))
        (try-one-by-one all-clauses)))))
 
 (defun eprolog--prove-goal (goals bindings)
@@ -618,14 +618,14 @@ solution enumeration through backtracking."
                    (let* ((prepared-goals (eprolog--replace-anonymous-variables goals)))
                      (eprolog--prove-goal-sequence prepared-goals '())))))
               (retrieve-success-bindings (result)
-                (let* ((bindings (eprolog-success-bindings result))
+                (let* ((bindings (eprolog--success-bindings result))
                        (query-variables (eprolog--variables-in goals))
                        (make-binding-pair (lambda (v) (cons v (eprolog--substitute-bindings bindings v)))))
                   (mapcar make-binding-pair query-variables)))
               (execute-success-continuation (result)
-                (funcall (eprolog-success-continuation result))))
+                (funcall (eprolog--success-continuation result))))
     (cl-do ((result (initial-continuation) (execute-success-continuation result)))
-        ((not (eprolog-success-p result)) (funcall on-failure))
+        ((not (eprolog--success-p result)) (funcall on-failure))
       (funcall on-success (retrieve-success-bindings result)))))
 
 ;;; Predicate definition utility
@@ -697,8 +697,8 @@ Example: (eprolog-query (parent _x _y)) finds all parent relationships."
 Attempts to unify TERM1 and TERM2, updating the binding environment.
 Succeeds if unification is possible, fails otherwise."
   (let ((new-bindings (eprolog--unify term1 term2 *eprolog-bindings*)))
-    (if (eprolog-failure-p new-bindings)
-        (make-eprolog-failure)
+    (if (eprolog--failure-p new-bindings)
+        (make-eprolog--failure)
       (eprolog--prove-goal-sequence *eprolog-remaining-goals* new-bindings))))
 
 (eprolog-define-lisp-predicate == (term1 term2)
@@ -709,7 +709,7 @@ Does not perform unification, only tests existing equality."
          (substituted-term2 (eprolog--substitute-bindings *eprolog-bindings* term2)))
     (if (equal substituted-term1 substituted-term2)
         (eprolog--prove-goal-sequence *eprolog-remaining-goals* *eprolog-bindings*)
-      (make-eprolog-failure))))
+      (make-eprolog--failure))))
 
 ;; Enhanced cut operation with continuation value handling
 
@@ -748,7 +748,7 @@ Succeeds if TERM is an atom (symbol that is not a variable)."
   (let ((value (eprolog--substitute-bindings *eprolog-bindings* term)))
     (if (and (symbolp value) (not (eprolog--variable-p value)))
         (eprolog--prove-goal-sequence *eprolog-remaining-goals* *eprolog-bindings*)
-      (make-eprolog-failure))))
+      (make-eprolog--failure))))
 
 (eprolog-define-lisp-predicate atomic (term)
   "Type predicate: atomic(TERM).
@@ -756,21 +756,21 @@ Succeeds if TERM is atomic (not a variable and not a compound term)."
   (let ((value (eprolog--substitute-bindings *eprolog-bindings* term)))
     (if (and (not (eprolog--variable-p value)) (not (consp value)))
         (eprolog--prove-goal-sequence *eprolog-remaining-goals* *eprolog-bindings*)
-      (make-eprolog-failure))))
+      (make-eprolog--failure))))
 
 (eprolog-define-lisp-predicate var (term)
   "Type predicate: var(TERM).
 Succeeds if TERM is an unbound variable."
   (if (eprolog--variable-p (eprolog--substitute-bindings *eprolog-bindings* term))
       (eprolog--prove-goal-sequence *eprolog-remaining-goals* *eprolog-bindings*)
-    (make-eprolog-failure)))
+    (make-eprolog--failure)))
 
 (eprolog-define-lisp-predicate ground (term)
   "Type predicate: ground(TERM).
 Succeeds if TERM is fully ground (contains no unbound variables)."
   (if (eprolog--ground-p term)
       (eprolog--prove-goal-sequence *eprolog-remaining-goals* *eprolog-bindings*)
-    (make-eprolog-failure)))
+    (make-eprolog--failure)))
 
 (eprolog-define-lisp-predicate number (term)
   "Type predicate: number(TERM).
@@ -778,7 +778,7 @@ Succeeds if TERM is a number."
   (let ((value (eprolog--substitute-bindings *eprolog-bindings* term)))
     (if (numberp value)
         (eprolog--prove-goal-sequence *eprolog-remaining-goals* *eprolog-bindings*)
-      (make-eprolog-failure))))
+      (make-eprolog--failure))))
 
 (eprolog-define-lisp-predicate string (term)
   "Type predicate: string(TERM).
@@ -786,14 +786,14 @@ Succeeds if TERM is a string."
   (let ((value (eprolog--substitute-bindings *eprolog-bindings* term)))
     (if (stringp value)
         (eprolog--prove-goal-sequence *eprolog-remaining-goals* *eprolog-bindings*)
-      (make-eprolog-failure))))
+      (make-eprolog--failure))))
 
 ;; Control predicates
 
 (eprolog-define-lisp-predicate fail ()
   "Control predicate: fail.
 Always fails, forcing backtracking."
-  (make-eprolog-failure))
+  (make-eprolog--failure))
 
 ;; Lisp evaluation predicates
 
@@ -804,8 +804,8 @@ Evaluates EXPRESSIONS as Lisp code and unifies the result with RESULT-VARIABLE."
          (evaluated-result (eval lisp-expression))
          (result-term (eprolog--substitute-bindings *eprolog-bindings* result-variable))
          (new-bindings (eprolog--unify result-term evaluated-result *eprolog-bindings*)))
-    (if (eprolog-failure-p new-bindings)
-        (make-eprolog-failure)
+    (if (eprolog--failure-p new-bindings)
+        (make-eprolog--failure)
       (eprolog--prove-goal-sequence *eprolog-remaining-goals* new-bindings))))
 
 (eprolog-define-lisp-predicate lisp! (&rest expressions)
@@ -821,7 +821,7 @@ Evaluates EXPRESSIONS as Lisp code and succeeds if the result is non-nil."
   (let* ((lisp-expression (eprolog--substitute-bindings *eprolog-bindings* `(progn ,@expressions)))
          (evaluated-result (eval lisp-expression)))
     (if (not evaluated-result)
-        (make-eprolog-failure)
+        (make-eprolog--failure)
       (eprolog--prove-goal-sequence *eprolog-remaining-goals* *eprolog-bindings*))))
 
 ;; Dynamic parameter predicates
@@ -842,8 +842,8 @@ Retrieves the value associated with SYMBOL and unifies it with VAR."
   (let* ((key-value (assoc variable-symbol *eprolog-dynamic-parameters*))
          (value (if key-value (cdr key-value) nil))
          (new-bindings (eprolog--unify prolog-variable value *eprolog-bindings*)))
-    (if (eprolog-failure-p new-bindings)
-        (make-eprolog-failure)
+    (if (eprolog--failure-p new-bindings)
+        (make-eprolog--failure)
       (eprolog--prove-goal-sequence *eprolog-remaining-goals* new-bindings))))
 
 ;; Basic logical predicates defined in Prolog
