@@ -96,23 +96,182 @@ Place =eprolog.el= in your Emacs load path and add to your configuration:
 (eprolog-query (lisp! (message "Hello from Prolog!")))
 #+END_SRC
 
-** Definite Clause Grammars
+** Definite Clause Grammars (DCG)
+
+ε-prolog provides full support for Definite Clause Grammars (DCG), a convenient notation for parsing and generating language structures. DCGs are automatically transformed into standard Prolog predicates using difference lists for efficient parsing.
+
+*** Basic Grammar Definition
 
 #+BEGIN_SRC emacs-lisp
-;; Define a simple grammar
-(eprolog-define-grammar! s np vp)
-(eprolog-define-grammar! np det noun)
-(eprolog-define-grammar! vp verb np)
+;; Define a simple grammar for sentences
+(eprolog-define-grammar! s np vp)           ; sentence → noun phrase + verb phrase
+(eprolog-define-grammar! np det noun)       ; noun phrase → determiner + noun  
+(eprolog-define-grammar! vp verb np)        ; verb phrase → verb + noun phrase
+
+;; Define terminals (strings represent literal words)
 (eprolog-define-grammar! det "the")
-(eprolog-define-grammar det "a")
+(eprolog-define-grammar det "a")            ; Multiple rules for same non-terminal
 (eprolog-define-grammar! noun "cat")
 (eprolog-define-grammar noun "dog")
 (eprolog-define-grammar! verb "chases")
 (eprolog-define-grammar verb "sees")
+#+END_SRC
 
-;; Parse a sentence
+*** Parsing with DCG
+
+#+BEGIN_SRC emacs-lisp
+;; Parse complete sentences
 (eprolog-query (phrase s ("the" "cat" "chases" "a" "dog")))
+;; Succeeds - valid sentence
+
+(eprolog-query (phrase s ("a" "dog" "sees" "the" "cat")))  
+;; Succeeds - another valid sentence
+
+(eprolog-query (phrase s ("cat" "the" "chases")))
+;; Fails - invalid sentence structure
+
+;; Parse with remaining tokens
+(eprolog-query (phrase s ("the" "cat" "chases" "a" "dog" "quickly") _rest))
+;; _rest = ("quickly") - parses sentence, leaves remainder
+#+END_SRC
+
+*** Advanced DCG Features
+
+**** Empty Productions (Epsilon)
+#+BEGIN_SRC emacs-lisp
+;; Optional adjective in noun phrases
+(eprolog-define-grammar! np det noun)
+(eprolog-define-grammar np det adj noun)    ; With adjective
+(eprolog-define-grammar np det noun)        ; Without adjective (alternative)
+
+;; Or using epsilon (nil) for optional elements
+(eprolog-define-grammar! optional-adj nil)         ; Empty production
+(eprolog-define-grammar optional-adj adj)          ; Or an adjective
+(eprolog-define-grammar! np det optional-adj noun)
+
+(eprolog-define-grammar! adj "big")
+(eprolog-define-grammar adj "small")
+#+END_SRC
+
+**** Semantic Actions
+#+BEGIN_SRC emacs-lisp
+;; Grammar with semantic constraints using (@ goal...)
+(eprolog-define-grammar! (np _number) (det _number) (noun _number))
+(eprolog-define-grammar! (det singular) "a")
+(eprolog-define-grammar! (det plural) "some") 
+(eprolog-define-grammar! (noun singular) "cat")
+(eprolog-define-grammar! (noun plural) "cats")
+
+;; Sentence with number agreement
+(eprolog-define-grammar! (s _num) (np _num) (vp _num))
+(eprolog-define-grammar! (vp _num) (verb _num) (np _))
+(eprolog-define-grammar! (verb singular) "chases")
+(eprolog-define-grammar! (verb plural) "chase")
+
+;; Parse with number agreement checking
+(eprolog-query (phrase s ("a" "cat" "chases" "some" "cats")))
+;; Succeeds - number agreement maintained
+
+(eprolog-query (phrase s ("a" "cat" "chase" "some" "cats")))  
+;; Fails - number disagreement
+#+END_SRC
+
+**** Cut in DCG Rules
+#+BEGIN_SRC emacs-lisp
+;; Deterministic parsing with cut
+(eprolog-define-grammar! statement declarative !)
+(eprolog-define-grammar statement question)
+
+(eprolog-define-grammar! declarative s ".")
+(eprolog-define-grammar! question s "?")
+
+;; First match commits due to cut
+(eprolog-query (phrase statement ("the" "cat" "chases" "a" "dog" ".")))
+;; Succeeds, won't try question alternative
+#+END_SRC
+
+*** List Processing with DCG
+
+#+BEGIN_SRC emacs-lisp
+;; Parse sequences (like comma-separated values)
+(eprolog-define-grammar! csv-list item)
+(eprolog-define-grammar csv-list item "," csv-list)
+
+(eprolog-define-grammar! item "apple")
+(eprolog-define-grammar item "banana") 
+(eprolog-define-grammar item "cherry")
+
+;; Parse CSV-style lists
+(eprolog-query (phrase csv-list ("apple" "," "banana" "," "cherry")))
 ;; Succeeds
+
+;; Parse numbers in sequence
+(eprolog-define-grammar! number-seq number)
+(eprolog-define-grammar number-seq number number-seq)
+
+(eprolog-define-grammar! number _n (@ (number _n)))  ; Semantic constraint
+
+(eprolog-query (phrase number-seq (1 2 3 4 5)))
+;; Succeeds if all elements are numbers
+#+END_SRC
+
+*** Grammar Generation
+
+DCGs can generate sentences as well as parse them:
+
+#+BEGIN_SRC emacs-lisp
+;; Generate all possible sentences
+(eprolog-query (phrase s _sentence))
+;; _sentence = ("the" "cat" "chases" "the" "cat")
+;; _sentence = ("the" "cat" "chases" "the" "dog")  
+;; _sentence = ("the" "cat" "chases" "a" "cat")
+;; ... (continues with all valid combinations)
+
+;; Generate sentences of specific length
+(eprolog-define-predicate (length () 0))
+(eprolog-define-predicate (length (_h . _t) _n)
+  (length _t _n1)
+  (is _n (+ _n1 1)))
+
+(eprolog-query (phrase s _sentence) (length _sentence 5))
+;; Generates only 5-word sentences
+#+END_SRC
+
+*** Complex Grammar Examples
+
+**** Arithmetic Expressions
+#+BEGIN_SRC emacs-lisp
+;; Grammar for simple arithmetic
+(eprolog-define-grammar! expr term)
+(eprolog-define-grammar expr term "+" expr)
+(eprolog-define-grammar expr term "-" expr)
+
+(eprolog-define-grammar! term factor)  
+(eprolog-define-grammar term factor "*" term)
+(eprolog-define-grammar term factor "/" term)
+
+(eprolog-define-grammar! factor number)
+(eprolog-define-grammar factor "(" expr ")")
+
+(eprolog-define-grammar! number _n (@ (number _n)))
+
+;; Parse arithmetic expressions
+(eprolog-query (phrase expr (2 "+" 3 "*" 4)))
+;; Succeeds - parses "2 + 3 * 4"
+#+END_SRC
+
+**** Nested Structures  
+#+BEGIN_SRC emacs-lisp
+;; Grammar for nested parentheses
+(eprolog-define-grammar! parens nil)                    ; Empty
+(eprolog-define-grammar parens "(" parens ")" parens)   ; Nested
+
+;; Check balanced parentheses
+(eprolog-query (phrase parens ("(" "(" ")" "(" ")" ")")))
+;; Succeeds - balanced
+
+(eprolog-query (phrase parens ("(" "(" ")" ")")))  
+;; Fails - unbalanced
 #+END_SRC
 
 * API Reference
@@ -178,17 +337,101 @@ Programmatically solve goals with optional keyword callbacks.
 ** DCG Support
 
 *** eprolog-define-grammar
-Define a DCG rule, adding to existing rules.
+Define a DCG rule, adding to existing rules with the same arity.
 
 #+BEGIN_SRC emacs-lisp
-(eprolog-define-grammar non-terminal element1 element2 ...)
+(eprolog-define-grammar head body-element1 body-element2 ...)
+#+END_SRC
+
+Adds a new DCG rule without replacing existing ones. This allows multiple alternatives for the same non-terminal.
+
+**** DCG Element Types:
+- =string= - Terminal symbols (literal strings to match)
+- =symbol= - Non-terminal symbols (other DCG rules) 
+- =(symbol args...)= - Non-terminals with arguments
+- =nil= - Epsilon production (empty, consumes no input)
+- =! - Cut operator (prevents backtracking)
+- =(@ goal...)= - Semantic actions (constraints that don't consume input)
+
+**** Examples:
+#+BEGIN_SRC emacs-lisp
+(eprolog-define-grammar noun "cat")           ; Terminal rule
+(eprolog-define-grammar noun "dog")           ; Alternative terminal
+(eprolog-define-grammar s np vp)              ; Non-terminal rule
+(eprolog-define-grammar (s _num) (np _num) (vp _num))  ; With arguments
+(eprolog-define-grammar optional nil)         ; Epsilon production
+(eprolog-define-grammar checked-noun (@ (atom _n)) noun)  ; Semantic action
 #+END_SRC
 
 *** eprolog-define-grammar!
 Define a DCG rule, replacing existing rules with the same arity.
 
 #+BEGIN_SRC emacs-lisp
-(eprolog-define-grammar! non-terminal element1 element2 ...)
+(eprolog-define-grammar! head body-element1 body-element2 ...)
+#+END_SRC
+
+Similar to =eprolog-define-grammar= but removes existing rules for the same non-terminal with the same arity before adding the new rule. Used for redefinition or when you want only one rule for a non-terminal.
+
+**** Examples:
+#+BEGIN_SRC emacs-lisp
+(eprolog-define-grammar! s np vp)             ; Replace any existing s/0 rules
+(eprolog-define-grammar! (det _num) "the")    ; Replace det/1 rules
+#+END_SRC
+
+*** phrase/2 and phrase/3
+Parse or generate using DCG rules.
+
+#+BEGIN_SRC emacs-lisp
+;; Parse complete input
+(eprolog-query (phrase non-terminal input-list))
+
+;; Parse with remainder  
+(eprolog-query (phrase non-terminal input-list remainder))
+#+END_SRC
+
+=phrase/2= succeeds if the non-terminal can parse the entire input list.
+=phrase/3= succeeds if the non-terminal can parse a prefix, with the remainder unified with the third argument.
+
+**** Examples:
+#+BEGIN_SRC emacs-lisp
+(eprolog-query (phrase s ("the" "cat" "runs")))
+;; Succeeds if s can parse the complete sentence
+
+(eprolog-query (phrase np ("the" "big" "cat" "runs" "fast") _rest))  
+;; _rest = ("runs" "fast") if np parses "the big cat"
+#+END_SRC
+
+*** DCG Best Practices
+
+**** Left Recursion
+Avoid left recursion in DCG rules as it can cause infinite loops:
+
+#+BEGIN_SRC emacs-lisp
+;; BAD - left recursive
+(eprolog-define-grammar expr expr "+" term)
+
+;; GOOD - right recursive  
+(eprolog-define-grammar expr term "+" expr)
+(eprolog-define-grammar expr term)
+#+END_SRC
+
+**** Deterministic Parsing
+Use cut (!) to make parsing deterministic when appropriate:
+
+#+BEGIN_SRC emacs-lisp
+(eprolog-define-grammar! statement declarative-stmt !)
+(eprolog-define-grammar statement question-stmt)
+#+END_SRC
+
+**** Semantic Constraints
+Use semantic actions (@ ...) for constraints that don't consume input:
+
+#+BEGIN_SRC emacs-lisp
+;; Ensure number agreement
+(eprolog-define-grammar (s _num) 
+  (np _num) 
+  (@ (atom _num))           ; Constraint: _num must be bound
+  (vp _num))
 #+END_SRC
 
 * Testing
