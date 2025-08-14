@@ -333,7 +333,8 @@ operation that modifies `*eprolog-clause-database*'.
 CLAUSES can also be a function for built-in predicates implemented in Lisp."
   (let* ((cleaned-db (cl-remove predicate-symbol *eprolog-clause-database* :key #'car))
          (new-db (cons (cons predicate-symbol clauses) cleaned-db)))
-    (setq *eprolog-clause-database* new-db)))
+    (setq *eprolog-clause-database* new-db)
+    (cdar new-db)))
 
 (defun eprolog--add-clause (clause)
   "Add CLAUSE to the current clause database.
