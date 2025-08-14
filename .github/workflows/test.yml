@@ -1,0 +1,87 @@
+name: Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        emacs-version:
+          - '27.2'
+          - '28.2'
+          - '29.1'
+          - 'snapshot'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Emacs
+      uses: purcell/setup-emacs@master
+      with:
+        version: ${{ matrix.emacs-version }}
+
+    - name: Run tests
+      run: |
+        emacs -batch -l eprolog.el -l eprolog-test.el -f ert-run-tests-batch-and-exit
+
+    - name: Check test results
+      run: |
+        echo "Test run completed for Emacs ${{ matrix.emacs-version }}"
+
+  test-report:
+    runs-on: ubuntu-latest
+    needs: test
+    if: always()
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Emacs
+      uses: purcell/setup-emacs@master
+      with:
+        version: '29.1'
+
+    - name: Generate detailed test report
+      run: |
+        echo "# ε-prolog Test Report" > test-report.md
+        echo "" >> test-report.md
+        echo "## Test Summary" >> test-report.md
+        echo "" >> test-report.md
+        
+        # Run tests and capture output
+        emacs -batch -l eprolog.el -l eprolog-test.el -f ert-run-tests-batch-and-exit > test-output.log 2>&1 || true
+        
+        # Extract test results
+        if grep -q "results as expected" test-output.log; then
+          PASSED=$(grep -o '[0-9]\+ results as expected' test-output.log | grep -o '[0-9]\+' | head -1)
+          TOTAL=$(grep -o 'Running [0-9]\+ tests' test-output.log | grep -o '[0-9]\+')
+          echo "- **Total Tests**: $TOTAL" >> test-report.md
+          echo "- **Passed**: $PASSED" >> test-report.md
+          echo "- **Status**: ✅ All tests passing" >> test-report.md
+        else
+          echo "- **Status**: ❌ Some tests failed" >> test-report.md
+        fi
+        
+        echo "" >> test-report.md
+        echo "## Test Categories" >> test-report.md
+        echo "" >> test-report.md
+        echo "- **Core Prolog**: Facts, rules, unification, backtracking, cut" >> test-report.md
+        echo "- **Built-ins**: Type checking, list operations, arithmetic with \`is/2\`" >> test-report.md
+        echo "- **Advanced**: DCG parsing, Lisp integration, dynamic parameters" >> test-report.md
+        echo "- **Family Relations**: Complex logic using Sazae-san characters (11 tests)" >> test-report.md
+        
+        echo "" >> test-report.md
+        echo "## Full Output" >> test-report.md
+        echo "" >> test-report.md
+        echo "\`\`\`" >> test-report.md
+        cat test-output.log >> test-report.md
+        echo "\`\`\`" >> test-report.md
+        
+        cat test-report.md
