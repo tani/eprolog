@@ -169,11 +169,6 @@ Programmatically solve goals with optional keyword callbacks.
 (eprolog-solve goals 
   :success (lambda (bindings) ...)
   :failure (lambda () ...))
-
-;; Legacy positional arguments still supported
-(eprolog-solve goals
-  (lambda (bindings) ...) ; on-success
-  (lambda () ...))        ; on-failure
 #+END_SRC
 
 ** DCG Support
