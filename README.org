@@ -209,10 +209,14 @@ Place =eprolog.el= in your Emacs load path and add to your configuration:
 (eprolog-define-grammar! number-seq number)
 (eprolog-define-grammar number-seq number number-seq)
 
-(eprolog-define-grammar! number _n (@ (number _n)))  ; Semantic constraint
+(eprolog-define-grammar! number "1")
+(eprolog-define-grammar number "2") 
+(eprolog-define-grammar number "3")
+(eprolog-define-grammar number "4")
+(eprolog-define-grammar number "5")
 
-(eprolog-query (phrase number-seq (1 2 3 4 5)))
-;; Succeeds if all elements are numbers
+(eprolog-query (phrase number-seq ("1" "2" "3" "4" "5")))
+;; Succeeds - parses sequence of number strings
 #+END_SRC
 
 *** Grammar Generation
@@ -253,10 +257,13 @@ DCGs can generate sentences as well as parse them:
 (eprolog-define-grammar! factor number)
 (eprolog-define-grammar factor "(" expr ")")
 
-(eprolog-define-grammar! number _n (@ (number _n)))
+(eprolog-define-grammar! number "1")
+(eprolog-define-grammar number "2")
+(eprolog-define-grammar number "3")
+(eprolog-define-grammar number "4")
 
 ;; Parse arithmetic expressions
-(eprolog-query (phrase expr (2 "+" 3 "*" 4)))
+(eprolog-query (phrase expr ("2" "+" "3" "*" "4")))
 ;; Succeeds - parses "2 + 3 * 4"
 #+END_SRC
 
