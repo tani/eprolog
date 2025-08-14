@@ -150,7 +150,7 @@ applied recursively to all subsequent successes."
 (defun eprolog--call-with-current-choice-point (proc)
   "Execute PROC with a fresh choice point tag for cut handling.
 Ensures the cut handler remains active across continuations."
-  (let ((tag (cl-gensym "CHOICE-POINT-")))
+  (let ((tag (gensym "CHOICE-POINT-")))
     (condition-case err
         (let ((result (funcall proc tag)))
           (eprolog--wrap-success-with-cut-handler result tag))
@@ -232,13 +232,13 @@ Variables are deduplicated with the rightmost occurrence preserved."
 (defun eprolog--replace-anonymous-variables (expression)
   "Replace all anonymous '_' variables in EXPRESSION with unique generated symbols.
 Recursively processes the expression tree, generating fresh variable names
-using `cl-gensym' for each anonymous variable encountered.
+using `gensym' for each anonymous variable encountered.
 
 Returns a copy of EXPRESSION with all '_' variables replaced by unique symbols.
 This ensures that multiple anonymous variables in the same clause don't unify
 with each other."
   (cond
-   ((and (symbolp expression) (eq expression '_)) (cl-gensym "_"))
+   ((and (symbolp expression) (eq expression '_)) (gensym "_"))
    ((atom expression) expression)
    (t (cons (eprolog--replace-anonymous-variables (car expression))
             (eprolog--replace-anonymous-variables (cdr expression))))))
@@ -369,13 +369,13 @@ overloading with different arities."
   "Create a copy of EXPRESSION with all variables renamed to fresh symbols.
 EXPRESSION is the term to rename variables in.
 
-Generates new variable names using `cl-gensym\=' based on the original
+Generates new variable names using `gensym\=' based on the original
 variable names.  Used to avoid variable name conflicts when applying
 clauses during resolution.  Each variable gets a unique replacement that
 preserves the original variable\='s base name."
   (cl-labels ((make-renaming-pair (variable)
                 (let ((var-string (symbol-name variable)))
-                  (cons variable (cl-gensym var-string))))
+                  (cons variable (gensym var-string))))
               (symbol-to-string (sym)
                 (if (symbolp sym) (symbol-name sym) "")))
     (let* ((variables (eprolog--variables-in expression))
@@ -977,7 +977,7 @@ cuts (!), and epsilon (empty) productions."
       nil
     (let* ((element (car body))
            (rest (cdr body))
-           (next-var (if rest (cl-gensym "_") out-var)))
+           (next-var (if rest (gensym "_") out-var)))
       (cond
        ;; Handle epsilon (empty production)
        ((null element)
@@ -1054,8 +1054,8 @@ Examples:
          (body (cdr dcg-parts))
          (head-name (if (consp head) (car head) head))
          (head-args (if (consp head) (cdr head) '()))
-         (in-var (cl-gensym "_"))
-         (out-var (cl-gensym "_"))
+         (in-var (gensym "_"))
+         (out-var (gensym "_"))
          (transformed-args `(,@head-args ,in-var ,out-var))
          (transformed-body (eprolog--transform-dcg-body body in-var out-var)))
     `(eprolog-define-prolog-predicate! (,head-name ,@transformed-args) ,@transformed-body)))
@@ -1084,8 +1084,8 @@ Examples:
          (body (cdr dcg-parts))
          (head-name (if (consp head) (car head) head))
          (head-args (if (consp head) (cdr head) '()))
-         (in-var (cl-gensym "_"))
-         (out-var (cl-gensym "_"))
+         (in-var (gensym "_"))
+         (out-var (gensym "_"))
          (transformed-args `(,@head-args ,in-var ,out-var))
          (transformed-body (eprolog--transform-dcg-body body in-var out-var)))
     `(eprolog-define-prolog-predicate (,head-name ,@transformed-args) ,@transformed-body)))
