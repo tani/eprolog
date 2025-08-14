@@ -1,7 +1,7 @@
 name: Tests
 
 # CI workflow for ε-prolog
-# Tests are defined in USAGE.org and executed via Makefile
+# Tests are defined in BOOK.org and executed via Makefile
 # The test suite serves as both comprehensive documentation and functional testing
 
 on:

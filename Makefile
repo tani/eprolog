@@ -6,8 +6,8 @@ EMACS ?= emacs
 
 # Source files
 MAIN_FILE = eprolog.el
-USAGE_FILE = USAGE.org
-USAGE_EL = USAGE.el
+USAGE_FILE = BOOK.org
+USAGE_EL = BOOK.el
 
 # Test targets
 .PHONY: test test-usage clean help
@@ -21,9 +21,9 @@ test-usage: $(USAGE_EL)
 	$(EMACS) -batch -l $(MAIN_FILE) -l $(USAGE_EL) \
 		--eval "(ert-run-tests-batch-and-exit \"eprolog-usage-\")"
 
-# Generate USAGE.el from USAGE.org if needed
+# Generate BOOK.el from BOOK.org if needed
 $(USAGE_EL): $(USAGE_FILE)
-	@echo "Generating USAGE.el from USAGE.org..."
+	@echo "Generating BOOK.el from BOOK.org..."
 	$(EMACS) -batch -l $(MAIN_FILE) \
 		--eval "(org-babel-load-file \"$(USAGE_FILE)\")" \
 		--eval "(message \"Generated $(USAGE_EL) successfully\")" 2>/dev/null
