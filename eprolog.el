@@ -869,7 +869,7 @@ Retrieves the value associated with SYMBOL and unifies it with VAR."
 ;; Basic logical predicates defined in Prolog
 
 (eprolog-define-prolog-predicate! true ())
-(eprolog-define-prolog-predicate! false ())
+(eprolog-define-prolog-predicate! false (fail))
 
 (eprolog-define-prolog-predicate! not (_goal)
   (call _goal) ! (fail))
