@@ -4,7 +4,7 @@
 
 ;; Author: Masaya Taniguchi
 ;; Version: 0.1.0
-;; Package-Requires: ((emacs "29.3"))
+;; Package-Requires: ((emacs "30.1"))
 ;; Keywords: languages, prolog, logic programming
 ;; URL: https://github.com/tani/eprolog
 

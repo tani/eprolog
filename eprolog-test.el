@@ -363,9 +363,9 @@
   "Test performance with larger clause database."
   (eprolog-test--restore-builtins)
   (dotimes (i 100)
-    (eprolog-define-prolog-predicate number (i)))
+    (eval `(eprolog-define-prolog-predicate test-num (,i))))
   
-  (let ((solutions (eprolog-test--collect-solutions '((number _x)))))
+  (let ((solutions (eprolog-test--collect-solutions '((test-num _x)))))
     (should (= (length solutions) 100))))
 
 ;;; Arithmetic tests with is/2 and lispp
