@@ -187,6 +187,36 @@ Define a DCG rule, replacing existing rules with the same arity.
 (eprolog-define-grammar! non-terminal element1 element2 ...)
 #+END_SRC
 
+* Testing
+
+ε-prolog includes a comprehensive test suite in =eprolog-test.el= with 51 tests covering all major functionality.
+
+** Running Tests
+
+*** Command Line (Recommended)
+Run all tests from the command line using Emacs batch mode:
+
+#+BEGIN_SRC bash
+emacs -batch -l eprolog.el -l eprolog-test.el -f ert-run-tests-batch-and-exit
+#+END_SRC
+
+*** Interactive Testing
+Run tests interactively within Emacs:
+
+#+BEGIN_SRC emacs-lisp
+;; Load the test file
+(load-file "eprolog-test.el")
+
+;; Run all tests interactively
+(ert-run-tests-interactively t)
+
+;; Run a specific test
+(ert-run-tests-interactively "eprolog-test-fibonacci-with-lispp")
+
+;; Run tests matching a pattern
+(ert-run-tests-interactively "family-tree")
+#+END_SRC
+
 * Debugging
 
 Enable spy mode to trace predicate execution:
