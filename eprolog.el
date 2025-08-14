@@ -660,7 +660,8 @@ Built-in predicates use this macro."
 
 (defmacro eprolog-define-prolog-predicate (head &rest body)
   "Define a Prolog clause (fact or rule) and add it to the clause database.
-HEAD is the predicate head, a list of (NAME . ARGS), or a symbol for predicates with no arguments.
+HEAD is the predicate head, a list of (NAME . ARGS), or a symbol for
+predicates with no arguments.
 BODY is the optional list of goals forming the rule body.
 
 If BODY is empty, defines a fact.  If BODY is non-empty, defines a rule.
@@ -679,7 +680,8 @@ Example: (eprolog-define-prolog-predicate true)"
 
 (defmacro eprolog-define-prolog-predicate! (head &rest body)
   "Define a Prolog clause, replacing existing clauses with the same arity.
-HEAD is the predicate head, a list of (NAME . ARGS), or a symbol for predicates with no arguments.
+HEAD is the predicate head, a list of (NAME . ARGS), or a symbol for
+predicates with no arguments.
 BODY is the optional list of goals forming the rule body.
 
 Similar to `eprolog-define-prolog-predicate\=' but removes existing
