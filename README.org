@@ -186,10 +186,10 @@ Enable spy mode to trace predicate execution:
 
 #+BEGIN_SRC emacs-lisp
 ;; Add predicates to spy list
-(setq *eprolog-spy-predicates* '(grandparent parent))
+(setq eprolog-spy-predicates '(grandparent parent))
 
 ;; Set spy mode
-(setq *eprolog-spy-mode* 'prompt) ; or 'always or 'disabled
+(setq eprolog-spy-state 'prompt) ; or 'always or 'disabled
 
 ;; Run query with tracing
 (eprolog-query (grandparent tom _x))
