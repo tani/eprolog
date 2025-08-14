@@ -1,5 +1,9 @@
 name: Tests
 
+# CI workflow for ε-prolog
+# Tests are defined in USAGE.org and executed via Makefile
+# The test suite serves as both comprehensive documentation and functional testing
+
 on:
   push:
     branches: [ main, develop ]
@@ -23,9 +27,17 @@ jobs:
       with:
         version: ${{ matrix.emacs-version }}
 
+    - name: Show available test targets
+      run: |
+        make help
+
+    - name: Check syntax and style
+      run: |
+        make check
+
     - name: Run tests
       run: |
-        emacs -batch -l eprolog.el -l eprolog-test.el -f ert-run-tests-batch-and-exit
+        make test
 
     - name: Check test results
       run: |
@@ -43,7 +55,7 @@ jobs:
     - name: Setup Emacs
       uses: purcell/setup-emacs@master
       with:
-        version: '29.1'
+        version: '30.1'
 
     - name: Generate detailed test report
       run: |
@@ -52,8 +64,17 @@ jobs:
         echo "## Test Summary" >> test-report.md
         echo "" >> test-report.md
         
+        # Run syntax check and capture output
+        echo "### Syntax Check" >> test-report.md
+        if make check > syntax-check.log 2>&1; then
+          echo "- **Syntax Check**: ✅ Passed" >> test-report.md
+        else
+          echo "- **Syntax Check**: ❌ Failed" >> test-report.md
+        fi
+        echo "" >> test-report.md
+        
         # Run tests and capture output
-        emacs -batch -l eprolog.el -l eprolog-test.el -f ert-run-tests-batch-and-exit > test-output.log 2>&1 || true
+        make test > test-output.log 2>&1 || true
         
         # Extract test results
         if grep -q "results as expected" test-output.log; then
@@ -69,13 +90,24 @@ jobs:
         echo "" >> test-report.md
         echo "## Test Categories" >> test-report.md
         echo "" >> test-report.md
-        echo "- **Core Prolog**: Facts, rules, unification, backtracking, cut" >> test-report.md
-        echo "- **Built-ins**: Type checking, list operations, arithmetic with \`is/2\`" >> test-report.md
-        echo "- **Advanced**: DCG parsing, Lisp integration, dynamic parameters" >> test-report.md
-        echo "- **Family Relations**: Complex logic using Sazae-san characters (11 tests)" >> test-report.md
+        echo "- **Core Prolog**: Facts, rules, unification, equality, variable binding" >> test-report.md
+        echo "- **Built-in Predicates**: Type checking, list operations, higher-order predicates" >> test-report.md
+        echo "- **Control Flow**: Cut, backtracking, logical operators, meta-predicates" >> test-report.md
+        echo "- **Lisp Integration**: Basic interface, dynamic parameters, side effects" >> test-report.md
+        echo "- **Arithmetic**: Basic operations, mathematical predicates, comparisons" >> test-report.md
+        echo "- **DCG**: Grammar parsing, generation, advanced features, complex applications" >> test-report.md
+        echo "- **Family Tree**: Comprehensive relationships using Sazae-san characters" >> test-report.md
+        echo "- **Advanced Applications**: Recursive algorithms, performance testing" >> test-report.md
         
         echo "" >> test-report.md
-        echo "## Full Output" >> test-report.md
+        echo "## Syntax Check Output" >> test-report.md
+        echo "" >> test-report.md
+        echo "\`\`\`" >> test-report.md
+        cat syntax-check.log >> test-report.md
+        echo "\`\`\`" >> test-report.md
+        
+        echo "" >> test-report.md
+        echo "## Test Output" >> test-report.md
         echo "" >> test-report.md
         echo "\`\`\`" >> test-report.md
         cat test-output.log >> test-report.md
