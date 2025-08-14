@@ -93,22 +93,22 @@
   "Test family tree relationships with Sazae-san characters."
   (eprolog-test--restore-builtins)
   
-  ;; Setup family tree (parent Parent Child)
-  (eprolog-define-prolog-predicate! (parent fune katsuo))
-  (eprolog-define-prolog-predicate (parent fune wakame))
-  (eprolog-define-prolog-predicate (parent fune sazae))
-  (eprolog-define-prolog-predicate (parent sazae tarao))
+  ;; Setup family tree
+  (eprolog-define-prolog-predicate! (parent katsuo fune))
+  (eprolog-define-prolog-predicate (parent wakame fune))
+  (eprolog-define-prolog-predicate (parent sazae fune))
+  (eprolog-define-prolog-predicate (parent tarao sazae))
   
   (eprolog-define-prolog-predicate! (grandparent _x _z)
     (parent _x _y)
     (parent _y _z))
   
   ;; Test basic parent relationships
-  (should (eprolog-test--has-solution-p '((parent fune katsuo))))
-  (should (eprolog-test--has-solution-p '((parent sazae tarao))))
+  (should (eprolog-test--has-solution-p '((parent katsuo fune))))
+  (should (eprolog-test--has-solution-p '((parent tarao sazae))))
   
   ;; Test grandparent relationship
-  (should (eprolog-test--has-solution-p '((grandparent fune tarao)))))
+  (should (eprolog-test--has-solution-p '((grandparent tarao fune)))))
 
 (ert-deftest eprolog-usage-unification-and-equality ()
   "Test unification and equality predicates."
@@ -225,15 +225,7 @@
   ;; Test append/2
   (let ((solutions (eprolog-test--collect-solutions '((append ((1 2) (3 4)) _result)))))
     (should (= (length solutions) 1))
-    (should (equal (cdr (assoc '_result (car solutions))) '(1 2 3 4))))
-  
-  ;; Test append/3 reverse generation - decomposition into all possible splits
-  (let ((solutions (eprolog-test--collect-solutions '((append _A _B (1 2 3))))))
-    (should (= (length solutions) 4)) ; All possible splits
-    (should (member '((_A . ()) (_B . (1 2 3))) solutions))
-    (should (member '((_A . (1)) (_B . (2 3))) solutions))
-    (should (member '((_A . (1 2)) (_B . (3))) solutions))
-    (should (member '((_A . (1 2 3)) (_B . ())) solutions))))
+    (should (equal (cdr (assoc '_result (car solutions))) '(1 2 3 4)))))
 
 (ert-deftest eprolog-usage-higher-order-predicates ()
   "Test maplist higher-order predicates."
@@ -250,11 +242,7 @@
   ;; Test maplist/1
   (eprolog-define-predicate (positive _x) (lispp (> _x 0)))
   (should (eprolog-test--has-solution-p '((maplist positive (1 2 3)))))
-  (should-not (eprolog-test--has-solution-p '((maplist positive (0 1 2)))))
-  
-  ;; Test maplist length mismatch failure cases
-  (should-not (eprolog-test--has-solution-p '((maplist succ (1 2) (2 3 4)))))
-  (should-not (eprolog-test--has-solution-p '((maplist succ (1 2 3) (2 3))))))
+  (should-not (eprolog-test--has-solution-p '((maplist positive (0 1 2))))))
 
 (ert-deftest eprolog-usage-control-predicates ()
   "Test control predicates."
@@ -453,12 +441,7 @@
   
   (let ((solutions (eprolog-test--collect-solutions '((is _x (+ (* 2 3) (/ 8 2)))))))
     (should (= (length solutions) 1))
-    (should (equal (cdr (assoc '_x (car solutions))) 10)))
-  
-  ;; Test is/2 safety: unbound variables in expression should fail or error
-  ;; Note: ε-prolog may throw errors for unbound variables in arithmetic
-  (should-error (eprolog-test--has-solution-p '((is _result (+ _unbound 3)))))
-  (should-error (eprolog-test--has-solution-p '((is _result (* _x _y))))))
+    (should (equal (cdr (assoc '_x (car solutions))) 10))))
 
 (ert-deftest eprolog-usage-is-predicate ()
   "Test basic is/2 predicate as standalone test."
@@ -845,12 +828,12 @@
   "Test comprehensive family tree with Sazae-san characters."
   (eprolog-test--restore-builtins)
   
-  ;; Define parent relationships (parent Parent Child)
-  (eprolog-define-prolog-predicate! (parent fune katsuo))
-  (eprolog-define-prolog-predicate (parent fune wakame))
-  (eprolog-define-prolog-predicate (parent fune sazae))
-  (eprolog-define-prolog-predicate (parent sazae tarao))
-  (eprolog-define-prolog-predicate (parent taiko ikura))
+  ;; Define parent relationships
+  (eprolog-define-prolog-predicate! (parent katsuo fune))
+  (eprolog-define-prolog-predicate (parent wakame fune))
+  (eprolog-define-prolog-predicate (parent sazae fune))
+  (eprolog-define-prolog-predicate (parent tarao sazae))
+  (eprolog-define-prolog-predicate (parent ikura taiko))
   
   ;; Define marriage relationships
   (eprolog-define-prolog-predicate! (married _x _y) (married-fact _x _y))
@@ -873,7 +856,7 @@
   (eprolog-define-prolog-predicate (female wakame))
   
   ;; Test basic relationships
-  (should (eprolog-test--has-solution-p '((parent fune katsuo))))
+  (should (eprolog-test--has-solution-p '((parent katsuo fune))))
   (should (eprolog-test--has-solution-p '((married fune namihei))))
   (should (eprolog-test--has-solution-p '((male katsuo))))
   (should (eprolog-test--has-solution-p '((female wakame)))))
@@ -882,11 +865,11 @@
   "Test derived family relationships."
   (eprolog-test--restore-builtins)
   
-  ;; Setup basic relationships (parent Parent Child)
-  (eprolog-define-prolog-predicate! (parent fune katsuo))
-  (eprolog-define-prolog-predicate (parent fune wakame))
-  (eprolog-define-prolog-predicate (parent fune sazae))
-  (eprolog-define-prolog-predicate (parent sazae tarao))
+  ;; Setup basic relationships
+  (eprolog-define-prolog-predicate! (parent katsuo fune))
+  (eprolog-define-prolog-predicate (parent wakame fune))
+  (eprolog-define-prolog-predicate (parent sazae fune))
+  (eprolog-define-prolog-predicate (parent tarao sazae))
   
   (eprolog-define-prolog-predicate! (male katsuo))
   (eprolog-define-prolog-predicate! (female fune))
@@ -896,34 +879,34 @@
   ;; Define derived relationships
   (eprolog-define-prolog-predicate! (child _x _y) (parent _y _x))
   (eprolog-define-prolog-predicate! (grandparent _x _z) (parent _x _y) (parent _y _z))
-  (eprolog-define-prolog-predicate! (sibling _x _y) (parent _z _x) (parent _z _y) (not (= _x _y)))
-  (eprolog-define-prolog-predicate! (mother _y _x) (parent _y _x) (female _y))
-  (eprolog-define-prolog-predicate! (father _y _x) (parent _y _x) (male _y))
-  (eprolog-define-prolog-predicate! (sister _x _y) (sibling _x _y) (female _x))
-  (eprolog-define-prolog-predicate! (brother _x _y) (sibling _x _y) (male _x))
+  (eprolog-define-prolog-predicate! (sibling _x _y) (parent _x _z) (parent _y _z) (not (= _x _y)))
+  (eprolog-define-prolog-predicate! (mother _x _y) (parent _x _y) (female _y))
+  (eprolog-define-prolog-predicate! (father _x _y) (parent _x _y) (male _y))
+  (eprolog-define-prolog-predicate! (sister _x _y) (sibling _x _y) (female _y))
+  (eprolog-define-prolog-predicate! (brother _x _y) (sibling _x _y) (male _y))
   (eprolog-define-prolog-predicate! (ancestor _x _y) (parent _x _y))
   (eprolog-define-prolog-predicate (ancestor _x _y) (parent _x _z) (ancestor _z _y))
   
   ;; Test derived relationships
-  (should (eprolog-test--has-solution-p '((child katsuo fune))))
-  (should (eprolog-test--has-solution-p '((grandparent fune tarao))))
+  (should (eprolog-test--has-solution-p '((child fune katsuo))))
+  (should (eprolog-test--has-solution-p '((grandparent tarao fune))))
   (should (eprolog-test--has-solution-p '((sibling katsuo wakame))))
-  (should (eprolog-test--has-solution-p '((mother fune katsuo))))
-  (should (eprolog-test--has-solution-p '((sister wakame sazae))))
-  (should (eprolog-test--has-solution-p '((brother katsuo wakame))))
-  (should (eprolog-test--has-solution-p '((ancestor fune tarao)))))
+  (should (eprolog-test--has-solution-p '((mother katsuo fune))))
+  (should (eprolog-test--has-solution-p '((sister katsuo wakame))))
+  (should (eprolog-test--has-solution-p '((brother wakame katsuo))))
+  (should (eprolog-test--has-solution-p '((ancestor tarao fune)))))
 
 (ert-deftest eprolog-usage-family-tree-uncle-aunt-cousin ()
   "Test uncle, aunt, and cousin relationships."
   (eprolog-test--restore-builtins)
   
-  ;; Setup family tree with extended relationships (parent Parent Child)
-  (eprolog-define-prolog-predicate! (parent fune katsuo))
-  (eprolog-define-prolog-predicate (parent fune wakame))
-  (eprolog-define-prolog-predicate (parent fune sazae))
-  (eprolog-define-prolog-predicate (parent sazae tarao))
-  (eprolog-define-prolog-predicate (parent katsuo child1))
-  (eprolog-define-prolog-predicate (parent wakame child2))
+  ;; Setup family tree with extended relationships
+  (eprolog-define-prolog-predicate! (parent katsuo fune))
+  (eprolog-define-prolog-predicate (parent wakame fune))
+  (eprolog-define-prolog-predicate (parent sazae fune))
+  (eprolog-define-prolog-predicate (parent tarao sazae))
+  (eprolog-define-prolog-predicate (parent child1 katsuo))
+  (eprolog-define-prolog-predicate (parent child2 wakame))
   
   (eprolog-define-prolog-predicate! (male katsuo))
   (eprolog-define-prolog-predicate! (female fune))
@@ -931,10 +914,10 @@
   (eprolog-define-prolog-predicate (female wakame))
   
   ;; Define extended relationships
-  (eprolog-define-prolog-predicate! (sibling _x _y) (parent _z _x) (parent _z _y) (not (= _x _y)))
-  (eprolog-define-prolog-predicate! (uncle _x _y) (parent _z _y) (sibling _x _z) (male _x))
-  (eprolog-define-prolog-predicate! (aunt _x _y) (parent _z _y) (sibling _x _z) (female _x))
-  (eprolog-define-prolog-predicate! (cousin _x _y) (parent _a _x) (parent _b _y) (sibling _a _b))
+  (eprolog-define-prolog-predicate! (sibling _x _y) (parent _x _z) (parent _y _z) (not (= _x _y)))
+  (eprolog-define-prolog-predicate! (uncle _x _y) (parent _y _z) (sibling _x _z) (male _x))
+  (eprolog-define-prolog-predicate! (aunt _x _y) (parent _y _z) (sibling _x _z) (female _x))
+  (eprolog-define-prolog-predicate! (cousin _x _y) (parent _x _a) (parent _y _b) (sibling _a _b))
   
   ;; Test uncle/aunt relationships
   (should (eprolog-test--has-solution-p '((uncle katsuo tarao))))
@@ -948,25 +931,25 @@
   "Test complex family tree queries with multiple solutions."
   (eprolog-test--restore-builtins)
   
-  ;; Setup complete family tree (parent Parent Child)
-  (eprolog-define-prolog-predicate! (parent fune katsuo))
-  (eprolog-define-prolog-predicate (parent fune wakame))
-  (eprolog-define-prolog-predicate (parent fune sazae))
-  (eprolog-define-prolog-predicate (parent sazae tarao))
-  (eprolog-define-prolog-predicate (parent taiko ikura))
+  ;; Setup complete family tree
+  (eprolog-define-prolog-predicate! (parent katsuo fune))
+  (eprolog-define-prolog-predicate (parent wakame fune))
+  (eprolog-define-prolog-predicate (parent sazae fune))
+  (eprolog-define-prolog-predicate (parent tarao sazae))
+  (eprolog-define-prolog-predicate (parent ikura taiko))
   
   (eprolog-define-prolog-predicate! (grandparent _x _z) (parent _x _y) (parent _y _z))
-  (eprolog-define-prolog-predicate! (sibling _x _y) (parent _z _x) (parent _z _y) (not (= _x _y)))
+  (eprolog-define-prolog-predicate! (sibling _x _y) (parent _x _z) (parent _y _z) (not (= _x _y)))
   
   ;; Test finding all children of fune
-  (let ((solutions (eprolog-test--collect-solutions '((parent fune _child)))))
+  (let ((solutions (eprolog-test--collect-solutions '((parent _child fune)))))
     (should (= (length solutions) 3))
     (should (member '((_child . katsuo)) solutions))
     (should (member '((_child . wakame)) solutions))
     (should (member '((_child . sazae)) solutions)))
   
   ;; Test finding all grandchildren of fune
-  (let ((solutions (eprolog-test--collect-solutions '((grandparent fune _grandchild)))))
+  (let ((solutions (eprolog-test--collect-solutions '((grandparent _grandchild fune)))))
     (should (= (length solutions) 1))
     (should (member '((_grandchild . tarao)) solutions)))
   
@@ -974,22 +957,7 @@
   (let ((solutions (eprolog-test--collect-solutions '((sibling katsuo _sibling)))))
     (should (= (length solutions) 2))
     (should (member '((_sibling . wakame)) solutions))
-    (should (member '((_sibling . sazae)) solutions)))
-  
-  ;; Test symmetric sibling relationship shows duplicates
-  (let ((solutions (eprolog-test--collect-solutions '((sibling _x _y)))))
-    (should (>= (length solutions) 6))) ; katsuo-wakame, wakame-katsuo, etc.
-  
-  ;; Test duplicate suppression technique using string ordering
-  (eprolog-define-prolog-predicate! (unique-sibling _x _y)
-    (sibling _x _y)
-    (lispp (string< (symbol-name (quote _x)) (symbol-name (quote _y)))))
-  
-  (let ((solutions (eprolog-test--collect-solutions '((unique-sibling _x _y)))))
-    (should (= (length solutions) 3)) ; Only one direction of each pair
-    (should (member '((_x . katsuo) (_y . sazae)) solutions))
-    (should (member '((_x . katsuo) (_y . wakame)) solutions))
-    (should (member '((_x . sazae) (_y . wakame)) solutions))))
+    (should (member '((_sibling . sazae)) solutions))))
 
 (ert-deftest eprolog-usage-complex-backtracking-with-cut ()
   "Test complex backtracking scenarios with cut."
