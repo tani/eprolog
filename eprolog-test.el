@@ -57,8 +57,8 @@
 (ert-deftest eprolog-test-define-fact ()
   "Test defining simple facts."
   (eprolog-test--restore-builtins)
-  (eprolog-define-prolog-predicate parent (tom bob))
-  (eprolog-define-prolog-predicate parent (bob ann))
+  (eprolog-define-prolog-predicate (parent tom bob))
+  (eprolog-define-prolog-predicate (parent bob ann))
   
   (should (eprolog-test--has-solution-p '((parent tom bob))))
   (should (eprolog-test--has-solution-p '((parent bob ann))))
@@ -67,9 +67,9 @@
 (ert-deftest eprolog-test-define-rule ()
   "Test defining rules with body."
   (eprolog-test--restore-builtins)
-  (eprolog-define-prolog-predicate parent (tom bob))
-  (eprolog-define-prolog-predicate parent (bob ann))
-  (eprolog-define-prolog-predicate grandparent (_x _z)
+  (eprolog-define-prolog-predicate (parent tom bob))
+  (eprolog-define-prolog-predicate (parent bob ann))
+  (eprolog-define-prolog-predicate (grandparent _x _z)
     (parent _x _y)
     (parent _y _z))
   
@@ -79,11 +79,11 @@
 (ert-deftest eprolog-test-define-predicate-replacement ()
   "Test predicate replacement with !."
   (eprolog-test--restore-builtins)
-  (eprolog-define-prolog-predicate test-pred (a))
-  (eprolog-define-prolog-predicate test-pred (b))
+  (eprolog-define-prolog-predicate (test-pred a))
+  (eprolog-define-prolog-predicate (test-pred b))
   (should (= (length (eprolog-test--collect-solutions '((test-pred _x)))) 2))
   
-  (eprolog-define-prolog-predicate! test-pred (c))
+  (eprolog-define-prolog-predicate! (test-pred c))
   (let ((solutions (eprolog-test--collect-solutions '((test-pred _x)))))
     (should (= (length solutions) 1))
     (should (equal (cdaar solutions) 'c))))
@@ -93,9 +93,9 @@
 (ert-deftest eprolog-test-variable-unification ()
   "Test basic variable unification."
   (eprolog-test--restore-builtins)
-  (eprolog-define-prolog-predicate likes (mary food))
-  (eprolog-define-prolog-predicate likes (mary wine))
-  (eprolog-define-prolog-predicate likes (john wine))
+  (eprolog-define-prolog-predicate (likes mary food))
+  (eprolog-define-prolog-predicate (likes mary wine))
+  (eprolog-define-prolog-predicate (likes john wine))
   
   (let ((solutions (eprolog-test--collect-solutions '((likes mary _x)))))
     (should (= (length solutions) 2))
@@ -105,7 +105,7 @@
 (ert-deftest eprolog-test-anonymous-variables ()
   "Test anonymous variable handling."
   (eprolog-test--restore-builtins)
-  (eprolog-define-prolog-predicate test (_ _))
+  (eprolog-define-prolog-predicate (test _ _))
   (should (eprolog-test--has-solution-p '((test a b)))))
 
 ;;; Built-in predicate tests
@@ -151,11 +151,11 @@
 (ert-deftest eprolog-test-cut-predicate ()
   "Test cut (!) behavior."
   (eprolog-test--restore-builtins)
-  (eprolog-define-prolog-predicate! choice (a))
-  (eprolog-define-prolog-predicate choice (b))
-  (eprolog-define-prolog-predicate choice (c))
+  (eprolog-define-prolog-predicate! (choice a))
+  (eprolog-define-prolog-predicate (choice b))
+  (eprolog-define-prolog-predicate (choice c))
   
-  (eprolog-define-prolog-predicate! test-cut (_x)
+  (eprolog-define-prolog-predicate! (test-cut _x)
     (choice _x) !)
   
   (let ((solutions (eprolog-test--collect-solutions '((test-cut _x)))))
@@ -167,7 +167,7 @@
 (ert-deftest eprolog-test-call-predicate ()
   "Test the call predicate."
   (eprolog-test--restore-builtins)
-  (eprolog-define-prolog-predicate likes (mary food))
+  (eprolog-define-prolog-predicate (likes mary food))
   
   (should (eprolog-test--has-solution-p '((call likes mary food))))
   (should (eprolog-test--has-solution-p '((call = _x 42) (= _x 42)))))
@@ -175,8 +175,8 @@
 (ert-deftest eprolog-test-logical-predicates ()
   "Test logical predicates (and, or, not)."
   (eprolog-test--restore-builtins)
-  (eprolog-define-prolog-predicate p ())
-  (eprolog-define-prolog-predicate q ())
+  (eprolog-define-prolog-predicate p)
+  (eprolog-define-prolog-predicate q)
   
   (should (eprolog-test--has-solution-p '((and p q))))
   (should (eprolog-test--has-solution-p '((or p fail))))
@@ -188,9 +188,9 @@
 (ert-deftest eprolog-test-if-then-else ()
   "Test conditional predicate (if)."
   (eprolog-test--restore-builtins)
-  (eprolog-define-prolog-predicate true-pred ())
-  (eprolog-define-prolog-predicate then-pred ())
-  (eprolog-define-prolog-predicate else-pred ())
+  (eprolog-define-prolog-predicate true-pred)
+  (eprolog-define-prolog-predicate then-pred)
+  (eprolog-define-prolog-predicate else-pred)
   
   (should (eprolog-test--has-solution-p '((if true-pred then-pred))))
   (should (eprolog-test--has-solution-p '((if fail then-pred else-pred)))))
@@ -219,7 +219,7 @@
 (ert-deftest eprolog-test-maplist-predicate ()
   "Test maplist predicate."
   (eprolog-test--restore-builtins)
-  (eprolog-define-prolog-predicate succ (_x _y)
+  (eprolog-define-prolog-predicate (succ _x _y)
     (is _y (+ _x 1)))
   
   (should (eprolog-test--has-solution-p '((maplist succ (1 2 3) (2 3 4))))))
@@ -319,8 +319,8 @@
 (ert-deftest eprolog-test-factorial ()
   "Test recursive factorial predicate."
   (eprolog-test--restore-builtins)
-  (eprolog-define-prolog-predicate! factorial (0 1))
-  (eprolog-define-prolog-predicate factorial (_n _f)
+  (eprolog-define-prolog-predicate! (factorial 0 1))
+  (eprolog-define-prolog-predicate (factorial _n _f)
     (lispp (> _n 0))
     (is _n1 (- _n 1))
     (factorial _n1 _f1)
@@ -333,11 +333,11 @@
 (ert-deftest eprolog-test-backtracking-with-cut ()
   "Test complex backtracking with cut."
   (eprolog-test--restore-builtins)
-  (eprolog-define-prolog-predicate! color (red))
-  (eprolog-define-prolog-predicate color (green))
-  (eprolog-define-prolog-predicate color (blue))
+  (eprolog-define-prolog-predicate! (color red))
+  (eprolog-define-prolog-predicate (color green))
+  (eprolog-define-prolog-predicate (color blue))
   
-  (eprolog-define-prolog-predicate! first-color (_x)
+  (eprolog-define-prolog-predicate! (first-color _x)
     (color _x) !)
   
   (let ((solutions (eprolog-test--collect-solutions '((first-color _x)))))
@@ -348,7 +348,7 @@
   "Test repeat predicate with cut."
   (eprolog-test--restore-builtins)
   (setq eprolog-test--counter 0)
-  (eprolog-define-prolog-predicate test-repeat ()
+  (eprolog-define-prolog-predicate (test-repeat)
     (repeat)
     (lisp! (setq eprolog-test--counter (1+ eprolog-test--counter)))
     (lispp (>= eprolog-test--counter 3))
@@ -363,7 +363,7 @@
   "Test performance with larger clause database."
   (eprolog-test--restore-builtins)
   (dotimes (i 100)
-    (eval `(eprolog-define-prolog-predicate test-num (,i))))
+    (eval `(eprolog-define-prolog-predicate (test-num ,i))))
   
   (let ((solutions (eprolog-test--collect-solutions '((test-num _x)))))
     (should (= (length solutions) 100))))
@@ -413,12 +413,12 @@
 (ert-deftest eprolog-test-custom-comparison-predicates ()
   "Test custom comparison predicates using lispp."
   (eprolog-test--restore-builtins)
-  (eprolog-define-prolog-predicate greater (_x _y)
+  (eprolog-define-prolog-predicate (greater _x _y)
     (lispp (> _x _y)))
-  (eprolog-define-prolog-predicate between (_x _low _high)
+  (eprolog-define-prolog-predicate (between _x _low _high)
     (lispp (>= _x _low))
     (lispp (<= _x _high)))
-  (eprolog-define-prolog-predicate positive (_x)
+  (eprolog-define-prolog-predicate (positive _x)
     (lispp (> _x 0)))
   
   (should (eprolog-test--has-solution-p '((greater 20 15))))
@@ -430,9 +430,9 @@
 (ert-deftest eprolog-test-fibonacci-with-lispp ()
   "Test Fibonacci sequence using is/2 and lispp."
   (eprolog-test--restore-builtins)
-  (eprolog-define-prolog-predicate! fib (0 0))
-  (eprolog-define-prolog-predicate fib (1 1))
-  (eprolog-define-prolog-predicate fib (_n _f)
+  (eprolog-define-prolog-predicate! (fib 0 0))
+  (eprolog-define-prolog-predicate (fib 1 1))
+  (eprolog-define-prolog-predicate (fib _n _f)
     (lispp (> _n 1))
     (is _n1 (- _n 1))
     (is _n2 (- _n 2))
@@ -447,8 +447,8 @@
 (ert-deftest eprolog-test-gcd-algorithm ()
   "Test Greatest Common Divisor using Euclidean algorithm."
   (eprolog-test--restore-builtins)
-  (eprolog-define-prolog-predicate! gcd (_a 0 _a))
-  (eprolog-define-prolog-predicate gcd (_a _b _g)
+  (eprolog-define-prolog-predicate! (gcd _a 0 _a))
+  (eprolog-define-prolog-predicate (gcd _a _b _g)
     (lispp (> _b 0))
     (is _r (mod _a _b))
     (gcd _b _r _g))
@@ -460,14 +460,14 @@
 (ert-deftest eprolog-test-geometric-calculations ()
   "Test geometric calculations with is/2."
   (eprolog-test--restore-builtins)
-  (eprolog-define-prolog-predicate distance ((_x1 _y1) (_x2 _y2) _d)
+  (eprolog-define-prolog-predicate (distance (_x1 _y1) (_x2 _y2) _d)
     (is _dx (- _x2 _x1))
     (is _dy (- _y2 _y1))
     (is _dx2 (* _dx _dx))
     (is _dy2 (* _dy _dy))
     (is _d (sqrt (+ _dx2 _dy2))))
   
-  (eprolog-define-prolog-predicate circle-area (_radius _area)
+  (eprolog-define-prolog-predicate (circle-area _radius _area)
     (is _pi 3.14159)
     (is _r2 (* _radius _radius))
     (is _area (* _pi _r2)))
@@ -483,10 +483,10 @@
 (ert-deftest eprolog-test-even-odd-predicates ()
   "Test even and odd number checking with lispp."
   (eprolog-test--restore-builtins)
-  (eprolog-define-prolog-predicate even-num (_n)
+  (eprolog-define-prolog-predicate (even-num _n)
     (is _r (mod _n 2))
     (lispp (= _r 0)))
-  (eprolog-define-prolog-predicate odd-num (_n)
+  (eprolog-define-prolog-predicate (odd-num _n)
     (is _r (mod _n 2))
     (lispp (= _r 1)))
   
@@ -498,13 +498,13 @@
 (ert-deftest eprolog-test-mathematical-functions ()
   "Test mathematical functions using is/2."
   (eprolog-test--restore-builtins)
-  (eprolog-define-prolog-predicate power-of-2 (_n _result)
+  (eprolog-define-prolog-predicate (power-of-2 _n _result)
     (is _result (expt 2 _n)))
-  (eprolog-define-prolog-predicate sum-to (_n _sum)
+  (eprolog-define-prolog-predicate (sum-to _n _sum)
     (lispp (<= _n 0))
     !
     (is _sum 0))
-  (eprolog-define-prolog-predicate sum-to (_n _sum)
+  (eprolog-define-prolog-predicate (sum-to _n _sum)
     (lispp (> _n 0))
     (is _n1 (- _n 1))
     (sum-to _n1 _sum1)
@@ -521,19 +521,19 @@
 (ert-deftest eprolog-test-absolute-value-and-minmax ()
   "Test absolute value and min/max predicates."
   (eprolog-test--restore-builtins)
-  (eprolog-define-prolog-predicate abs-val (_x _abs)
+  (eprolog-define-prolog-predicate (abs-val _x _abs)
     (lispp (>= _x 0))
     !
     (is _abs _x))
-  (eprolog-define-prolog-predicate abs-val (_x _abs)
+  (eprolog-define-prolog-predicate (abs-val _x _abs)
     (lispp (< _x 0))
     (is _abs (- _x)))
   
-  (eprolog-define-prolog-predicate max-of (_a _b _max)
+  (eprolog-define-prolog-predicate (max-of _a _b _max)
     (lispp (>= _a _b))
     !
     (is _max _a))
-  (eprolog-define-prolog-predicate max-of (_a _b _max)
+  (eprolog-define-prolog-predicate (max-of _a _b _max)
     (is _max _b))
   
   (let ((solutions (eprolog-test--collect-solutions '((abs-val -17 _abs)))))
@@ -551,32 +551,32 @@
   (eprolog-test--restore-builtins)
   
   ;; Define parent relationships
-  (eprolog-define-prolog-predicate! parent (katsuo fune))
-  (eprolog-define-prolog-predicate parent (wakame fune))
-  (eprolog-define-prolog-predicate parent (sazae fune))
-  (eprolog-define-prolog-predicate parent (tarao sazae))
-  (eprolog-define-prolog-predicate parent (ikura taiko))
-  (eprolog-define-prolog-predicate parent (_x _y) (parent _x _z) ! (married _y _z))
+  (eprolog-define-prolog-predicate! (parent katsuo fune))
+  (eprolog-define-prolog-predicate (parent wakame fune))
+  (eprolog-define-prolog-predicate (parent sazae fune))
+  (eprolog-define-prolog-predicate (parent tarao sazae))
+  (eprolog-define-prolog-predicate (parent ikura taiko))
+  (eprolog-define-prolog-predicate (parent _x _y) (parent _x _z) ! (married _y _z))
 
   ;; Define marriage relationships
-  (eprolog-define-prolog-predicate! married (_x _y) (married-fact _x _y))
-  (eprolog-define-prolog-predicate married (_x _y) (married-fact _y _x))
+  (eprolog-define-prolog-predicate! (married _x _y) (married-fact _x _y))
+  (eprolog-define-prolog-predicate (married _x _y) (married-fact _y _x))
 
-  (eprolog-define-prolog-predicate! married-fact (fune namihei))
-  (eprolog-define-prolog-predicate married-fact (sazae masuo))
-  (eprolog-define-prolog-predicate married-fact (taiko norisuke))
+  (eprolog-define-prolog-predicate! (married-fact fune namihei))
+  (eprolog-define-prolog-predicate (married-fact sazae masuo))
+  (eprolog-define-prolog-predicate (married-fact taiko norisuke))
 
   ;; Define gender
-  (eprolog-define-prolog-predicate! male (namihei))
-  (eprolog-define-prolog-predicate male (katsuo))
-  (eprolog-define-prolog-predicate male (masuo))
-  (eprolog-define-prolog-predicate male (tarao))
-  (eprolog-define-prolog-predicate male (norisuke))
+  (eprolog-define-prolog-predicate! (male namihei))
+  (eprolog-define-prolog-predicate (male katsuo))
+  (eprolog-define-prolog-predicate (male masuo))
+  (eprolog-define-prolog-predicate (male tarao))
+  (eprolog-define-prolog-predicate (male norisuke))
 
-  (eprolog-define-prolog-predicate! female (fune))
-  (eprolog-define-prolog-predicate female (sazae))
-  (eprolog-define-prolog-predicate female (taiko))
-  (eprolog-define-prolog-predicate female (wakame))
+  (eprolog-define-prolog-predicate! (female fune))
+  (eprolog-define-prolog-predicate (female sazae))
+  (eprolog-define-prolog-predicate (female taiko))
+  (eprolog-define-prolog-predicate (female wakame))
 
   ;; Test basic parent relationships
   (should (eprolog-test--has-solution-p '((parent katsuo fune))))
@@ -596,19 +596,19 @@
   (eprolog-test--restore-builtins)
   
   ;; Setup family tree
-  (eprolog-define-prolog-predicate! parent (katsuo fune))
-  (eprolog-define-prolog-predicate parent (wakame fune))
-  (eprolog-define-prolog-predicate parent (sazae fune))
-  (eprolog-define-prolog-predicate parent (tarao sazae))
-  (eprolog-define-prolog-predicate parent (ikura taiko))
-  (eprolog-define-prolog-predicate parent (_x _y) (parent _x _z) ! (married _y _z))
+  (eprolog-define-prolog-predicate! (parent katsuo fune))
+  (eprolog-define-prolog-predicate (parent wakame fune))
+  (eprolog-define-prolog-predicate (parent sazae fune))
+  (eprolog-define-prolog-predicate (parent tarao sazae))
+  (eprolog-define-prolog-predicate (parent ikura taiko))
+  (eprolog-define-prolog-predicate (parent _x _y) (parent _x _z) ! (married _y _z))
 
-  (eprolog-define-prolog-predicate! married (_x _y) (married-fact _x _y))
-  (eprolog-define-prolog-predicate married (_x _y) (married-fact _y _x))
+  (eprolog-define-prolog-predicate! (married _x _y) (married-fact _x _y))
+  (eprolog-define-prolog-predicate (married _x _y) (married-fact _y _x))
 
-  (eprolog-define-prolog-predicate! married-fact (fune namihei))
-  (eprolog-define-prolog-predicate married-fact (sazae masuo))
-  (eprolog-define-prolog-predicate married-fact (taiko norisuke))
+  (eprolog-define-prolog-predicate! (married-fact fune namihei))
+  (eprolog-define-prolog-predicate (married-fact sazae masuo))
+  (eprolog-define-prolog-predicate (married-fact taiko norisuke))
 
   ;; Test complex parent relationships (through marriage)
   (should (eprolog-test--has-solution-p '((parent katsuo namihei))))
@@ -622,13 +622,13 @@
   (eprolog-test--restore-builtins)
   
   ;; Setup family tree (without complex parent rule to avoid infinite recursion)
-  (eprolog-define-prolog-predicate! parent (katsuo fune))
-  (eprolog-define-prolog-predicate parent (wakame fune))
-  (eprolog-define-prolog-predicate parent (sazae fune))
-  (eprolog-define-prolog-predicate parent (tarao sazae))
-  (eprolog-define-prolog-predicate parent (ikura taiko))
+  (eprolog-define-prolog-predicate! (parent katsuo fune))
+  (eprolog-define-prolog-predicate (parent wakame fune))
+  (eprolog-define-prolog-predicate (parent sazae fune))
+  (eprolog-define-prolog-predicate (parent tarao sazae))
+  (eprolog-define-prolog-predicate (parent ikura taiko))
 
-  (eprolog-define-prolog-predicate! grandparent (_x _z) (parent _x _y) (parent _y _z))
+  (eprolog-define-prolog-predicate! (grandparent _x _z) (parent _x _y) (parent _y _z))
 
   ;; Test grandparent relationships
   (should (eprolog-test--has-solution-p '((grandparent tarao fune))))
@@ -639,19 +639,19 @@
   (eprolog-test--restore-builtins)
   
   ;; Setup family tree
-  (eprolog-define-prolog-predicate! parent (katsuo fune))
-  (eprolog-define-prolog-predicate parent (wakame fune))
-  (eprolog-define-prolog-predicate parent (sazae fune))
-  (eprolog-define-prolog-predicate parent (tarao sazae))
-  (eprolog-define-prolog-predicate parent (_x _y) (parent _x _z) ! (married _y _z))
+  (eprolog-define-prolog-predicate! (parent katsuo fune))
+  (eprolog-define-prolog-predicate (parent wakame fune))
+  (eprolog-define-prolog-predicate (parent sazae fune))
+  (eprolog-define-prolog-predicate (parent tarao sazae))
+  (eprolog-define-prolog-predicate (parent _x _y) (parent _x _z) ! (married _y _z))
 
-  (eprolog-define-prolog-predicate! married (_x _y) (married-fact _x _y))
-  (eprolog-define-prolog-predicate married (_x _y) (married-fact _y _x))
+  (eprolog-define-prolog-predicate! (married _x _y) (married-fact _x _y))
+  (eprolog-define-prolog-predicate (married _x _y) (married-fact _y _x))
 
-  (eprolog-define-prolog-predicate! married-fact (fune namihei))
-  (eprolog-define-prolog-predicate married-fact (sazae masuo))
+  (eprolog-define-prolog-predicate! (married-fact fune namihei))
+  (eprolog-define-prolog-predicate (married-fact sazae masuo))
 
-  (eprolog-define-prolog-predicate! sibling (_x _y) (parent _x _z) (parent _y _z) (not (= _x _y)))
+  (eprolog-define-prolog-predicate! (sibling _x _y) (parent _x _z) (parent _y _z) (not (= _x _y)))
 
   ;; Test sibling relationships
   (should (eprolog-test--has-solution-p '((sibling katsuo wakame))))
@@ -664,13 +664,13 @@
   (eprolog-test--restore-builtins)
   
   ;; Setup family tree (without complex parent rule)
-  (eprolog-define-prolog-predicate! parent (katsuo fune))
-  (eprolog-define-prolog-predicate parent (wakame fune))
-  (eprolog-define-prolog-predicate parent (sazae fune))
-  (eprolog-define-prolog-predicate parent (tarao sazae))
+  (eprolog-define-prolog-predicate! (parent katsuo fune))
+  (eprolog-define-prolog-predicate (parent wakame fune))
+  (eprolog-define-prolog-predicate (parent sazae fune))
+  (eprolog-define-prolog-predicate (parent tarao sazae))
 
-  (eprolog-define-prolog-predicate! ancestor (_x _y) (parent _x _y))
-  (eprolog-define-prolog-predicate ancestor (_x _y) (parent _x _z) (ancestor _z _y))
+  (eprolog-define-prolog-predicate! (ancestor _x _y) (parent _x _y))
+  (eprolog-define-prolog-predicate (ancestor _x _y) (parent _x _z) (ancestor _z _y))
 
   ;; Test ancestor relationships
   (should (eprolog-test--has-solution-p '((ancestor tarao sazae))))
@@ -682,12 +682,12 @@
   (eprolog-test--restore-builtins)
   
   ;; Setup family tree
-  (eprolog-define-prolog-predicate! parent (katsuo fune))
-  (eprolog-define-prolog-predicate parent (wakame fune))
-  (eprolog-define-prolog-predicate parent (sazae fune))
-  (eprolog-define-prolog-predicate parent (tarao sazae))
+  (eprolog-define-prolog-predicate! (parent katsuo fune))
+  (eprolog-define-prolog-predicate (parent wakame fune))
+  (eprolog-define-prolog-predicate (parent sazae fune))
+  (eprolog-define-prolog-predicate (parent tarao sazae))
 
-  (eprolog-define-prolog-predicate! child (_x _y) (parent _y _x))
+  (eprolog-define-prolog-predicate! (child _x _y) (parent _y _x))
 
   ;; Test child relationships
   (should (eprolog-test--has-solution-p '((child fune katsuo))))
@@ -701,29 +701,29 @@
   (eprolog-test--restore-builtins)
   
   ;; Setup family tree
-  (eprolog-define-prolog-predicate! parent (katsuo fune))
-  (eprolog-define-prolog-predicate parent (wakame fune))
-  (eprolog-define-prolog-predicate parent (sazae fune))
-  (eprolog-define-prolog-predicate parent (tarao sazae))
-  (eprolog-define-prolog-predicate parent (_x _y) (parent _x _z) ! (married _y _z))
+  (eprolog-define-prolog-predicate! (parent katsuo fune))
+  (eprolog-define-prolog-predicate (parent wakame fune))
+  (eprolog-define-prolog-predicate (parent sazae fune))
+  (eprolog-define-prolog-predicate (parent tarao sazae))
+  (eprolog-define-prolog-predicate (parent _x _y) (parent _x _z) ! (married _y _z))
 
-  (eprolog-define-prolog-predicate! married (_x _y) (married-fact _x _y))
-  (eprolog-define-prolog-predicate married (_x _y) (married-fact _y _x))
+  (eprolog-define-prolog-predicate! (married _x _y) (married-fact _x _y))
+  (eprolog-define-prolog-predicate (married _x _y) (married-fact _y _x))
 
-  (eprolog-define-prolog-predicate! married-fact (fune namihei))
-  (eprolog-define-prolog-predicate married-fact (sazae masuo))
+  (eprolog-define-prolog-predicate! (married-fact fune namihei))
+  (eprolog-define-prolog-predicate (married-fact sazae masuo))
 
-  (eprolog-define-prolog-predicate! male (namihei))
-  (eprolog-define-prolog-predicate male (katsuo))
-  (eprolog-define-prolog-predicate male (masuo))
-  (eprolog-define-prolog-predicate male (tarao))
+  (eprolog-define-prolog-predicate! (male namihei))
+  (eprolog-define-prolog-predicate (male katsuo))
+  (eprolog-define-prolog-predicate (male masuo))
+  (eprolog-define-prolog-predicate (male tarao))
 
-  (eprolog-define-prolog-predicate! female (fune))
-  (eprolog-define-prolog-predicate female (sazae))
-  (eprolog-define-prolog-predicate female (wakame))
+  (eprolog-define-prolog-predicate! (female fune))
+  (eprolog-define-prolog-predicate (female sazae))
+  (eprolog-define-prolog-predicate (female wakame))
 
-  (eprolog-define-prolog-predicate! mother (_x _y) (parent _x _y) (female _y))
-  (eprolog-define-prolog-predicate! father (_x _y) (parent _x _y) (male _y))
+  (eprolog-define-prolog-predicate! (mother _x _y) (parent _x _y) (female _y))
+  (eprolog-define-prolog-predicate! (father _x _y) (parent _x _y) (male _y))
 
   ;; Test mother relationships
   (should (eprolog-test--has-solution-p '((mother katsuo fune))))
@@ -742,18 +742,18 @@
   (eprolog-test--restore-builtins)
   
   ;; Setup family tree
-  (eprolog-define-prolog-predicate! parent (katsuo fune))
-  (eprolog-define-prolog-predicate parent (wakame fune))
-  (eprolog-define-prolog-predicate parent (sazae fune))
+  (eprolog-define-prolog-predicate! (parent katsuo fune))
+  (eprolog-define-prolog-predicate (parent wakame fune))
+  (eprolog-define-prolog-predicate (parent sazae fune))
 
-  (eprolog-define-prolog-predicate! male (katsuo))
-  (eprolog-define-prolog-predicate! female (fune))
-  (eprolog-define-prolog-predicate female (sazae))
-  (eprolog-define-prolog-predicate female (wakame))
+  (eprolog-define-prolog-predicate! (male katsuo))
+  (eprolog-define-prolog-predicate! (female fune))
+  (eprolog-define-prolog-predicate (female sazae))
+  (eprolog-define-prolog-predicate (female wakame))
 
-  (eprolog-define-prolog-predicate! sibling (_x _y) (parent _x _z) (parent _y _z) (not (= _x _y)))
-  (eprolog-define-prolog-predicate! sister (_x _y) (sibling _x _y) (female _y))
-  (eprolog-define-prolog-predicate! brother (_x _y) (sibling _x _y) (male _y))
+  (eprolog-define-prolog-predicate! (sibling _x _y) (parent _x _z) (parent _y _z) (not (= _x _y)))
+  (eprolog-define-prolog-predicate! (sister _x _y) (sibling _x _y) (female _y))
+  (eprolog-define-prolog-predicate! (brother _x _y) (sibling _x _y) (male _y))
 
   ;; Test sister relationships
   (should (eprolog-test--has-solution-p '((sister katsuo wakame))))
@@ -770,19 +770,19 @@
   (eprolog-test--restore-builtins)
   
   ;; Setup family tree
-  (eprolog-define-prolog-predicate! parent (katsuo fune))
-  (eprolog-define-prolog-predicate parent (wakame fune))
-  (eprolog-define-prolog-predicate parent (sazae fune))
-  (eprolog-define-prolog-predicate parent (tarao sazae))
+  (eprolog-define-prolog-predicate! (parent katsuo fune))
+  (eprolog-define-prolog-predicate (parent wakame fune))
+  (eprolog-define-prolog-predicate (parent sazae fune))
+  (eprolog-define-prolog-predicate (parent tarao sazae))
 
-  (eprolog-define-prolog-predicate! male (katsuo))
-  (eprolog-define-prolog-predicate! female (fune))
-  (eprolog-define-prolog-predicate female (sazae))
-  (eprolog-define-prolog-predicate female (wakame))
+  (eprolog-define-prolog-predicate! (male katsuo))
+  (eprolog-define-prolog-predicate! (female fune))
+  (eprolog-define-prolog-predicate (female sazae))
+  (eprolog-define-prolog-predicate (female wakame))
 
-  (eprolog-define-prolog-predicate! sibling (_x _y) (parent _x _z) (parent _y _z) (not (= _x _y)))
-  (eprolog-define-prolog-predicate! uncle (_x _y) (parent _y _z) (sibling _x _z) (male _x))
-  (eprolog-define-prolog-predicate! aunt (_x _y) (parent _y _z) (sibling _x _z) (female _x))
+  (eprolog-define-prolog-predicate! (sibling _x _y) (parent _x _z) (parent _y _z) (not (= _x _y)))
+  (eprolog-define-prolog-predicate! (uncle _x _y) (parent _y _z) (sibling _x _z) (male _x))
+  (eprolog-define-prolog-predicate! (aunt _x _y) (parent _y _z) (sibling _x _z) (female _x))
 
   ;; Test uncle relationships
   (should (eprolog-test--has-solution-p '((uncle katsuo tarao))))
@@ -795,17 +795,17 @@
   (eprolog-test--restore-builtins)
   
   ;; Setup family tree with cousins
-  (eprolog-define-prolog-predicate! parent (katsuo fune))
-  (eprolog-define-prolog-predicate parent (wakame fune))
-  (eprolog-define-prolog-predicate parent (sazae fune))
-  (eprolog-define-prolog-predicate parent (tarao sazae))
+  (eprolog-define-prolog-predicate! (parent katsuo fune))
+  (eprolog-define-prolog-predicate (parent wakame fune))
+  (eprolog-define-prolog-predicate (parent sazae fune))
+  (eprolog-define-prolog-predicate (parent tarao sazae))
   
   ;; Add another generation to create cousins
-  (eprolog-define-prolog-predicate parent (child1 katsuo))
-  (eprolog-define-prolog-predicate parent (child2 wakame))
+  (eprolog-define-prolog-predicate (parent child1 katsuo))
+  (eprolog-define-prolog-predicate (parent child2 wakame))
 
-  (eprolog-define-prolog-predicate! sibling (_x _y) (parent _x _z) (parent _y _z) (not (= _x _y)))
-  (eprolog-define-prolog-predicate cousin (_x _y) (parent _x _a) (parent _y _b) (sibling _a _b))
+  (eprolog-define-prolog-predicate! (sibling _x _y) (parent _x _z) (parent _y _z) (not (= _x _y)))
+  (eprolog-define-prolog-predicate! (cousin _x _y) (parent _x _a) (parent _y _b) (sibling _a _b))
 
   ;; Test cousin relationships
   (should (eprolog-test--has-solution-p '((cousin tarao child1))))
@@ -818,32 +818,32 @@
   (eprolog-test--restore-builtins)
   
   ;; Setup complete family tree (without recursive parent rule)
-  (eprolog-define-prolog-predicate! parent (katsuo fune))
-  (eprolog-define-prolog-predicate parent (wakame fune))
-  (eprolog-define-prolog-predicate parent (sazae fune))
-  (eprolog-define-prolog-predicate parent (tarao sazae))
-  (eprolog-define-prolog-predicate parent (ikura taiko))
+  (eprolog-define-prolog-predicate! (parent katsuo fune))
+  (eprolog-define-prolog-predicate (parent wakame fune))
+  (eprolog-define-prolog-predicate (parent sazae fune))
+  (eprolog-define-prolog-predicate (parent tarao sazae))
+  (eprolog-define-prolog-predicate (parent ikura taiko))
 
-  (eprolog-define-prolog-predicate! married (_x _y) (married-fact _x _y))
-  (eprolog-define-prolog-predicate married (_x _y) (married-fact _y _x))
+  (eprolog-define-prolog-predicate! (married _x _y) (married-fact _x _y))
+  (eprolog-define-prolog-predicate (married _x _y) (married-fact _y _x))
 
-  (eprolog-define-prolog-predicate! married-fact (fune namihei))
-  (eprolog-define-prolog-predicate married-fact (sazae masuo))
-  (eprolog-define-prolog-predicate married-fact (taiko norisuke))
+  (eprolog-define-prolog-predicate! (married-fact fune namihei))
+  (eprolog-define-prolog-predicate (married-fact sazae masuo))
+  (eprolog-define-prolog-predicate (married-fact taiko norisuke))
 
-  (eprolog-define-prolog-predicate! male (namihei))
-  (eprolog-define-prolog-predicate male (katsuo))
-  (eprolog-define-prolog-predicate male (masuo))
-  (eprolog-define-prolog-predicate male (tarao))
-  (eprolog-define-prolog-predicate male (norisuke))
+  (eprolog-define-prolog-predicate! (male namihei))
+  (eprolog-define-prolog-predicate (male katsuo))
+  (eprolog-define-prolog-predicate (male masuo))
+  (eprolog-define-prolog-predicate (male tarao))
+  (eprolog-define-prolog-predicate (male norisuke))
 
-  (eprolog-define-prolog-predicate! female (fune))
-  (eprolog-define-prolog-predicate female (sazae))
-  (eprolog-define-prolog-predicate female (taiko))
-  (eprolog-define-prolog-predicate female (wakame))
+  (eprolog-define-prolog-predicate! (female fune))
+  (eprolog-define-prolog-predicate (female sazae))
+  (eprolog-define-prolog-predicate (female taiko))
+  (eprolog-define-prolog-predicate (female wakame))
 
-  (eprolog-define-prolog-predicate! grandparent (_x _z) (parent _x _y) (parent _y _z))
-  (eprolog-define-prolog-predicate! sibling (_x _y) (parent _x _z) (parent _y _z) (not (= _x _y)))
+  (eprolog-define-prolog-predicate! (grandparent _x _z) (parent _x _y) (parent _y _z))
+  (eprolog-define-prolog-predicate! (sibling _x _y) (parent _x _z) (parent _y _z) (not (= _x _y)))
 
   ;; Test finding all children of fune
   (let ((solutions (eprolog-test--collect-solutions '((parent _child fune)))))
@@ -866,3 +866,4 @@
 (provide 'eprolog-test)
 
 ;;; eprolog-test.el ends here
+

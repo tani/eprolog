@@ -48,14 +48,14 @@ Place =eprolog.el= in your Emacs load path and add to your configuration:
 
 #+BEGIN_SRC emacs-lisp
 ;; Define facts (using convenient alias)
-(eprolog-define-predicate parent (tom bob))
-(eprolog-define-predicate parent (tom liz))
-(eprolog-define-predicate parent (bob ann))
-(eprolog-define-predicate parent (bob pat))
-(eprolog-define-predicate parent (pat jim))
+(eprolog-define-predicate (parent tom bob))
+(eprolog-define-predicate (parent tom liz))
+(eprolog-define-predicate (parent bob ann))
+(eprolog-define-predicate (parent bob pat))
+(eprolog-define-predicate (parent pat jim))
 
 ;; Define rules
-(eprolog-define-predicate grandparent (_x _z)
+(eprolog-define-predicate (grandparent _x _z)
   (parent _x _y)
   (parent _y _z))
 
@@ -123,8 +123,10 @@ Place =eprolog.el= in your Emacs load path and add to your configuration:
 Define a Prolog clause (fact or rule) and add it to the database.
 
 #+BEGIN_SRC emacs-lisp
-(eprolog-define-prolog-predicate name (arg1 arg2 ...) goal1 goal2 ...)
+(eprolog-define-prolog-predicate (name arg1 arg2 ...) goal1 goal2 ...)
 #+END_SRC
+
+The first argument is a head term containing the predicate name and its arguments. For facts with no arguments, you can omit the parentheses: =(eprolog-define-prolog-predicate name)=.
 
 *Alias:* =eprolog-define-predicate=
 
@@ -132,8 +134,10 @@ Define a Prolog clause (fact or rule) and add it to the database.
 Define a Prolog clause, replacing existing clauses with the same arity.
 
 #+BEGIN_SRC emacs-lisp
-(eprolog-define-prolog-predicate! name (arg1 arg2 ...) goal1 goal2 ...)
+(eprolog-define-prolog-predicate! (name arg1 arg2 ...) goal1 goal2 ...)
 #+END_SRC
+
+The first argument is a head term containing the predicate name and its arguments. For facts with no arguments, you can omit the parentheses: =(eprolog-define-prolog-predicate! name)=.
 
 *Alias:* =eprolog-define-predicate!=
 

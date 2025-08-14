@@ -658,39 +658,43 @@ Built-in predicates use this macro."
 
 ;;; Macros for defining clauses - PUBLIC API
 
-(defmacro eprolog-define-prolog-predicate (name args &rest body)
+(defmacro eprolog-define-prolog-predicate (head &rest body)
   "Define a Prolog clause (fact or rule) and add it to the clause database.
-NAME is the predicate symbol.
-ARGS is the list of arguments for the predicate head.
+HEAD is the predicate head, a list of (NAME . ARGS), or a symbol for predicates with no arguments.
 BODY is the optional list of goals forming the rule body.
 
 If BODY is empty, defines a fact.  If BODY is non-empty, defines a rule.
 Anonymous variables are automatically replaced with unique variables.
 
-Example: (eprolog-define-prolog-predicate parent (tom bob))
-Example: (eprolog-define-prolog-predicate grandparent (_x _z)
-          (parent _x _y) (parent _y _z))"
+Example: (eprolog-define-prolog-predicate (parent tom bob))
+Example: (eprolog-define-prolog-predicate (grandparent _x _z)
+          (parent _x _y) (parent _y _z))
+Example: (eprolog-define-prolog-predicate true)"
   (declare (indent defun))
-  (let ((clause (cons (cons name args) body)))
+  (let* ((head-list (if (consp head) head (list head)))
+         (clause (cons head-list body)))
     `(eprolog--add-clause (eprolog--replace-anonymous-variables ',clause))))
 (defalias 'eprolog-define-predicate 'eprolog-define-prolog-predicate)
 
 
-(defmacro eprolog-define-prolog-predicate! (name args &rest body)
+(defmacro eprolog-define-prolog-predicate! (head &rest body)
   "Define a Prolog clause, replacing existing clauses with the same arity.
-NAME is the predicate symbol.
-ARGS is the list of arguments for the predicate head.
+HEAD is the predicate head, a list of (NAME . ARGS), or a symbol for predicates with no arguments.
 BODY is the optional list of goals forming the rule body.
 
 Similar to `eprolog-define-prolog-predicate\=' but removes existing
 clauses for the predicate with the same arity before adding the new
 clause.  Used for predicate redefinition.
 
-Example: (eprolog-define-prolog-predicate! factorial (0 1))
+Example: (eprolog-define-prolog-predicate! (factorial 0 1))
+Example: (eprolog-define-prolog-predicate! true)
   replaces all factorial/2 clauses."
   (declare (indent defun))
-  (let ((arity (length args))
-        (clause (cons (cons name args) body)))
+  (let* ((head-list (if (consp head) head (list head)))
+         (name (car head-list))
+         (args (cdr head-list))
+         (arity (length args))
+         (clause (cons head-list body)))
     `(progn
        (eprolog--remove-clauses-with-arity! ',name ,arity)
        (eprolog--add-clause (eprolog--replace-anonymous-variables ',clause)))))
@@ -868,93 +872,91 @@ Retrieves the value associated with SYMBOL and unifies it with VAR."
 
 ;; Basic logical predicates defined in Prolog
 
-(eprolog-define-prolog-predicate! true ())
+(eprolog-define-prolog-predicate! true)
 (eprolog-define-prolog-predicate! false (fail))
 
-(eprolog-define-prolog-predicate! not (_goal)
+(eprolog-define-prolog-predicate! (not _goal)
   (call _goal) ! (fail))
-(eprolog-define-prolog-predicate not (_goal))
+(eprolog-define-prolog-predicate (not _goal))
 
 ;; Logical conjunction and disjunction
 
-(eprolog-define-prolog-predicate! and ()
-  (true))
-(eprolog-define-prolog-predicate! and (_x1)
+(eprolog-define-prolog-predicate! and (true))
+(eprolog-define-prolog-predicate! (and _x1)
   (call _x1))
-(eprolog-define-prolog-predicate! and (_x1 _x2)
+(eprolog-define-prolog-predicate! (and _x1 _x2)
   (and _x1) (and _x2))
-(eprolog-define-prolog-predicate! and (_x1 _x2 _x3)
+(eprolog-define-prolog-predicate! (and _x1 _x2 _x3)
   (and _x1 (and _x2 _x3)))
-(eprolog-define-prolog-predicate! and (_x1 _x2 _x3 _x4)
+(eprolog-define-prolog-predicate! (and _x1 _x2 _x3 _x4)
   (and _x1 (and _x2 _x3 _x4)))
 
-(eprolog-define-prolog-predicate! or ()
-  (false))
-(eprolog-define-prolog-predicate or (_x1)
+(eprolog-define-prolog-predicate! or (fail))
+(eprolog-define-prolog-predicate (or _x1)
   (call _x1))
-(eprolog-define-prolog-predicate or (_x1 _x2)
+(eprolog-define-prolog-predicate (or _x1 _x2)
   (or _x1))
-(eprolog-define-prolog-predicate or (_x1 _x2)
+(eprolog-define-prolog-predicate (or _x1 _x2)
   (or _x2))
-(eprolog-define-prolog-predicate or (_x1 _x2 _x3)
+(eprolog-define-prolog-predicate (or _x1 _x2 _x3)
   (or _x1 (or _x2 _x3)))
-(eprolog-define-prolog-predicate or (_x1 _x2 _x3 _x4)
+(eprolog-define-prolog-predicate (or _x1 _x2 _x3 _x4)
   (or _x1 (or _x2 _x3 _x4)))
 
 ;; Conditional predicate
 
-(eprolog-define-prolog-predicate! if (_cond _then)
+(eprolog-define-prolog-predicate! (if _cond _then)
   (call _cond) (call _then))
-(eprolog-define-prolog-predicate! if (_cond _then _else)
+(eprolog-define-prolog-predicate! (if _cond _then _else)
   (call _cond) ! (call _then))
-(eprolog-define-prolog-predicate if (_cond _then _else)
+(eprolog-define-prolog-predicate (if _cond _then _else)
   (call _else))
 
 ;; Arithmetic evaluation
 
-(eprolog-define-prolog-predicate! is (_result _expression)
+(eprolog-define-prolog-predicate! (is _result _expression)
   (lisp _result _expression))
 
 ;; Control predicate for infinite choice points
 
-(eprolog-define-prolog-predicate! repeat ())
-(eprolog-define-prolog-predicate repeat () (repeat))
+(eprolog-define-prolog-predicate! repeat)
+(eprolog-define-prolog-predicate (repeat) (repeat))
 
 ;; List manipulation predicates
 
-(eprolog-define-prolog-predicate! member (_item (_item . _)))
-(eprolog-define-prolog-predicate member (_item (_ . _rest)) (member _item _rest))
+(eprolog-define-prolog-predicate! (member _item (_item . _)))
+(eprolog-define-prolog-predicate (member _item (_ . _rest)) (member _item _rest))
 
 ;; Higher-order predicates
 
-(eprolog-define-prolog-predicate! maplist (_goal ()))
-(eprolog-define-prolog-predicate maplist (_goal (_head . _tail))
+(eprolog-define-prolog-predicate! (maplist _goal ()))
+(eprolog-define-prolog-predicate (maplist _goal (_head . _tail))
   (call _goal _head)
   (maplist _goal _tail))
 
-(eprolog-define-prolog-predicate! maplist (_goal () ()))
-(eprolog-define-prolog-predicate maplist (_goal (_head1 . _tail1) (_head2 . _tail2))
+(eprolog-define-prolog-predicate! (maplist _goal () ()))
+(eprolog-define-prolog-predicate (maplist _goal (_head1 . _tail1) (_head2 . _tail2))
   (call _goal _head1 _head2)
   (maplist _goal _tail1 _tail2))
 
-(eprolog-define-prolog-predicate! maplist (_goal () () ()))
-(eprolog-define-prolog-predicate maplist (_goal (_head1 . _tail1) (_head2 . _tail2) (_head3 . _tail3))
+(eprolog-define-prolog-predicate! (maplist _goal () () ()))
+(eprolog-define-prolog-predicate (maplist _goal (_head1 . _tail1) (_head2 . _tail2) (_head3 . _tail3))
   (call _goal _head1 _head2 _head3)
   (maplist _goal _tail1 _tail2 _tail3))
 
-(eprolog-define-prolog-predicate! maplist (_goal () () () ()))
-(eprolog-define-prolog-predicate maplist (_goal (_head1 . _tail1) (_head2 . _tail2) (_head3 . _tail3) (_head4 . _tail4))
+(eprolog-define-prolog-predicate! (maplist _goal () () () ()))
+(eprolog-define-prolog-predicate (maplist _goal (_head1 . _tail1) (_head2 . _tail2) (_head3 . _tail3) (_head4 . _tail4))
   (call _goal _head1 _head2 _head3 _head4)
   (maplist _goal _tail1 _tail2 _tail3 _tail4))
 
 ;; List concatenation
 
-(eprolog-define-prolog-predicate! append (() _list _list))
-(eprolog-define-prolog-predicate append ((_head . _tail) _list (_head . _result))
+(eprolog-define-prolog-predicate! (append () _list _list))
+(eprolog-define-prolog-predicate (append (_head . _tail) _list (_head . _result))
   (append _tail _list _result))
 
-(eprolog-define-prolog-predicate! append (() ()))
-(eprolog-define-prolog-predicate append ((_head . _tail) _result)
+(eprolog-define-prolog-predicate! (append () ()))
+(eprolog-define-prolog-predicate (append (_head . _tail) _result)
   (append _tail _tail-result)
   (append _head _tail-result _result))
 
@@ -1054,7 +1056,7 @@ Examples:
          (out-var (cl-gensym "_"))
          (transformed-args `(,@head-args ,in-var ,out-var))
          (transformed-body (eprolog--transform-dcg-body body in-var out-var)))
-    `(eprolog-define-prolog-predicate! ,head-name ,transformed-args ,@transformed-body)))
+    `(eprolog-define-prolog-predicate! (,head-name ,@transformed-args) ,@transformed-body)))
 
 (defmacro eprolog-define-grammar (&rest dcg-parts)
   "Define a DCG rule (DCG-PARTS), adding to existing rules with the same arity.
@@ -1084,15 +1086,16 @@ Examples:
          (out-var (cl-gensym "_"))
          (transformed-args `(,@head-args ,in-var ,out-var))
          (transformed-body (eprolog--transform-dcg-body body in-var out-var)))
-    `(eprolog-define-prolog-predicate ,head-name ,transformed-args ,@transformed-body)))
+    `(eprolog-define-prolog-predicate (,head-name ,@transformed-args) ,@transformed-body)))
 
 ;; DCG parsing predicates
 
-(eprolog-define-prolog-predicate! phrase (_NonTerminal _List)
-  (call _NonTerminal _List ()))
+(eprolog-define-prolog-predicate! (phrase _NonTerminal _List)
+  (call _NonTerminal _List nil))
 
-(eprolog-define-prolog-predicate phrase (_NonTerminal _List _Rest)
+(eprolog-define-prolog-predicate (phrase _NonTerminal _List _Rest)
   (call _NonTerminal _List _Rest))
 
 (provide 'eprolog)
 ;;; eprolog.el ends here
+
