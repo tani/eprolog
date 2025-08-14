@@ -4,14 +4,18 @@
 
 * Introduction
 
-This file contains comprehensive examples and executable tests for ε-prolog, combining practical examples from README.org and eprolog.el. Each section demonstrates specific features with working ERT tests.
+Welcome to the comprehensive guide and test suite for ε-prolog, a sophisticated implementation of Prolog within the Emacs Lisp ecosystem. This document bridges theoretical understanding and practical application by combining educational examples with executable tests using ERT (Emacs Lisp Regression Testing).
 
-To run all tests:
+What makes this document unique is its dual nature: every example is both a learning tool and a working test case. As you read through the explanations and examples, you're also examining a complete test suite that validates ε-prolog's functionality. This approach ensures that all examples are accurate, up-to-date, and actually work as described.
+
+The document draws from practical examples in README.org and the implementation details in eprolog.el, presenting them in a structured, progressive manner that builds your understanding from basic concepts to advanced applications.
+
+To run all tests from the command line, execute:
 #+BEGIN_SRC bash :eval no
 emacs -batch -l eprolog.el -l USAGE.org -f ert-run-tests-batch-and-exit
 #+END_SRC
 
-Or interactively:
+Or to run tests interactively within Emacs:
 #+BEGIN_SRC emacs-lisp :eval never :tangle no
 (org-babel-load-file "USAGE.org")
 (ert-run-tests-interactively t)
@@ -19,14 +23,17 @@ Or interactively:
 
 * Setup
 
-This section establishes the testing environment for ε-prolog. We define helper functions that make it easy to test whether queries succeed or fail, collect multiple solutions, and restore the clean state between tests.
+Every comprehensive test suite begins with careful preparation. This section establishes the testing infrastructure that makes all subsequent demonstrations both reliable and reproducible. Think of it as setting up a laboratory where we can conduct logical experiments safely and systematically.
 
-The setup includes:
-- Loading required libraries (eprolog and ert for testing)
-- Helper functions for testing query success/failure
-- Solution collection utilities
-- State restoration mechanisms to ensure test isolation
+The testing environment we create here serves multiple purposes: it ensures test isolation (so one test doesn't affect another), provides convenient utilities for examining Prolog behavior, and maintains consistency across all examples in this document.
 
+Our testing framework includes several key components:
+- **Library Loading**: Essential modules (eprolog for Prolog functionality, ert for testing framework)
+- **Query Testing Utilities**: Functions to check if queries succeed or fail
+- **Solution Collection**: Tools to gather and examine all possible answers to queries
+- **State Management**: Mechanisms to ensure each test starts with a clean slate
+
+The following code block establishes this testing foundation:
 #+BEGIN_SRC emacs-lisp
 (require 'eprolog)
 (require 'ert)
@@ -62,18 +69,25 @@ The setup includes:
 
 * Core Prolog Functionality
 
-This section covers the fundamental building blocks of ε-prolog: facts, rules, and basic logical reasoning. These are the core concepts that every Prolog programmer must understand.
+Prolog operates on a beautifully simple yet powerful principle: you describe what you know (facts) and what can be inferred (rules), then ask questions about this knowledge. This section explores the fundamental architecture of logical programming, showing how ε-prolog transforms declarative statements into a queryable knowledge base.
+
+Understanding these core concepts is essential because they form the conceptual foundation for everything else in Prolog. Unlike imperative programming where you tell the computer *how* to solve problems, Prolog lets you describe *what* the problem is and lets the system figure out the solution through logical inference.
 
 ** Facts and Rules
 
-Facts represent basic truths in your knowledge base, while rules define logical relationships and implications. In ε-prolog, you define facts and rules using `eprolog-define-predicate`. The following tests demonstrate basic fact definition, rule creation, and querying.
+Think of facts as the basic building blocks of knowledge—simple, indisputable statements about your domain. Rules, on the other hand, are logical recipes that show how to derive new knowledge from existing facts and other rules. Together, they form a powerful knowledge representation system that can answer complex questions through logical inference.
 
-This subsection shows:
-- How to define simple facts (parent relationships)
-- How to create rules that derive new information (grandparent from parent relationships)
-- How to query the knowledge base
-- How to collect multiple solutions from queries
+The beauty of this approach lies in its declarative nature: you don't need to specify *how* to find answers, only *what* relationships exist. The Prolog engine handles the reasoning process, exploring different logical paths to find solutions.
 
+In ε-prolog, both facts and rules are defined using `eprolog-define-predicate`. This unified interface makes it easy to build sophisticated knowledge bases incrementally.
+
+Key concepts demonstrated in this subsection:
+- **Fact Definition**: Establishing basic truths (like family relationships)
+- **Rule Creation**: Defining logical implications (deriving grandparent from parent relationships)
+- **Knowledge Base Querying**: Asking questions and getting answers
+- **Solution Collection**: Gathering all possible answers to a query
+
+This test demonstrates the fundamental pattern of Prolog programming: starting with basic facts and building complex relationships through rules. We create a family tree and then derive grandparent relationships from parent facts:
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-usage-basic-facts-and-rules ()
   "Test basic fact and rule definition from README.org examples."
@@ -111,6 +125,7 @@ This subsection shows:
 
 This test demonstrates the basic building blocks of Prolog programming: facts and rules. We create a simple family tree with parent relationships and then define a rule to derive grandparent relationships. The test shows how to verify that facts are correctly stored and that rules correctly infer new information.
 
+The following test focuses on the mechanics of defining predicates, showing how facts are stored in the knowledge base:
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-usage-predicate-definition-tests ()
   "Test basic predicate definition functionality."
@@ -127,6 +142,7 @@ This test demonstrates the basic building blocks of Prolog programming: facts an
 
 This test focuses specifically on the mechanics of defining facts. It shows the most basic operation in Prolog: asserting that certain relationships hold. This forms the foundation for more complex logical reasoning.
 
+Sometimes you need to replace all clauses of a predicate rather than adding new ones. The exclamation mark syntax provides this capability:
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-usage-predicate-replacement ()
   "Test predicate replacement with ! operator."
@@ -146,6 +162,7 @@ This test focuses specifically on the mechanics of defining facts. It shows the 
 
 This test demonstrates predicate replacement semantics in ε-prolog. When you use `eprolog-define-predicate!` with the exclamation mark, it replaces all existing clauses for that predicate. This is important for understanding how to update your knowledge base dynamically.
 
+Here's a more culturally diverse example using Japanese anime characters, demonstrating the same concepts with different data:
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-usage-family-tree-sazae-san ()
   "Test family tree relationships with Sazae-san characters."
@@ -171,14 +188,19 @@ This test demonstrates predicate replacement semantics in ε-prolog. When you us
 
 ** Unification and Equality
 
-Unification is the process of making two terms equal by finding appropriate variable bindings. This is the core mechanism that makes Prolog work. ε-prolog provides several predicates for different types of equality and unification.
+Unification is the beating heart of Prolog's inference engine—the fundamental process that makes logical programming possible. It's more sophisticated than simple equality checking; unification actively attempts to make two terms identical by finding appropriate values for variables, essentially solving equations in the realm of symbolic logic.
 
-This subsection covers:
-- The `=/2` predicate for unification (allows variable binding)
-- The `==/2` predicate for strict equality (no variable binding)
-- How variables get bound during unification
-- The difference between unification and strict equality
+Consider unification as Prolog's way of pattern matching with intelligence. When you ask whether two terms can be made equal, Prolog doesn't just check if they're already identical—it explores whether there's a way to bind variables that would make them match. This capability transforms static queries into dynamic problem-solving.
 
+The distinction between different types of equality is crucial for understanding Prolog's behavior. While mathematical equality is binary (either equal or not), Prolog offers nuanced comparison operations tailored to different logical needs.
+
+Essential concepts in this subsection:
+- **Unification (`=/2`)**: Intelligent pattern matching that binds variables to achieve equality
+- **Strict Equality (`==/2`)**: Traditional equality checking without variable modification  
+- **Variable Binding**: How Prolog assigns values to variables during unification
+- **Pattern Matching**: The process of matching structural templates with concrete data
+
+The following test demonstrates the fundamental difference between unification and strict equality:
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-usage-unification-and-equality ()
   "Test unification and equality predicates."
@@ -196,6 +218,7 @@ This subsection covers:
 
 This test shows the fundamental difference between unification (`=`) and strict equality (`==`). Unification can bind variables to make terms equal, while strict equality only succeeds if terms are already identical.
 
+Complex unification scenarios demonstrate how Prolog's pattern matching works with structured data:
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-usage-variable-unification-advanced ()
   "Test advanced variable unification patterns."
@@ -220,6 +243,7 @@ This test shows the fundamental difference between unification (`=`) and strict 
 
 This test demonstrates more complex unification scenarios, showing how variables get bound during query execution and how you can collect multiple solutions with different variable bindings.
 
+Anonymous variables provide a way to match patterns when you don't care about certain values:
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-usage-anonymous-variables ()
   "Test anonymous variable handling."
@@ -234,6 +258,7 @@ This test demonstrates more complex unification scenarios, showing how variables
 
 Anonymous variables (represented by `_`) are special in Prolog. Each `_` is treated as a unique variable that you don't care about the value of. This is useful when you need to match a pattern but don't need to use some of the matched values.
 
+The occurs check prevents the creation of infinite structures during unification:
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-usage-occurs-check ()
   "Test occurs check in unification."
@@ -247,19 +272,24 @@ Anonymous variables (represented by `_`) are special in Prolog. Each `_` is trea
 
 * Built-in Predicates
 
-ε-prolog comes with a comprehensive set of built-in predicates that provide essential functionality for type checking, list manipulation, and higher-order operations. These predicates form the standard library that most Prolog programs rely on.
+Just as every programming language provides a standard library of essential functions, ε-prolog comes equipped with a comprehensive collection of built-in predicates that handle common programming tasks. These predicates are the workhorses of Prolog programming, providing battle-tested solutions for frequent operations like type checking, list processing, and higher-order transformations.
+
+What makes these predicates particularly valuable is their logical nature—they don't just perform operations, they establish relationships. A predicate like `member/2` doesn't just check membership; it can generate all members of a list, verify membership, or even work backwards to find lists containing specific elements. This multi-directional functionality is a hallmark of logical programming.
 
 ** Type Checking
 
-Type checking predicates allow you to test what kind of data you're working with. This is essential for writing robust Prolog programs that handle different data types appropriately.
+In the dynamic world of Prolog, where variables can be bound to any type of data during execution, type checking becomes both an art and a necessity. Unlike statically typed languages that catch type errors at compile time, Prolog's flexible nature requires runtime type inspection to write robust, defensive code.
 
-This subsection demonstrates:
-- `atom/1` for testing atomic values
-- `var/1` for testing unbound variables  
-- `number/1` for testing numeric values
-- `string/1` for testing string values
-- `ground/1` for testing if a term contains no variables
+Type checking predicates serve as your guardians against unexpected data, enabling you to write predicates that gracefully handle different types of input. They're particularly valuable when building predicates that need to behave differently based on the nature of their arguments—a common pattern in sophisticated Prolog programs.
 
+The type checking arsenal in ε-prolog includes:
+- **`atom/1`**: Identifies atomic values (symbols, constants)
+- **`var/1`**: Detects unbound variables (useful for checking instantiation)
+- **`number/1`**: Verifies numeric data (integers, floats)  
+- **`string/1`**: Recognizes string literals
+- **`ground/1`**: Ensures terms are fully instantiated (contain no variables)
+
+The following test demonstrates the basic type checking predicates available in ε-prolog:
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-usage-type-checking ()
   "Test type checking predicates from README.org."
@@ -284,6 +314,7 @@ This subsection demonstrates:
 
 This test shows how to use the basic type checking predicates. These are fundamental for writing predicates that need to behave differently depending on the type of their arguments.
 
+The ground predicate is particularly useful for checking whether a term is fully instantiated:
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-usage-ground-predicate ()
   "Test ground term checking."
@@ -301,14 +332,17 @@ This test shows how to use the basic type checking predicates. These are fundame
 
 ** List Operations
 
-List processing is central to Prolog programming. ε-prolog provides powerful built-in predicates for working with lists, including membership testing, concatenation, and list transformation.
+Lists are the Swiss Army knife of Prolog data structures—versatile, ubiquitous, and surprisingly powerful. In Prolog, lists aren't just containers; they're logical structures that can be deconstructed, analyzed, and manipulated through pattern matching and unification. This makes list processing in Prolog fundamentally different from imperative languages.
 
-This subsection covers:
-- `member/2` for testing list membership and generating list elements
-- `append/3` for list concatenation and decomposition
-- `append/2` for concatenating a list of lists
-- How these predicates work in multiple directions (testing, generating, decomposing)
+The true magic of Prolog list operations lies in their *relational* nature. A predicate like `append/3` doesn't just concatenate lists—it defines a three-way relationship between lists. You can use it to join lists, split them, or even generate all possible ways to partition a list. This multi-directional capability transforms simple operations into powerful problem-solving tools.
 
+Core list manipulation predicates:
+- **`member/2`**: The membership oracle—tests, generates, and validates list elements
+- **`append/3`**: The list relationship specialist—concatenates, decomposes, and partitions
+- **`append/2`**: Flattens a list of lists into a single list
+- **Bidirectional Operations**: Using the same predicate for testing, generation, and decomposition
+
+The following test demonstrates the versatility of list operations in Prolog:
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-usage-list-operations ()
   "Test list operation predicates from README.org examples."
@@ -345,6 +379,8 @@ This subsection covers:
 
 ** Higher-order Predicates
 
+Higher-order predicates bring functional programming concepts to Prolog, allowing predicates to be passed as arguments to other predicates. This enables powerful abstraction patterns.
+
 Higher-order predicates take other predicates as arguments, enabling powerful patterns for list processing and transformation. These predicates implement common functional programming patterns in a logical setting.
 
 This subsection demonstrates:
@@ -352,6 +388,7 @@ This subsection demonstrates:
 - `maplist/3` for applying a binary predicate to corresponding elements of two lists
 - How to use predicates as arguments to other predicates
 
+The following test shows how to use higher-order predicates for list transformation:
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-usage-higher-order-predicates ()
   "Test maplist higher-order predicates."
@@ -373,9 +410,13 @@ This subsection demonstrates:
 
 * Control Flow
 
-Control flow in Prolog is fundamentally different from imperative languages. Instead of explicit loops and conditionals, Prolog uses logical predicates to control execution flow, backtracking, and choice points.
+Control flow in Prolog represents a paradigm shift from the sequential, step-by-step execution model of imperative languages. Instead of explicit loops and conditional statements, Prolog orchestrates program flow through logical relationships, backtracking, and the elegant dance of success and failure.
+
+This approach reflects Prolog's declarative nature: rather than specifying *how* to control execution, you describe *what* conditions lead to success or failure, and let the Prolog engine navigate the logical landscape. The result is a control flow mechanism that's both more abstract and more powerful than traditional imperative constructs.
 
 ** Basic Control Predicates
+
+These fundamental predicates provide the building blocks for controlling program flow in Prolog. They allow you to force failure, guarantee success, or negate conditions.
 
 These predicates provide basic control over execution flow, including ways to fail deliberately, succeed unconditionally, or negate conditions.
 
@@ -385,6 +426,7 @@ This subsection covers:
 - `false` - alias for fail
 - `not/1` - negation as failure
 
+The following test demonstrates the basic control predicates:
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-usage-control-predicates ()
   "Test control predicates."
@@ -402,6 +444,7 @@ This subsection covers:
 
 This test demonstrates the basic control predicates. Understanding these is crucial for controlling the flow of execution in Prolog programs.
 
+The fail predicate serves a specific purpose in forcing backtracking:
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-usage-fail-predicate ()
   "Test the fail predicate."
@@ -411,6 +454,7 @@ This test demonstrates the basic control predicates. Understanding these is cruc
 
 The `fail` predicate is simple but important - it always fails. This is useful for forcing backtracking or for implementing certain control patterns.
 
+The cut operator is one of Prolog's most powerful and controversial features, allowing precise control over backtracking:
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-usage-cut-predicate ()
   "Test cut (!) behavior as standalone predicate."
@@ -429,6 +473,7 @@ The `fail` predicate is simple but important - it always fails. This is useful f
 
 The cut (`!`) is one of the most important control mechanisms in Prolog. It removes choice points, preventing backtracking past the cut. This test shows how cut limits the solutions returned by a predicate.
 
+The call predicate enables meta-programming by allowing dynamic predicate invocation:
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-usage-call-predicate ()
   "Test the call predicate."
@@ -441,6 +486,8 @@ The cut (`!`) is one of the most important control mechanisms in Prolog. It remo
 
 ** Logical Operators
 
+Logical operators provide ways to combine and modify logical conditions, essential for building complex queries and control structures in Prolog programs.
+
 Logical operators allow you to combine and modify logical conditions. These are essential for building complex queries and control structures.
 
 This subsection demonstrates:
@@ -448,6 +495,7 @@ This subsection demonstrates:
 - `or/0-4` for logical disjunction (at least one condition must be true)  
 - `if/2` and `if/3` for conditional execution (if-then and if-then-else)
 
+The following test demonstrates logical combination operators:
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-usage-logical-predicates ()
   "Test logical conjunction and disjunction predicates."
@@ -472,6 +520,7 @@ This subsection demonstrates:
   (should (eprolog-test--has-solution-p '((if fail fail true)))))
 #+END_SRC
 
+Conditional execution provides if-then-else semantics in a logical context:
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-usage-if-then-else ()
   "Test conditional predicate (if) as standalone test."
@@ -486,6 +535,7 @@ This subsection demonstrates:
 
 ** Meta-predicates
 
+Meta-predicates operate on other predicates, enabling powerful meta-programming capabilities in Prolog:
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-usage-metacall-predicates ()
   "Test meta-call predicates."
@@ -502,6 +552,7 @@ This subsection demonstrates:
 
 ** Cut and Backtracking Control
 
+Understanding how cut affects backtracking is crucial for writing efficient Prolog programs:
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-usage-cut-semantics ()
   "Test cut (!) semantics."
@@ -526,6 +577,7 @@ This subsection demonstrates:
     (should (equal (cdr (assoc '_x (car solutions))) 'a))))
 #+END_SRC
 
+The repeat predicate creates infinite choice points, useful for implementing loops:
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-usage-repeat-predicate ()
   "Test repeat predicate for infinite choice points."
@@ -544,9 +596,13 @@ This subsection demonstrates:
 
 * Lisp Integration
 
-One of ε-prolog's unique features is its tight integration with Emacs Lisp. This allows you to seamlessly combine logical programming with functional programming, accessing the full power of both paradigms.
+One of ε-prolog's most remarkable achievements is its seamless fusion with Emacs Lisp, creating a hybrid programming environment where logical and functional paradigms complement each other naturally. This integration isn't just a technical convenience—it's a bridge between two fundamentally different ways of thinking about computation.
+
+The beauty of this integration lies in its bidirectional nature. Prolog queries can invoke Lisp functions to perform calculations, access Emacs features, or manipulate data structures, while Lisp code can query the Prolog knowledge base. This creates a powerful symbiosis where each language contributes its strengths to solve complex problems.
 
 ** Basic Lisp Interface
+
+The basic Lisp interface provides predicates that bridge the gap between Prolog's logical world and Lisp's functional world. These predicates are essential for practical programming in ε-prolog.
 
 The basic Lisp interface provides predicates for calling Lisp code from within Prolog queries. This is essential for accessing Emacs functions, performing calculations, and integrating with the Emacs environment.
 
@@ -556,6 +612,7 @@ This subsection covers:
 - `lisp!/1` for evaluating Lisp expressions for side effects only
 - How to pass data between Prolog and Lisp
 
+The following test demonstrates the three main ways to interface with Lisp:
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-usage-lisp-integration ()
   "Test Lisp integration predicates from README.org examples."
@@ -576,6 +633,7 @@ This subsection covers:
     (should (eq test-var 'success))))
 #+END_SRC
 
+Evaluating Lisp expressions and capturing their results enables powerful computations:
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-usage-lisp-predicate ()
   "Test Lisp evaluation predicate as standalone test."
@@ -585,6 +643,7 @@ This subsection covers:
     (should (equal (cdr (assoc '_x (car solutions))) 5))))
 #+END_SRC
 
+Sometimes you need to execute Lisp code for its side effects rather than its return value:
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-usage-lisp-side-effects ()
   "Test Lisp side effect predicate as standalone test."
@@ -594,6 +653,7 @@ This subsection covers:
   (should (eq eprolog-test--temp-var 'modified)))
 #+END_SRC
 
+Using Lisp expressions as boolean tests enables complex conditional logic:
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-usage-lisp-conditional ()
   "Test Lisp conditional predicate as standalone test."
@@ -604,6 +664,7 @@ This subsection covers:
 
 ** Dynamic Parameters
 
+Dynamic parameters provide a way to maintain state across predicate calls within a query:
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-usage-dynamic-parameters ()
   "Test dynamic parameter predicates."
@@ -626,9 +687,13 @@ This subsection covers:
 
 * Arithmetic and Mathematics
 
+Arithmetic in Prolog requires explicit evaluation, which distinguishes it from many other programming languages. This section explores how ε-prolog handles mathematical computations and provides predicates for numerical operations.
+
 Arithmetic in Prolog requires explicit evaluation using the `is/2` predicate. Unlike many programming languages, arithmetic expressions are not automatically evaluated - they remain as symbolic structures until explicitly computed.
 
 ** Basic Arithmetic
+
+The `is/2` predicate is the cornerstone of arithmetic in Prolog, providing explicit evaluation of mathematical expressions.
 
 The `is/2` predicate evaluates arithmetic expressions and unifies the result with a variable. This is the primary way to perform calculations in Prolog.
 
@@ -638,6 +703,7 @@ This subsection demonstrates:
 - How `is/2` evaluates expressions and binds results
 - Integration with mathematical functions (sqrt, expt, etc.)
 
+The following test demonstrates basic and complex arithmetic operations:
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-usage-arithmetic ()
   "Test arithmetic evaluation with is/2 and mathematical functions."
@@ -663,6 +729,7 @@ This subsection demonstrates:
     (should (equal (cdr (assoc '_x (car solutions))) 10))))
 #+END_SRC
 
+The is/2 predicate serves as the foundation for all arithmetic operations:
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-usage-is-predicate ()
   "Test basic is/2 predicate as standalone test."
@@ -672,6 +739,7 @@ This subsection demonstrates:
     (should (equal (cdr (assoc '_x (car solutions))) 5))))
 #+END_SRC
 
+Testing various arithmetic operations demonstrates the range of mathematical capabilities:
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-usage-basic-arithmetic-operations ()
   "Test basic arithmetic operations with is/2."
@@ -689,6 +757,7 @@ This subsection demonstrates:
     (should (equal (cdr (assoc '_x (car solutions))) 63))))
 #+END_SRC
 
+Complex expressions and mathematical functions extend the computational capabilities:
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-usage-complex-arithmetic ()
   "Test complex arithmetic expressions."
@@ -704,6 +773,7 @@ This subsection demonstrates:
 
 ** Mathematical Predicates
 
+Building mathematical predicates demonstrates how to combine arithmetic with logical programming:
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-usage-mathematical-predicates ()
   "Test mathematical predicates."
@@ -749,6 +819,7 @@ This subsection demonstrates:
     (should (equal (cdr (assoc '_result (car solutions))) 15))))
 #+END_SRC
 
+Arithmetic comparisons are essential for numerical reasoning in Prolog:
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-usage-arithmetic-comparisons ()
   "Test arithmetic comparisons using lispp."
@@ -768,6 +839,7 @@ This subsection demonstrates:
   (should-not (eprolog-test--has-solution-p '((lispp (= 5 8))))))
 #+END_SRC
 
+Custom comparison predicates demonstrate how to build domain-specific numerical logic:
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-usage-custom-comparison-predicates ()
   "Test custom comparison predicates using lispp."
@@ -790,6 +862,7 @@ This subsection demonstrates:
   (should-not (eprolog-test--has-solution-p '((positive -5)))))
 #+END_SRC
 
+Mathematical utility predicates like absolute value and min/max are common requirements:
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-usage-absolute-value-and-minmax ()
   "Test absolute value and min/max predicates."
@@ -829,6 +902,7 @@ This subsection demonstrates:
 
 ** Geometric Calculations
 
+Geometric calculations demonstrate how to build more complex mathematical predicates:
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-usage-geometric-calculations ()
   "Test geometric calculations."
@@ -861,9 +935,13 @@ This subsection demonstrates:
 
 * DCG (Definite Clause Grammars)
 
-Definite Clause Grammars (DCGs) provide a powerful and elegant way to parse and generate structured text. DCGs extend Prolog with a special syntax for working with sequences (typically lists of tokens), making it ideal for natural language processing, parsing, and generation tasks.
+Definite Clause Grammars stand as one of Prolog's most sophisticated and elegant contributions to computational linguistics and parsing theory. DCGs transform the traditionally complex task of parsing into a declarative, almost literary description of language structure. They represent a perfect marriage of formal grammar theory with the practical power of logic programming.
+
+What makes DCGs truly remarkable is their bidirectional nature—the same grammar rules that parse text can also generate it. This symmetry reflects a deep mathematical principle: if you can describe the structure of valid sentences, you automatically have a system that can both recognize and produce those sentences. DCGs embody this principle with remarkable elegance and efficiency.
 
 ** Basic Grammar Operations
+
+DCGs transform the task of parsing from explicit list manipulation to declarative grammar rules. This section introduces the fundamental concepts and operations.
 
 DCGs allow you to define grammars using a rule-based approach where each grammar rule corresponds to a Prolog predicate. The special DCG syntax automatically handles the threading of the input list through the grammar rules.
 
@@ -873,6 +951,7 @@ This subsection demonstrates:
 - The `phrase/2` and `phrase/3` predicates for parsing
 - Simple sentence parsing with determiners, nouns, and verbs
 
+The following test introduces basic DCG concepts with a simple grammar:
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-usage-dcg-basic ()
   "Test basic DCG functionality."
@@ -887,6 +966,7 @@ This subsection demonstrates:
   (should-not (eprolog-test--has-solution-p '((phrase sentence ("cat" "sleeps"))))))
 #+END_SRC
 
+A more complete grammar demonstrates how DCGs can parse natural language structures:
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-usage-dcg-basic-grammar ()
   "Test basic DCG grammar definition and parsing."
@@ -911,6 +991,7 @@ This subsection demonstrates:
   (should-not (eprolog-test--has-solution-p '((phrase s ("cat" "the" "chases"))))))
 #+END_SRC
 
+DCGs can also parse partial input, returning the unparsed remainder:
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-usage-dcg-parsing-with-remainder ()
   "Test DCG parsing with remainder."
@@ -933,6 +1014,7 @@ This subsection demonstrates:
 
 ** Advanced DCG Features
 
+Advanced DCG features enable more sophisticated parsing and generation capabilities:
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-usage-dcg-epsilon-productions ()
   "Test DCG epsilon (empty) productions."
@@ -950,6 +1032,7 @@ This subsection demonstrates:
   (should (eprolog-test--has-solution-p '((phrase np ("the" "big" "cat"))))))
 #+END_SRC
 
+DCGs with arguments enable grammatical agreement and semantic processing:
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-usage-dcg-with-args ()
   "Test DCG with arguments."
@@ -972,6 +1055,7 @@ This subsection demonstrates:
   (should-not (eprolog-test--has-solution-p '((phrase (noun plural) ("cat"))))))
 #+END_SRC
 
+Semantic actions in DCGs allow you to build parse trees or perform computations during parsing:
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-usage-dcg-semantic-actions ()
   "Test DCG semantic actions."
@@ -992,6 +1076,7 @@ This subsection demonstrates:
   (should-not (eprolog-test--has-solution-p '((phrase (s _) ("a" "cat" "chase" "some" "cats"))))))
 #+END_SRC
 
+Cut operations in DCGs provide control over parsing alternatives:
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-usage-dcg-cut-operations ()
   "Test DCG cut operations."
@@ -1009,6 +1094,7 @@ This subsection demonstrates:
 
 ** Grammar Generation
 
+DCGs work bidirectionally - they can generate sentences as well as parse them:
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-usage-dcg-generation ()
   "Test DCG sentence generation."
@@ -1028,6 +1114,7 @@ This subsection demonstrates:
     (should (equal (cdr (assoc '_sentence (car solutions))) '("the" "cat" "runs")))))
 #+END_SRC
 
+Length-constrained generation demonstrates how to combine DCGs with other predicates:
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-usage-dcg-length-constrained-generation ()
   "Test DCG generation with length constraints."
@@ -1051,6 +1138,7 @@ This subsection demonstrates:
 
 ** Complex Grammar Applications
 
+DCGs can handle complex parsing tasks like arithmetic expressions:
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-usage-dcg-arithmetic-expressions ()
   "Test arithmetic expression parsing with DCG."
@@ -1076,6 +1164,7 @@ This subsection demonstrates:
   (should (eprolog-test--has-solution-p '((phrase expr ("(" "2" "+" "3" ")" "*" "4"))))))
 #+END_SRC
 
+Nested structure parsing showcases DCGs' recursive capabilities:
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-usage-dcg-nested-structures ()
   "Test nested structure parsing with DCG."
@@ -1092,6 +1181,7 @@ This subsection demonstrates:
   (should-not (eprolog-test--has-solution-p '((phrase parens ("(" "(" ")"))))))
 #+END_SRC
 
+CSV-style parsing demonstrates practical text processing:
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-usage-dcg-csv-parsing ()
   "Test CSV-style parsing with DCG."
@@ -1110,9 +1200,13 @@ This subsection demonstrates:
 
 * Family Tree Relationships
 
-Family tree modeling is a classic application of Prolog that demonstrates how logical relationships can be represented and reasoned about. This section shows how to build comprehensive family relationship systems that can answer complex queries about kinship.
+Few domains illustrate Prolog's expressive power as clearly as family relationships. What begins as a simple collection of parent-child facts blossoms into a rich knowledge base capable of answering complex genealogical questions. This classic application demonstrates how Prolog's declarative approach naturally mirrors human reasoning about kinship.
+
+The elegance of family tree modeling in Prolog lies in how closely the logical representation matches our intuitive understanding of relationships. When we define that "X is a grandparent of Z if X is a parent of Y and Y is a parent of Z," we're expressing exactly the kind of logical reasoning humans use naturally. Prolog simply makes this reasoning computational.
 
 ** Comprehensive Family Tree Tests
+
+Building a family tree in Prolog involves layering increasingly complex relationships on top of basic facts. This approach mirrors how we think about family relationships in the real world.
 
 Family trees provide an excellent example of how basic facts can be combined with rules to derive complex relationships. We start with basic parent relationships and build up to sophisticated kinship queries.
 
@@ -1122,6 +1216,7 @@ This subsection covers:
 - How facts and rules work together to build knowledge bases
 - The foundation for more complex relationship derivations
 
+The following test establishes a comprehensive family tree with multiple types of relationships:
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-usage-family-tree-comprehensive ()
   "Test comprehensive family tree with Sazae-san characters."
@@ -1161,6 +1256,7 @@ This subsection covers:
   (should (eprolog-test--has-solution-p '((female wakame)))))
 #+END_SRC
 
+Derived relationships show the power of logical inference in Prolog:
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-usage-family-tree-derived-relationships ()
   "Test derived family relationships."
@@ -1198,6 +1294,7 @@ This subsection covers:
   (should (eprolog-test--has-solution-p '((ancestor tarao fune)))))
 #+END_SRC
 
+Extended family relationships demonstrate more complex logical derivations:
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-usage-family-tree-uncle-aunt-cousin ()
   "Test uncle, aunt, and cousin relationships."
@@ -1231,6 +1328,7 @@ This subsection covers:
   (should (eprolog-test--has-solution-p '((cousin child1 child2)))))
 #+END_SRC
 
+Complex queries demonstrate Prolog's ability to find multiple solutions:
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-usage-family-tree-complex-queries ()
   "Test complex family tree queries with multiple solutions."
@@ -1267,8 +1365,11 @@ This subsection covers:
 
 * Complex Backtracking and Control Flow
 
+Understanding backtracking is essential for mastering Prolog. This section explores advanced scenarios where careful control of backtracking behavior is crucial for correct and efficient programs.
+
 ** Complex Backtracking Scenarios
 
+The cut operator provides fine-grained control over Prolog's backtracking mechanism:
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-usage-complex-backtracking-with-cut ()
   "Test complex backtracking scenarios with cut."
@@ -1293,6 +1394,7 @@ This subsection covers:
     (should (equal (cdr (assoc '_x (car solutions))) 'red))))
 #+END_SRC
 
+The repeat predicate combined with cut creates controlled loops:
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-usage-repeat-with-complex-conditions ()
   "Test repeat predicate with complex termination conditions."
@@ -1312,8 +1414,11 @@ This subsection covers:
 
 * Advanced Applications
 
+The true test of any programming paradigm lies in its ability to express complex algorithms elegantly and naturally. This section ventures beyond basic Prolog concepts to explore how classical computational problems can be reimagined through the lens of logical relationships. These examples demonstrate that Prolog isn't just suitable for AI and symbolic reasoning—it's a versatile tool for algorithmic thinking.
+
 ** Recursive Algorithms
 
+Factorial calculation demonstrates basic recursion in Prolog:
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-usage-factorial ()
   "Test recursive factorial implementation."
@@ -1341,6 +1446,7 @@ This subsection covers:
     (should (= (cdr (assoc '_f (car solutions))) 120))))
 #+END_SRC
 
+The Fibonacci sequence shows more complex recursive patterns:
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-usage-fibonacci ()
   "Test Fibonacci sequence implementation."
@@ -1371,6 +1477,7 @@ This subsection covers:
     (should (= (cdr (assoc '_f (car solutions))) 3))))
 #+END_SRC
 
+The Greatest Common Divisor algorithm demonstrates iterative computation in Prolog:
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-usage-gcd-algorithm ()
   "Test Greatest Common Divisor algorithm."
@@ -1393,14 +1500,17 @@ This subsection covers:
 
 * Performance Testing
 
-Performance testing ensures that ε-prolog can handle real-world applications with reasonable efficiency. These tests evaluate the system's behavior under various load conditions and help identify potential bottlenecks.
+No programming system is complete without understanding its performance characteristics and limitations. While Prolog's declarative nature provides tremendous expressive power, it's essential to understand how that power scales with problem size and complexity. This section explores ε-prolog's performance envelope through systematic testing.
 
-This section demonstrates:
-- Large database performance with many facts
-- Deep recursion handling and stack management
-- Stress testing with complex predicate structures
-- Memory and execution time considerations
+Performance testing in logic programming differs from traditional benchmarking because the focus isn't just on raw execution speed—it's on understanding how logical inference scales with database size, recursion depth, and problem complexity. These tests help establish confidence that ε-prolog can handle real-world applications effectively.
 
+Key performance dimensions evaluated:
+- **Database Scaling**: How performance varies with the number of facts and rules
+- **Recursion Depth**: The system's ability to handle deep logical reasoning chains  
+- **Memory Management**: Behavior under high predicate density and complex structures
+- **Inference Complexity**: Performance with multiple choice points and backtracking scenarios
+
+Comprehensive performance testing evaluates multiple aspects of system performance:
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-usage-performance-tests ()
   "Test performance with larger databases and deep recursion."
@@ -1423,6 +1533,7 @@ This section demonstrates:
   (should (eprolog-test--has-solution-p '((count-down 10)))))
 #+END_SRC
 
+Large database testing evaluates performance with many clauses:
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-usage-large-database ()
   "Test performance with larger clause database."
@@ -1434,6 +1545,7 @@ This section demonstrates:
     (should (= (length solutions) 100))))
 #+END_SRC
 
+Stress testing pushes the system to its limits:
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-usage-stress-testing ()
   "Test system behavior under stress conditions."
@@ -1460,6 +1572,7 @@ This section demonstrates:
 
 * Test Runner
 
+The test runner provides a convenient way to execute all tests and verify system functionality:
 #+BEGIN_SRC emacs-lisp
 (defun eprolog-usage-run-all-tests ()
   "Run all ε-prolog usage tests and display summary."
@@ -1472,9 +1585,13 @@ This section demonstrates:
 (provide 'eprolog-usage-tests)
 #+END_SRC
 
-* Footer
+* Conclusion
 
-This file contains comprehensive test coverage for all ε-prolog features, organized by functionality with logical progression from basic to advanced concepts.
+This comprehensive exploration of ε-prolog demonstrates the rich expressiveness and practical power of logic programming within the Emacs ecosystem. From basic fact assertion to complex grammar parsing, from simple queries to sophisticated algorithmic implementations, ε-prolog provides a robust platform for declarative programming.
+
+The journey through these examples illustrates a fundamental truth about Prolog: it's not just a programming language, but a different way of thinking about computation. Instead of telling the computer how to solve problems, we describe what we know and what relationships exist, then let logical inference find the solutions.
+
+This document serves multiple purposes: it's a learning resource for understanding ε-prolog's capabilities, a comprehensive test suite ensuring system reliability, and a demonstration of how logical programming can elegantly solve complex problems. Each example has been carefully crafted to be both educational and executable, ensuring that theory and practice remain tightly coupled.
 
 ** Document Structure
 
@@ -1532,17 +1649,24 @@ This file contains comprehensive test coverage for all ε-prolog features, organ
 - Large Database and Deep Recursion Tests
 - Stress Testing
 
-** Key Features
+** Design Philosophy
 
-1. **Logical Organization** - Sections progress from basic to advanced concepts
-2. **Consistent Structure** - Each major section has clear subsections
-3. **Individual Test Blocks** - Each test is in its own code block for easy execution
-4. **Comprehensive Coverage** - Tests combine examples from README.org and eprolog.el
-5. **Clear Documentation** - Each section explains its purpose and scope
+The architecture of this document reflects several key principles that make it both educational and practical:
 
-To extend these tests:
-1. Add new test functions following the =ert-deftest= pattern
-2. Use =eprolog-test--restore-builtins= to ensure clean test state
-3. Use helper functions =eprolog-test--has-solution-p= and =eprolog-test--collect-solutions=
-4. Follow the naming convention =eprolog-usage-<feature>=
-5. Place new tests in the appropriate logical section
+1. **Progressive Complexity**: Concepts build naturally from simple facts to sophisticated applications
+2. **Dual Purpose Design**: Every example serves as both documentation and functional test
+3. **Executable Examples**: All code can be run directly, ensuring accuracy and relevance
+4. **Comprehensive Coverage**: Examples span the full spectrum of ε-prolog capabilities
+5. **Clear Exposition**: Each concept is explained before being demonstrated
+
+** Extending This Test Suite
+
+For those interested in contributing additional examples or tests, the framework provides a solid foundation:
+
+1. **Follow Existing Patterns**: New tests should use the established `ert-deftest` structure
+2. **Maintain Test Isolation**: Always begin tests with `eprolog-test--restore-builtins`  
+3. **Use Standard Helpers**: Leverage `eprolog-test--has-solution-p` and `eprolog-test--collect-solutions`
+4. **Consistent Naming**: Follow the `eprolog-usage-<feature>` convention
+5. **Logical Organization**: Place new examples in appropriate thematic sections
+
+The goal is to maintain this document as a living resource that grows with ε-prolog while preserving its educational value and technical accuracy.
