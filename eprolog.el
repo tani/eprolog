@@ -126,19 +126,38 @@ predicates to maintain state across Prolog goals.")
 
 ;;; Internal utility functions
 
+(defun eprolog--wrap-success-with-cut-handler (result tag)
+  "Wrap RESULT so that any future cut with TAG is caught and handled.
+If RESULT is a success, its continuation is wrapped; wrapping is
+applied recursively to all subsequent successes."
+  (if (eprolog-success-p result)
+      (let ((bindings (eprolog-success-bindings result))
+            (cont     (eprolog-success-continuation result)))
+        (make-eprolog-success
+         :bindings bindings
+         :continuation
+         (lambda ()
+           (condition-case err
+               (let ((next (funcall cont)))
+                 (eprolog--wrap-success-with-cut-handler next tag))
+             (eprolog-cut-exception
+              (if (eq tag (plist-get (cdr err) :tag))
+                  (eprolog--wrap-success-with-cut-handler
+                   (plist-get (cdr err) :value) tag)
+                (signal (car err) (cdr err))))))))
+    result))
+
 (defun eprolog--call-with-current-choice-point (proc)
   "Execute PROC with a fresh choice point tag for cut handling.
-PROC is called with a unique choice point tag as its argument.
-Catches cut-exception conditions and handles them appropriately based on tag matching.
-Used internally by the prover engine to manage backtracking choice points.
-
-Returns the result of calling PROC, or the cut value if a matching cut is encountered."
+Ensures the cut handler remains active across continuations."
   (let ((tag (cl-gensym "CHOICE-POINT-")))
     (condition-case err
-        (funcall proc tag)
+        (let ((result (funcall proc tag)))
+          (eprolog--wrap-success-with-cut-handler result tag))
       (eprolog-cut-exception
        (if (eq tag (plist-get (cdr err) :tag))
-           (plist-get (cdr err) :value)
+           (eprolog--wrap-success-with-cut-handler
+            (plist-get (cdr err) :value) tag)
          (signal (car err) (cdr err)))))))
 
 ;;; Variables and unification helpers
@@ -387,7 +406,7 @@ BINDINGS is the current variable binding environment.
 
 Shows the resolved goal after applying current variable bindings."
   (let ((resolved (eprolog--substitute-bindings bindings goal)))
-    (eprolog--printf "%s: %S" kind resolved)))
+    (eprolog--printf "\n%s: %S" kind resolved)))
 
 (defun eprolog--with-spy (goal bindings thunk)
   "Execute THUNK with spy tracing for GOAL using BINDINGS.
@@ -445,6 +464,8 @@ Transforms bare ! atoms and (!) lists to include the choice point tag
 for proper cut semantics. Used to link cuts to their originating choice points."
   (cl-labels ((insert-cut-term (term)
                 (cond
+                 ((and (consp term) (eq '! (car term)) (cadr term))
+                  (error "invalid choice-point insertion happened"))
                  ((and (consp term) (eq '! (car term))) (list '! choice-point))
                  ((and (atom term) (eq '! term)) (list '! choice-point))
                  (t term))))
@@ -594,9 +615,8 @@ solution enumeration through backtracking."
   (cl-labels ((initial-continuation ()
                 (eprolog--call-with-current-choice-point
                  (lambda (choice-point)
-                   (let* ((prepared-goals (eprolog--replace-anonymous-variables goals))
-                          (cut-goals (eprolog--insert-choice-point prepared-goals choice-point)))
-                     (eprolog--prove-goal-sequence cut-goals '())))))
+                   (let* ((prepared-goals (eprolog--replace-anonymous-variables goals)))
+                     (eprolog--prove-goal-sequence prepared-goals '())))))
               (retrieve-success-bindings (result)
                 (let* ((bindings (eprolog-success-bindings result))
                        (query-variables (eprolog--variables-in goals))
@@ -699,8 +719,7 @@ Commits to the current choice, preventing backtracking to alternative clauses
 for the current goal. CHOICE-POINT identifies the choice point to cut."
   (let ((continuation-result (eprolog--prove-goal-sequence *eprolog-remaining-goals* *eprolog-bindings*)))
     (signal 'eprolog-cut-exception
-            (list :tag choice-point)
-            :value continuation-result)))
+            (list :tag choice-point :value continuation-result))))
 
 ;; Meta-call predicate with variadic support
 
@@ -1111,5 +1130,4 @@ This is the general form of DCG parsing with difference lists."
   (call _NonTerminal _List _Rest))
 
 (provide 'eprolog)
-
 ;;; eprolog.el ends here
