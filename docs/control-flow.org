@@ -280,3 +280,131 @@ The cut predicate controls backtracking, and these tests verify proper failure b
   
   (should-not (eprolog-test--has-solution-p '((cut-branch-fail)))))
 #+END_SRC
+
+** Advanced Control Flow Error Cases
+
+These tests verify robust error handling and edge case behavior in control flow predicates.
+
+*** Deep Nesting Tests
+
+#+BEGIN_SRC emacs-lisp
+(ert-deftest eprolog-feature-control-deep-nesting ()
+  "Test deeply nested control structures."
+  (eprolog-test--restore-builtins)
+  
+  ;; Test deeply nested if-then-else (5 levels)
+  (should (eprolog-test--has-solution-p 
+    '((if true 
+          (if true 
+              (if true 
+                  (if true 
+                      (if true true fail))
+                  fail)
+              fail)
+          fail))))
+  
+  ;; Test deeply nested and/or combinations  
+  (should (eprolog-test--has-solution-p
+    '((and (or true fail)
+           (and (or fail true)
+                (and true true))))))
+  
+  ;; Test failure in deep nesting
+  (should-not (eprolog-test--has-solution-p
+    '((if true
+          (if true
+              (if fail true fail))))))
+#+END_SRC
+
+*** Meta-predicate Error Handling
+
+#+BEGIN_SRC emacs-lisp
+(ert-deftest eprolog-feature-control-meta-predicate-errors ()
+  "Test error handling in meta-predicates like call/1."
+  (eprolog-test--restore-builtins)
+  
+  ;; Test call with malformed goals
+  (should-not (eprolog-test--has-solution-p '((call ()))))
+  (should-not (eprolog-test--has-solution-p '((call (())))))
+  
+  ;; Test call with invalid predicate structures
+  (should-not (eprolog-test--has-solution-p '((call (123 invalid)))))
+  (should-not (eprolog-test--has-solution-p '((call ("string" predicate)))))
+  
+  ;; Test nested call failures
+  (should-not (eprolog-test--has-solution-p '((call (call (call fail))))))
+  
+  ;; Test call with complex invalid structures
+  (should-not (eprolog-test--has-solution-p '((call ((nested) (invalid) (structure))))))
+  
+  ;; Test call with unbound variables that can't be resolved
+  (should-not (eprolog-test--has-solution-p '((call _undefined_goal)))))
+#+END_SRC
+
+*** Cut Interaction Edge Cases
+
+#+BEGIN_SRC emacs-lisp
+(ert-deftest eprolog-feature-control-cut-interaction-edge-cases ()
+  "Test cut behavior in complex interaction scenarios."
+  (eprolog-test--restore-builtins)
+  
+  ;; Test cut with negation
+  (eprolog-define-predicate (cut-with-not)
+    (not fail)
+    !)
+  (should (eprolog-test--has-solution-p '((cut-with-not))))
+  
+  ;; Test cut scope in nested structures
+  (eprolog-define-predicate (nested-cut-test _x)
+    (or (and (= _x 1) !)
+        (= _x 2)))
+  
+  (let ((solutions (eprolog-test--collect-solutions '((nested-cut-test _x)))))
+    ;; Cut should prevent backtracking to _x = 2
+    (should (= (length solutions) 1))
+    (should (= (cdr (assoc '_x (car solutions))) 1)))
+  
+  ;; Test cut in conditional structures
+  (eprolog-define-predicate (cut-in-if _result)
+    (if true (and (= _result success) !) (= _result failure)))
+  
+  (should (eprolog-test--has-solution-p '((cut-in-if success))))
+  (should-not (eprolog-test--has-solution-p '((cut-in-if failure)))))
+#+END_SRC
+
+*** Logical Operator Edge Cases
+
+#+BEGIN_SRC emacs-lisp
+(ert-deftest eprolog-feature-control-logical-operators-edge-cases ()
+  "Test edge cases in logical operators."
+  (eprolog-test--restore-builtins)
+  
+  ;; Test and/or with invalid arguments
+  (should-not (eprolog-test--has-solution-p '((and 123))))
+  (should-not (eprolog-test--has-solution-p '((or "invalid"))))
+  (should-not (eprolog-test--has-solution-p '((and (invalid structure)))))
+  
+  ;; Test nested logical operations with mixed success/failure
+  (should-not (eprolog-test--has-solution-p
+    '((and (or true fail) 
+           (or fail fail)))))
+  
+  ;; Test short-circuit behavior in and/or
+  (eprolog-define-predicate (should-not-reach))
+  (should-not (eprolog-test--has-solution-p
+    '((and fail (should-not-reach)))))
+  
+  (should (eprolog-test--has-solution-p
+    '((or true (should-not-reach)))))
+  
+  ;; Test complex logical combinations
+  (should (eprolog-test--has-solution-p
+    '((or (and fail true)
+          (and true (or fail true)))))))
+#+END_SRC
+
+** Conclusion
+
+This comprehensive collection of control flow tests demonstrates ε-prolog's sophisticated handling of logical program flow. From basic success and failure predicates to complex cut semantics and meta-programming capabilities, these tests verify that the control mechanisms work reliably across a wide range of scenarios.
+
+The control flow predicates form the backbone of logical programming, enabling elegant expression of complex logical relationships while maintaining the declarative nature that makes Prolog so powerful for reasoning tasks.

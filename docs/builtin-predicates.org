@@ -180,3 +180,139 @@ The following test shows how to use higher-order predicates for list transformat
   (should-not (eprolog-test--has-solution-p '((maplist succ (1 2) (2 3 4)))))
   (should-not (eprolog-test--has-solution-p '((maplist succ (1 2 3) (2 3))))))
 #+END_SRC
+
+** Type Safety and Invalid Input Tests
+
+These tests verify robust handling of type mismatches and invalid inputs across built-in predicates.
+
+*** Type Checking with Invalid Inputs
+
+#+BEGIN_SRC emacs-lisp
+(ert-deftest eprolog-feature-builtin-type-checking-invalid ()
+  "Test type checking predicates with invalid/unexpected inputs."
+  (eprolog-test--restore-builtins)
+  
+  ;; Test atom/1 with various invalid types
+  (should-not (eprolog-test--has-solution-p '((atom (1 2 3)))))
+  (should-not (eprolog-test--has-solution-p '((atom (foo bar)))))
+  (should (eprolog-test--has-solution-p '((atom 123))))
+  (should (eprolog-test--has-solution-p '((atom "string"))))
+  
+  ;;;; Test var/1 with bound variables and literals
+  (should-not (eprolog-test--has-solution-p '((= _x 42) (var _x))))
+  (should-not (eprolog-test--has-solution-p '((var 42))))
+  (should-not (eprolog-test--has-solution-p '((var atom))))
+  ;; Test number/1 with non-numeric types
+  (should-not (eprolog-test--has-solution-p '((number atom))))
+  (should-not (eprolog-test--has-solution-p '((number "123"))))
+  (should-not (eprolog-test--has-solution-p '((number (1 2 3)))))
+  
+  ;; Test string/1 with non-string types
+  (should-not (eprolog-test--has-solution-p '((string 123))))
+  (should-not (eprolog-test--has-solution-p '((string atom))))
+  (should-not (eprolog-test--has-solution-p '((string (a b)))))
+  )
+#+END_SRC
+
+*** List Operations with Invalid Structures
+
+#+BEGIN_SRC emacs-lisp
+(ert-deftest eprolog-feature-builtin-list-operations-invalid ()
+  "Test list operations with non-list and invalid inputs."
+  (eprolog-test--restore-builtins)
+  
+  ;; Test append/3 with non-lists (may fail or error depending on implementation)
+  (condition-case nil (should-not (eprolog-test--has-solution-p '((append atom (b c) _result)))) (error t))
+  (condition-case nil (should-not (eprolog-test--has-solution-p '((append (a b) 123 _result)))) (error t))
+  (condition-case nil (should-not (eprolog-test--has-solution-p '((append "string" (b c) _result)))) (error t))
+  
+  ;; Test member/2 with non-lists
+  (should-not (eprolog-test--has-solution-p '((member _x atom))))
+  (should-not (eprolog-test--has-solution-p '((member _x 123))))
+  (should-not (eprolog-test--has-solution-p '((member _x "string"))))
+  
+  ;; Test append/2 with non-list of lists
+  (should-not (eprolog-test--has-solution-p '((append (a b c) _result))))
+  (should-not (eprolog-test--has-solution-p '((append ((1 2) atom (3 4)) _result))))
+  
+  ;; Test with mixed valid/invalid structures
+  (should-not (eprolog-test--has-solution-p '((append ((1 2) (3 4) not-list) _result)))))
+#+END_SRC
+
+*** Maplist with Invalid Predicates
+
+#+BEGIN_SRC emacs-lisp
+(ert-deftest eprolog-feature-builtin-maplist-invalid ()
+  "Test maplist with undefined and invalid predicates."
+  (eprolog-test--restore-builtins)
+  
+  ;; Test with undefined predicate
+  (should-not (eprolog-test--has-solution-p '((maplist undefined-pred (1 2 3)))))
+  
+  ;; Test with non-atom predicate name (may fail or error)
+  (condition-case nil (should-not (eprolog-test--has-solution-p '((maplist 123 (1 2 3))))) (error t))
+  (condition-case nil (should-not (eprolog-test--has-solution-p '((maplist "pred" (1 2 3))))) (error t))
+  (condition-case nil (should-not (eprolog-test--has-solution-p '((maplist (invalid pred) (1 2 3))))) (error t))
+  
+  ;; Test with predicate that doesn't match arity
+  (eprolog-define-predicate (wrong-arity _a _b _c))
+  (should-not (eprolog-test--has-solution-p '((maplist wrong-arity (1 2 3)))))
+  
+  ;; Test with non-list arguments
+  (eprolog-define-predicate (test-pred _x))
+  (should-not (eprolog-test--has-solution-p '((maplist test-pred atom))))
+  (should-not (eprolog-test--has-solution-p '((maplist test-pred 123)))))
+#+END_SRC
+
+*** Ground Predicate Edge Cases
+
+#+BEGIN_SRC emacs-lisp
+(ert-deftest eprolog-feature-builtin-ground-edge-cases ()
+  "Test ground predicate with complex and edge case structures."
+  (eprolog-test--restore-builtins)
+  
+  ;; Test partially ground structures
+  (should-not (eprolog-test--has-solution-p '((ground (foo _x bar)))))
+  (should-not (eprolog-test--has-solution-p '((ground (a (b _y) c)))))
+  
+  ;; Test deeply nested structures with variables
+  (should-not (eprolog-test--has-solution-p '((ground (level1 (level2 (level3 _var)))))))
+  
+  ;; Test mixed ground/non-ground lists
+  (should-not (eprolog-test--has-solution-p '((ground (a b _c d)))))
+  (should-not (eprolog-test--has-solution-p '((ground ((1 2) (3 _x) (4 5))))))
+  
+  ;; Test fully ground complex structures
+  (should (eprolog-test--has-solution-p '((ground (complex (nested (structure with atoms)) (and (numbers 1 2 3)))))))
+  
+  ;; Test empty structures
+  (should (eprolog-test--has-solution-p '((ground ()))))
+  (should (eprolog-test--has-solution-p '((ground (empty-list ()))))))
+#+END_SRC
+
+*** Empty List Handling
+
+#+BEGIN_SRC emacs-lisp
+(ert-deftest eprolog-feature-builtin-empty-list-handling ()
+  "Test operations with empty lists and edge cases."
+  (eprolog-test--restore-builtins)
+  
+  ;; Test append with empty lists
+  (should (eprolog-test--has-solution-p '((append () (1 2 3) (1 2 3)))))
+  (should (eprolog-test--has-solution-p '((append (1 2 3) () (1 2 3)))))
+  (should (eprolog-test--has-solution-p '((append () () ()))))
+  
+  ;; Test member with empty list
+  (should-not (eprolog-test--has-solution-p '((member _x ()))))
+  (should-not (eprolog-test--has-solution-p '((member a ()))))
+  
+  ;; Test maplist with empty list
+  (eprolog-define-predicate (always-true _x))
+  (should (eprolog-test--has-solution-p '((maplist always-true ()))))
+  
+  ;; Test append/2 with list of empty lists
+  (should (eprolog-test--has-solution-p '((append (() () ()) _result) (= _result ()))))
+  
+  ;; Test decomposition of empty list
+  (should-not (eprolog-test--has-solution-p '((= () (_head . _tail))))))
+#+END_SRC

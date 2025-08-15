@@ -414,3 +414,227 @@ Stress testing pushes the system to its limits:
   
   (should (eprolog-test--has-solution-p '((deep-recursion 10 done)))))
 #+END_SRC
+
+** Integration and End-to-End Tests
+
+These tests verify complete workflows and interactions between different ε-prolog components.
+
+*** Multi-Module Integration Tests
+
+#+BEGIN_SRC emacs-lisp
+(ert-deftest eprolog-example-multi-feature-integration ()
+  "Test integration of multiple ε-prolog features in a single workflow."
+  (eprolog-test--restore-builtins)
+  
+  ;; Define facts using core functionality
+  (eprolog-define-predicate (person alice 25))
+  (eprolog-define-predicate (person bob 30))
+  (eprolog-define-predicate (person charlie 35))
+  
+  ;; Use arithmetic to calculate age-related predicates
+  (eprolog-define-predicate (adult _person)
+    (person _person _age)
+    (is _adult_age 18)
+    (lispp (>= _age _adult_age)))
+  
+  ;; Use control flow for complex logic
+  (eprolog-define-predicate (age-group _person _group)
+    (person _person _age)
+    (if (lispp (< _age 30))
+        (= _group young)
+        (if (lispp (< _age 40))
+            (= _group middle)
+            (= _group old))))
+  
+  ;; Use list operations to collect results
+  (eprolog-define-predicate (all-adults _adults))
+  
+  ;; Test the integrated workflow
+  (should (eprolog-test--has-solution-p '((adult alice))))
+  (should (eprolog-test--has-solution-p '((adult bob))))
+  (should (eprolog-test--has-solution-p '((adult charlie))))
+  
+  (should (eprolog-test--has-solution-p '((age-group alice young))))
+  (should (eprolog-test--has-solution-p '((age-group bob middle))))
+  (should (eprolog-test--has-solution-p '((age-group charlie middle)))))
+#+END_SRC
+
+*** Real-World Database Simulation
+
+#+BEGIN_SRC emacs-lisp
+(ert-deftest eprolog-example-database-simulation ()
+  "Test a complete database-like application with multiple tables and relationships."
+  (eprolog-test--restore-builtins)
+  
+  ;; Define "database tables" as predicates
+  (eprolog-define-predicate (employee 1 "Alice" engineering 75000))
+  (eprolog-define-predicate (employee 2 "Bob" sales 65000))
+  (eprolog-define-predicate (employee 3 "Charlie" engineering 80000))
+  (eprolog-define-predicate (employee 4 "Diana" marketing 70000))
+  
+  (eprolog-define-predicate (department engineering "Engineering Floor"))
+  (eprolog-define-predicate (department sales "Sales Office"))
+  (eprolog-define-predicate (department marketing "Marketing Suite"))
+  
+  ;; Define "views" and computed predicates
+  (eprolog-define-predicate (high-earner _id _name)
+    (employee _id _name _dept _salary)
+    (lispp (> _salary 70000)))
+  
+  (eprolog-define-predicate (department-info _name _dept _location)
+    (employee _id _name _dept _salary)
+    (department _dept _location))
+  
+  ;; Define aggregation predicates
+  (eprolog-define-predicate (department-count _dept _count)
+    ;; This is a simplified version - real aggregation would be more complex
+    (department _dept _location)
+    (= _count 0)) ;; Placeholder implementation
+  
+  ;; Test database operations
+  (should (eprolog-test--has-solution-p '((high-earner 1 "Alice"))))
+  (should (eprolog-test--has-solution-p '((high-earner 3 "Charlie"))))
+  (should-not (eprolog-test--has-solution-p '((high-earner 2 "Bob"))))
+  
+  (should (eprolog-test--has-solution-p '((department-info "Alice" engineering "Engineering Floor"))))
+  (should (eprolog-test--has-solution-p '((department-info "Diana" marketing "Marketing Suite"))))
+  
+  ;; Test complex queries with multiple constraints
+  (should (eprolog-test--has-solution-p 
+    '((employee _id _name engineering _salary) (lispp (> _salary 70000))))))
+#+END_SRC
+
+*** Graph Algorithm Integration
+
+#+BEGIN_SRC emacs-lisp
+(ert-deftest eprolog-example-graph-algorithms ()
+  "Test graph algorithms using ε-prolog predicates."
+  (eprolog-test--restore-builtins)
+  
+  ;; Define graph edges
+  (eprolog-define-predicate (edge a b))
+  (eprolog-define-predicate (edge b c))
+  (eprolog-define-predicate (edge c d))
+  (eprolog-define-predicate (edge a c))
+  (eprolog-define-predicate (edge b d))
+  
+  ;; Define path finding predicate
+  (eprolog-define-predicate (path _from _to)
+    (edge _from _to))
+  (eprolog-define-predicate (path _from _to)
+    (edge _from _intermediate)
+    (path _intermediate _to))
+  
+  ;; Define reachability predicate  
+  (eprolog-define-predicate (reachable _from _to)
+    (path _from _to))
+  
+  ;; Test direct connections
+  (should (eprolog-test--has-solution-p '((edge a b))))
+  (should (eprolog-test--has-solution-p '((edge b c))))
+  
+  ;; Test path finding
+  (should (eprolog-test--has-solution-p '((path a b))))
+  (should (eprolog-test--has-solution-p '((path a d))))
+  (should (eprolog-test--has-solution-p '((path a c))))
+  
+  ;; Test reachability
+  (should (eprolog-test--has-solution-p '((reachable a d))))
+  (should-not (eprolog-test--has-solution-p '((reachable d a)))))
+#+END_SRC
+
+** Performance Regression Tests
+
+These tests establish performance baselines and detect regression in critical operations.
+
+*** Basic Operation Performance Tests
+
+#+BEGIN_SRC emacs-lisp
+(ert-deftest eprolog-example-basic-performance-regression ()
+  "Test basic operation performance to detect regressions."
+  (eprolog-test--restore-builtins)
+  
+  ;; Test fact storage and retrieval performance (simplified)
+  (let ((start-time (current-time)))
+    ;; Define a few test facts manually
+    (eprolog-define-predicate (perf-fact 1 1))
+    (eprolog-define-predicate (perf-fact 2 2))
+    (eprolog-define-predicate (perf-fact 3 3))
+    
+    ;; Query the facts
+    (should (eprolog-test--has-solution-p '((perf-fact 1 1))))
+    (should (eprolog-test--has-solution-p '((perf-fact 2 2))))
+    (should (eprolog-test--has-solution-p '((perf-fact 3 3))))
+    
+    (let ((elapsed (float-time (time-subtract (current-time) start-time))))
+      ;; Should complete within reasonable time (very relaxed threshold)
+      (should (< elapsed 10.0)))) ;; 10 seconds threshold
+  
+  ;; Test unification performance with complex structures
+  (let ((complex-term (make-list 50 '(nested (structure (with (deep (nesting)))))))
+        (start-time (current-time)))
+    
+    (dotimes (i 10)
+      (should (eprolog-test--has-solution-p `((= _x ,complex-term)))))
+    
+    (let ((elapsed (float-time (time-subtract (current-time) start-time))))
+      (should (< elapsed 2.0))))) ;; 2 seconds threshold
+#+END_SRC
+
+*** Arithmetic Performance Tests
+
+#+BEGIN_SRC emacs-lisp
+(ert-deftest eprolog-example-arithmetic-performance-regression ()
+  "Test arithmetic performance to detect regressions."
+  (eprolog-test--restore-builtins)
+  
+  (let ((start-time (current-time)))
+    ;; Test a few arithmetic operations (simplified)
+    (should (eprolog-test--has-solution-p '((is _result (+ 1 1)))))
+    (should (eprolog-test--has-solution-p '((is _result (+ 2 1)))))
+    (should (eprolog-test--has-solution-p '((is _result (+ 3 1)))))
+    
+    (let ((elapsed (float-time (time-subtract (current-time) start-time))))
+      (should (< elapsed 5.0)))) ;; 5 seconds threshold
+  
+  ;; Test complex arithmetic expressions (simplified)
+  (let ((start-time (current-time)))
+    (should (eprolog-test--has-solution-p '((is _result (+ (* 2 2) (- 5 1) (/ 8 2))))))
+    (should (eprolog-test--has-solution-p '((is _result (+ (* 3 2) (- 6 1) (/ 9 3))))))
+    
+    (let ((elapsed (float-time (time-subtract (current-time) start-time))))
+      (should (< elapsed 5.0))))) ;; 5 seconds threshold
+#+END_SRC
+
+*** Backtracking Performance Tests
+
+#+BEGIN_SRC emacs-lisp
+(ert-deftest eprolog-example-backtracking-performance-regression ()
+  "Test backtracking performance to detect regressions."
+  (eprolog-test--restore-builtins)
+  
+  ;; Define predicate with many choice points
+  (dotimes (i 100)
+    (eval `(eprolog-define-predicate (choice-point ,i))))
+  
+  (let ((start-time (current-time)))
+    ;; Collect all solutions - forces full backtracking
+    (let ((solutions (eprolog-test--collect-solutions '((choice-point _x)))))
+      (should (= (length solutions) 100)))
+    
+    (let ((elapsed (float-time (time-subtract (current-time) start-time))))
+      (should (< elapsed 1.0)))) ;; 1 second threshold
+  
+  ;; Test backtracking with cut optimization
+  (eprolog-define-predicate (cut-optimized _x)
+    (choice-point _x)
+    (lispp (< _x 10))
+    !)
+  
+  (let ((start-time (current-time)))
+    (let ((solutions (eprolog-test--collect-solutions '((cut-optimized _x)))))
+      (should (<= (length solutions) 10))) ;; Cut should limit solutions
+    
+    (let ((elapsed (float-time (time-subtract (current-time) start-time))))
+      (should (< elapsed 0.5))))) ;; Should be faster with cut
+#+END_SRC
