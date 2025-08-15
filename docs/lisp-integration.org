@@ -20,58 +20,61 @@ This subsection covers:
 - ~lisp!/1~ for evaluating Lisp expressions for side effects only
 - How to pass data between Prolog and Lisp
 
-The following test demonstrates the three main ways to interface with Lisp:
+The following comprehensive test demonstrates all three main ways to interface with Lisp in a single, well-organized test case:
 
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-feature-lisp-integration ()
-  "Test Lisp integration predicates from README.org examples."
+  "Test comprehensive Lisp integration predicates - all three integration modes."
   (eprolog-test--restore-builtins)
   
-  ;; Test lisp/2 as shown in README
+  ;; === LISP/2 EVALUATION TESTS ===
+  ;; Test lisp/2 for evaluating expressions and capturing results
+  
+  ;; Basic arithmetic evaluation
   (let ((solutions (eprolog-test--collect-solutions '((lisp _result (+ 1 2 3))))))
     (should (= (length solutions) 1))
     (should (= (cdr (assoc '_result (car solutions))) 6)))
   
-  ;; Test lispp/1 as shown in README
-  (should (eprolog-test--has-solution-p '((lispp (> 5 3)))))
-  (should-not (eprolog-test--has-solution-p '((lispp (< 5 3)))))
-  
-  ;; Test lisp!/1 side effects
-  (let ((test-var nil))
-    (should (eprolog-test--has-solution-p `((lisp! (setq test-var 'success)))))
-    (should (eq test-var 'success))))
-#+END_SRC
-
-Evaluating Lisp expressions and capturing their results enables powerful computations:
-
-#+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-feature-lisp-predicate ()
-  "Test Lisp evaluation predicate as standalone test."
-  (eprolog-test--restore-builtins)
+  ;; More complex arithmetic
   (let ((solutions (eprolog-test--collect-solutions '((lisp _x (+ 2 3))))))
     (should (= (length solutions) 1))
-    (should (equal (cdr (assoc '_x (car solutions))) 5))))
-#+END_SRC
-
-Sometimes you need to execute Lisp code for its side effects rather than its return value:
-
-#+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-feature-lisp-side-effects ()
-  "Test Lisp side effect predicate as standalone test."
-  (eprolog-test--restore-builtins)
+    (should (equal (cdr (assoc '_x (car solutions))) 5)))
+  
+  ;; Function calls and data structure creation
+  (let ((solutions (eprolog-test--collect-solutions '((lisp _result (list 'a 'b 'c))))))
+    (should (= (length solutions) 1))
+    (should (equal (cdr (assoc '_result (car solutions))) '(a b c))))
+  
+  ;; === LISPP/1 BOOLEAN TESTS ===
+  ;; Test lispp/1 for boolean evaluation of Lisp expressions
+  
+  ;; Basic comparison tests
+  (should (eprolog-test--has-solution-p '((lispp (> 5 3)))))
+  (should-not (eprolog-test--has-solution-p '((lispp (< 5 3)))))
+  (should-not (eprolog-test--has-solution-p '((lispp (> 3 5)))))
+  
+  ;; Boolean logic tests
+  (should (eprolog-test--has-solution-p '((lispp (and t t)))))
+  (should-not (eprolog-test--has-solution-p '((lispp (and t nil)))))
+  (should (eprolog-test--has-solution-p '((lispp (or t nil)))))
+  
+  ;; === LISP!/1 SIDE EFFECT TESTS ===
+  ;; Test lisp!/1 for executing Lisp code for side effects
+  
+  ;; Variable assignment side effects
+  (let ((test-var nil))
+    (should (eprolog-test--has-solution-p `((lisp! (setq test-var 'success)))))
+    (should (eq test-var 'success)))
+  
+  ;; More complex side effect operations
   (setq eprolog-test--temp-var nil)
   (should (eprolog-test--has-solution-p `((lisp! (setq eprolog-test--temp-var 'modified)))))
-  (should (eq eprolog-test--temp-var 'modified)))
-#+END_SRC
-
-Using Lisp expressions as boolean tests enables complex conditional logic:
-
-#+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-feature-lisp-conditional ()
-  "Test Lisp conditional predicate as standalone test."
-  (eprolog-test--restore-builtins)
-  (should (eprolog-test--has-solution-p '((lispp (> 5 3)))))
-  (should-not (eprolog-test--has-solution-p '((lispp (> 3 5))))))
+  (should (eq eprolog-test--temp-var 'modified))
+  
+  ;; Multiple side effects in sequence
+  (setq eprolog-test--counter 0)
+  (should (eprolog-test--has-solution-p `((lisp! (setq eprolog-test--counter (+ eprolog-test--counter 1))))))
+  (should (= eprolog-test--counter 1)))
 #+END_SRC
 
 ** Lisp Integration Negative Tests

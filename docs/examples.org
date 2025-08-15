@@ -24,19 +24,22 @@ This subsection covers:
 - How facts and rules work together to build knowledge bases
 - The foundation for more complex relationship derivations
 
-The following test establishes a comprehensive family tree with multiple types of relationships:
+The following test establishes a comprehensive family tree covering all relationship types and complex queries:
 
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-example-family-tree-comprehensive ()
-  "Test comprehensive family tree with Sazae-san characters."
+  "Test comprehensive family tree with all relationship types and complex queries."
   (eprolog-test--restore-builtins)
   
+  ;; === BASIC RELATIONSHIPS SETUP ===
   ;; Define parent relationships (parent Parent Child)
   (eprolog-define-prolog-predicate! (parent fune katsuo))
   (eprolog-define-prolog-predicate (parent fune wakame))
   (eprolog-define-prolog-predicate (parent fune sazae))
   (eprolog-define-prolog-predicate (parent sazae tarao))
   (eprolog-define-prolog-predicate (parent taiko ikura))
+  (eprolog-define-prolog-predicate (parent katsuo child1))
+  (eprolog-define-prolog-predicate (parent wakame child2))
   
   ;; Define marriage relationships
   (eprolog-define-prolog-predicate! (married _x _y) (married-fact _x _y))
@@ -58,32 +61,8 @@ The following test establishes a comprehensive family tree with multiple types o
   (eprolog-define-prolog-predicate (female taiko))
   (eprolog-define-prolog-predicate (female wakame))
   
-  ;; Test basic relationships
-  (should (eprolog-test--has-solution-p '((parent fune katsuo))))
-  (should (eprolog-test--has-solution-p '((married fune namihei))))
-  (should (eprolog-test--has-solution-p '((male katsuo))))
-  (should (eprolog-test--has-solution-p '((female wakame)))))
-#+END_SRC
-
-Derived relationships show the power of logical inference in Prolog:
-
-#+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-example-family-tree-derived-relationships ()
-  "Test derived family relationships."
-  (eprolog-test--restore-builtins)
-  
-  ;; Setup basic relationships (parent Parent Child)
-  (eprolog-define-prolog-predicate! (parent fune katsuo))
-  (eprolog-define-prolog-predicate (parent fune wakame))
-  (eprolog-define-prolog-predicate (parent fune sazae))
-  (eprolog-define-prolog-predicate (parent sazae tarao))
-  
-  (eprolog-define-prolog-predicate! (male katsuo))
-  (eprolog-define-prolog-predicate! (female fune))
-  (eprolog-define-prolog-predicate (female sazae))
-  (eprolog-define-prolog-predicate (female wakame))
-  
-  ;; Define derived relationships
+  ;; === DERIVED RELATIONSHIPS ===
+  ;; Define all derived relationship rules
   (eprolog-define-prolog-predicate! (child _x _y) (parent _y _x))
   (eprolog-define-prolog-predicate! (grandparent _x _z) (parent _x _y) (parent _y _z))
   (eprolog-define-prolog-predicate! (sibling _x _y) (parent _z _x) (parent _z _y) (not (= _x _y)))
@@ -94,68 +73,38 @@ Derived relationships show the power of logical inference in Prolog:
   (eprolog-define-prolog-predicate! (ancestor _x _y) (parent _x _y))
   (eprolog-define-prolog-predicate (ancestor _x _y) (parent _x _z) (ancestor _z _y))
   
-  ;; Test derived relationships
+  ;; Extended relationships
+  (eprolog-define-prolog-predicate! (uncle _x _y) (parent _z _y) (sibling _x _z) (male _x))
+  (eprolog-define-prolog-predicate! (aunt _x _y) (parent _z _y) (sibling _x _z) (female _x))
+  (eprolog-define-prolog-predicate! (cousin _x _y) (parent _a _x) (parent _b _y) (sibling _a _b))
+  
+  ;; Utility for unique sibling pairs
+  (eprolog-define-prolog-predicate! (unique-sibling _x _y)
+    (sibling _x _y)
+    (lispp (string< (symbol-name (quote _x)) (symbol-name (quote _y)))))
+
+  ;; === BASIC RELATIONSHIP TESTS ===
+  (should (eprolog-test--has-solution-p '((parent fune katsuo))))
+  (should (eprolog-test--has-solution-p '((married fune namihei))))
+  (should (eprolog-test--has-solution-p '((male katsuo))))
+  (should (eprolog-test--has-solution-p '((female wakame))))
+  
+  ;; === DERIVED RELATIONSHIP TESTS ===
   (should (eprolog-test--has-solution-p '((child katsuo fune))))
   (should (eprolog-test--has-solution-p '((grandparent fune tarao))))
   (should (eprolog-test--has-solution-p '((sibling katsuo wakame))))
   (should (eprolog-test--has-solution-p '((mother fune katsuo))))
   (should (eprolog-test--has-solution-p '((sister wakame sazae))))
   (should (eprolog-test--has-solution-p '((brother katsuo wakame))))
-  (should (eprolog-test--has-solution-p '((ancestor fune tarao)))))
-#+END_SRC
-
-Extended family relationships demonstrate more complex logical derivations:
-
-#+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-example-family-tree-uncle-aunt-cousin ()
-  "Test uncle, aunt, and cousin relationships."
-  (eprolog-test--restore-builtins)
+  (should (eprolog-test--has-solution-p '((ancestor fune tarao))))
   
-  ;; Setup family tree with extended relationships (parent Parent Child)
-  (eprolog-define-prolog-predicate! (parent fune katsuo))
-  (eprolog-define-prolog-predicate (parent fune wakame))
-  (eprolog-define-prolog-predicate (parent fune sazae))
-  (eprolog-define-prolog-predicate (parent sazae tarao))
-  (eprolog-define-prolog-predicate (parent katsuo child1))
-  (eprolog-define-prolog-predicate (parent wakame child2))
-  
-  (eprolog-define-prolog-predicate! (male katsuo))
-  (eprolog-define-prolog-predicate! (female fune))
-  (eprolog-define-prolog-predicate (female sazae))
-  (eprolog-define-prolog-predicate (female wakame))
-  
-  ;; Define extended relationships
-  (eprolog-define-prolog-predicate! (sibling _x _y) (parent _z _x) (parent _z _y) (not (= _x _y)))
-  (eprolog-define-prolog-predicate! (uncle _x _y) (parent _z _y) (sibling _x _z) (male _x))
-  (eprolog-define-prolog-predicate! (aunt _x _y) (parent _z _y) (sibling _x _z) (female _x))
-  (eprolog-define-prolog-predicate! (cousin _x _y) (parent _a _x) (parent _b _y) (sibling _a _b))
-  
-  ;; Test uncle/aunt relationships
+  ;; === EXTENDED RELATIONSHIP TESTS ===
   (should (eprolog-test--has-solution-p '((uncle katsuo tarao))))
   (should (eprolog-test--has-solution-p '((aunt wakame tarao))))
-  
-  ;; Test cousin relationships  
   (should (eprolog-test--has-solution-p '((cousin tarao child1))))
-  (should (eprolog-test--has-solution-p '((cousin child1 child2)))))
-#+END_SRC
-
-Complex queries demonstrate Prolog's ability to find multiple solutions:
-
-#+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-example-family-tree-complex-queries ()
-  "Test complex family tree queries with multiple solutions."
-  (eprolog-test--restore-builtins)
+  (should (eprolog-test--has-solution-p '((cousin child1 child2))))
   
-  ;; Setup complete family tree (parent Parent Child)
-  (eprolog-define-prolog-predicate! (parent fune katsuo))
-  (eprolog-define-prolog-predicate (parent fune wakame))
-  (eprolog-define-prolog-predicate (parent fune sazae))
-  (eprolog-define-prolog-predicate (parent sazae tarao))
-  (eprolog-define-prolog-predicate (parent taiko ikura))
-  
-  (eprolog-define-prolog-predicate! (grandparent _x _z) (parent _x _y) (parent _y _z))
-  (eprolog-define-prolog-predicate! (sibling _x _y) (parent _z _x) (parent _z _y) (not (= _x _y)))
-  
+  ;; === COMPLEX MULTI-SOLUTION QUERIES ===
   ;; Test finding all children of fune
   (let ((solutions (eprolog-test--collect-solutions '((parent fune _child)))))
     (should (= (length solutions) 3))
@@ -179,16 +128,14 @@ Complex queries demonstrate Prolog's ability to find multiple solutions:
     (should (>= (length solutions) 6))) ; katsuo-wakame, wakame-katsuo, etc.
   
   ;; Test duplicate suppression technique using string ordering
-  (eprolog-define-prolog-predicate! (unique-sibling _x _y)
-    (sibling _x _y)
-    (lispp (string< (symbol-name (quote _x)) (symbol-name (quote _y)))))
-  
   (let ((solutions (eprolog-test--collect-solutions '((unique-sibling _x _y)))))
     (should (= (length solutions) 3)) ; Only one direction of each pair
     (should (member '((_x . katsuo) (_y . sazae)) solutions))
     (should (member '((_x . katsuo) (_y . wakame)) solutions))
     (should (member '((_x . sazae) (_y . wakame)) solutions))))
 #+END_SRC
+
+The family tree test demonstrates how basic facts can be combined with rules to derive complex relationships, showcasing the power of logical inference in Prolog.
 
 ** Complex Backtracking and Control Flow
 

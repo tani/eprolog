@@ -25,24 +25,47 @@ The following test demonstrates the basic type checking predicates available in 
 
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-feature-builtin-type-checking ()
-  "Test type checking predicates from README.org."
+  "Test type checking predicates - positive cases demonstrating correct type identification."
   (eprolog-test--restore-builtins)
   
-  ;; Test atom/1
+  ;; === POSITIVE TYPE IDENTIFICATION TESTS ===
+  ;; These tests verify that type predicates correctly identify their respective types
+  
+  ;; Test atom/1 - should succeed for atomic values
   (should (eprolog-test--has-solution-p '((atom foo))))
-  (should-not (eprolog-test--has-solution-p '((atom (a b)))))
+  (should (eprolog-test--has-solution-p '((atom 'quoted-atom))))
   
-  ;; Test var/1
+  ;; Test var/1 - should succeed for unbound variables
   (should (eprolog-test--has-solution-p '((var _x))))
-  (should-not (eprolog-test--has-solution-p '((var foo))))
+  (should (eprolog-test--has-solution-p '((var _unbound))))
   
-  ;; Test number/1
+  ;; Test number/1 - should succeed for numeric values
   (should (eprolog-test--has-solution-p '((number 42))))
-  (should-not (eprolog-test--has-solution-p '((number foo))))
+  (should (eprolog-test--has-solution-p '((number 3.14))))
+  (should (eprolog-test--has-solution-p '((number -17))))
   
-  ;; Test string/1
+  ;; Test string/1 - should succeed for string literals
   (should (eprolog-test--has-solution-p '((string "hello"))))
-  (should-not (eprolog-test--has-solution-p '((string foo)))))
+  (should (eprolog-test--has-solution-p '((string "")))))  ; empty string
+  
+  ;; === BASIC NEGATIVE CASES ===
+  ;; These verify type predicates fail appropriately for wrong types
+  
+  ;; atom/1 should fail for non-atomic structures
+  (should-not (eprolog-test--has-solution-p '((atom (a b)))))
+  (should-not (eprolog-test--has-solution-p '((atom 123))))
+  
+  ;; var/1 should fail for bound terms
+  (should-not (eprolog-test--has-solution-p '((var foo))))
+  (should-not (eprolog-test--has-solution-p '((var 42))))
+  
+  ;; number/1 should fail for non-numeric types
+  (should-not (eprolog-test--has-solution-p '((number foo))))
+  (should-not (eprolog-test--has-solution-p '((number "123"))))
+  
+  ;; string/1 should fail for non-string types
+  (should-not (eprolog-test--has-solution-p '((string foo))))
+  (should-not (eprolog-test--has-solution-p '((string 123)))))
 #+END_SRC
 
 This test shows how to use the basic type checking predicates. These are fundamental for writing predicates that need to behave differently depending on the type of their arguments.
@@ -196,29 +219,44 @@ These tests verify that type checking predicates handle edge cases and unexpecte
 
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-feature-builtin-type-checking-invalid ()
-  "Test type checking predicates with invalid/unexpected inputs."
+  "Test type checking predicates with invalid/unexpected inputs - negative cases and edge cases."
   (eprolog-test--restore-builtins)
   
-  ;; Test atom/1 with various invalid types
-  (should-not (eprolog-test--has-solution-p '((atom (1 2 3)))))
-  (should-not (eprolog-test--has-solution-p '((atom (foo bar)))))
-  (should (eprolog-test--has-solution-p '((atom 123))))
-  (should (eprolog-test--has-solution-p '((atom "string"))))
+  ;; === EDGE CASES FOR TYPE INTERPRETATION ===
+  ;; These test boundary cases where type classification might be ambiguous
   
-  ;;;; Test var/1 with bound variables and literals
+  ;; atom/1 edge cases - what ε-prolog considers atomic
+  (should-not (eprolog-test--has-solution-p '((atom (1 2 3)))))  ; lists are not atoms
+  (should-not (eprolog-test--has-solution-p '((atom (foo bar))))) ; compound terms are not atoms
+  (should (eprolog-test--has-solution-p '((atom 123))))           ; numbers may be considered atoms in ε-prolog
+  (should (eprolog-test--has-solution-p '((atom "string"))))      ; strings may be considered atoms in ε-prolog
+  
+  ;; === VARIABLE BINDING STATE TESTS ===
+  ;; Test var/1 behavior with bound variables and different term types
+  
+  ;; var/1 should fail after variable binding
   (should-not (eprolog-test--has-solution-p '((= _x 42) (var _x))))
+  
+  ;; var/1 should fail for all non-variable terms  
   (should-not (eprolog-test--has-solution-p '((var 42))))
   (should-not (eprolog-test--has-solution-p '((var atom))))
-  ;; Test number/1 with non-numeric types
-  (should-not (eprolog-test--has-solution-p '((number atom))))
-  (should-not (eprolog-test--has-solution-p '((number "123"))))
-  (should-not (eprolog-test--has-solution-p '((number (1 2 3)))))
+  (should-not (eprolog-test--has-solution-p '((var (compound term)))))
+  (should-not (eprolog-test--has-solution-p '((var "string"))))
   
-  ;; Test string/1 with non-string types
+  ;; === STRICT TYPE REJECTION TESTS ===
+  ;; These verify that type predicates properly reject inappropriate types
+  
+  ;; number/1 should strictly reject non-numeric types
+  (should-not (eprolog-test--has-solution-p '((number atom))))
+  (should-not (eprolog-test--has-solution-p '((number "123"))))    ; string representation of number
+  (should-not (eprolog-test--has-solution-p '((number (1 2 3)))))  ; list of numbers
+  (should-not (eprolog-test--has-solution-p '((number ())))))      ; empty list
+  
+  ;; string/1 should strictly reject non-string types
   (should-not (eprolog-test--has-solution-p '((string 123))))
   (should-not (eprolog-test--has-solution-p '((string atom))))
-  (should-not (eprolog-test--has-solution-p '((string (a b)))))
-  )
+  (should-not (eprolog-test--has-solution-p '((string (a b)))))    ; list is not string
+  (should-not (eprolog-test--has-solution-p '((string ())))))      ; empty list is not string
 #+END_SRC
 
 *** List Operations with Invalid Structures

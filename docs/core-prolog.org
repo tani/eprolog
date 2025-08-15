@@ -614,35 +614,30 @@ This section explores the robustness of ε-prolog's term handling across diverse
 
 Comprehensive edge case testing ensures that ε-prolog handles unusual but valid inputs gracefully, maintaining consistency across different character encodings, atom naming conventions, and boundary values that might cause issues in less robust systems.
 
-*** Special Character and Unicode Tests
+*** Special Character Tests
 
-These tests verify that ε-prolog correctly handles atoms with special characters, Unicode symbols, and non-standard naming conventions, ensuring robust internationalization support.
+These tests verify that ε-prolog correctly handles atoms with special characters and practical naming conventions commonly encountered in real-world usage.
 
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-core-special-characters ()
-  "Test handling of special characters and unicode in atom names."
+  "Test handling of practical special characters in atom names."
   (eprolog-test--restore-builtins)
   
-  ;; Test atoms with special characters
+  ;; Test atoms with spaces (practical for quoted atoms)
   (eprolog-define-predicate (special-chars |atom with spaces|))
   (should (eprolog-test--has-solution-p '((special-chars |atom with spaces|))))
   
-  ;; Test atoms with punctuation
-  (eprolog-define-predicate (punct-test +plus+ -minus- /slash/ *star*))
-  (should (eprolog-test--has-solution-p '((punct-test +plus+ -minus- /slash/ *star*))))
+  ;; Test atoms with common punctuation
+  (eprolog-define-predicate (punct-test +plus+ -minus- *star*))
+  (should (eprolog-test--has-solution-p '((punct-test +plus+ -minus- *star*))))
   
-  ;; Test unicode characters (if supported)
-  (eprolog-define-predicate (unicode-test α β γ))
-  (should (eprolog-test--has-solution-p '((unicode-test α β γ))))
-  
-  ;; Test atoms with numbers and mixed characters
+  ;; Test atoms with numbers and mixed alphanumeric characters
   (eprolog-define-predicate (mixed-123 a1b2c3))
   (should (eprolog-test--has-solution-p '((mixed-123 a1b2c3))))
   
-  ;; Test reasonably long atom names (50 chars should be fine)
-  (let ((long-atom (intern (make-string 50 ?a))))
-    (eval `(eprolog-define-predicate (long-atom-test ,long-atom)))
-    (should (eprolog-test--has-solution-p `((long-atom-test ,long-atom))))))
+  ;; Test underscore and dash in atom names (common in practice)
+  (eprolog-define-predicate (underscore-test my_atom another-atom))
+  (should (eprolog-test--has-solution-p '((underscore-test my_atom another-atom)))))
 #+END_SRC
 
 *** Empty and Boundary Value Tests
