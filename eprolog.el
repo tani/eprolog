@@ -795,35 +795,104 @@ Succeeds if TERM is an unbound variable."
 
 ;; Lisp evaluation predicates
 
+(defun eprolog--eval-lisp-expressions (expressions &optional result-handler)
+  "Evaluate EXPRESSIONS as Lisp code with unified safety checks and handling.
+
+This is a helper function used by the Lisp evaluation predicates (lisp/2+,
+lisp!/1+, lispp/1+) to consolidate common functionality.
+
+Arguments:
+  EXPRESSIONS - List of Lisp expressions to evaluate
+  RESULT-HANDLER - Optional function to process evaluation result
+
+Behavior:
+  - Checks that EXPRESSIONS are fully ground (no unbound variables)
+  - Substitutes current variable bindings into expressions
+  - Evaluates expressions as (progn ,@expressions)
+  - If RESULT-HANDLER provided, calls it with evaluation result
+  - Otherwise continues proof with current bindings
+  - Returns appropriate success/failure object for proof engine
+
+Safety:
+  - Fails immediately if expressions contain unbound variables
+  - Proper integration with eprolog proof engine and backtracking"
+  (if (not (eprolog--ground-p expressions))
+      (make-eprolog--failure)
+    (let* ((lisp-expression (eprolog--substitute-bindings eprolog-current-bindings `(progn ,@expressions)))
+           (evaluated-result (eval lisp-expression)))
+      (if result-handler
+          (funcall result-handler evaluated-result)
+        (eprolog--prove-goal-sequence eprolog-remaining-goals eprolog-current-bindings)))))
+
 (eprolog-define-lisp-predicate lisp (result-variable &rest expressions)
   "Lisp evaluation predicate: lisp(RESULT, EXPRESSIONS...).
-Evaluates EXPRESSIONS as Lisp code and unifies the result with RESULT-VARIABLE."
-  (if (not (eprolog--ground-p expressions))
-    (make-eprolog--failure)
-    (let* ((lisp-expression (eprolog--substitute-bindings eprolog-current-bindings `(progn ,@expressions)))
-           (evaluated-result (eval lisp-expression))
-           (result-term (eprolog--substitute-bindings eprolog-current-bindings result-variable))
-           (new-bindings (eprolog--unify result-term evaluated-result eprolog-current-bindings)))
-      (if (eprolog--failure-p new-bindings)
-          (make-eprolog--failure)
-        (eprolog--prove-goal-sequence eprolog-remaining-goals new-bindings)))))
+
+Evaluates EXPRESSIONS as Lisp code and unifies the result with RESULT-VARIABLE.
+
+Usage:
+  (eprolog-query (lisp X (+ 2 3)))           ; X = 5
+  (eprolog-query (lisp Y (length '(a b c)))) ; Y = 3
+  (eprolog-query (lisp Z (current-buffer)))  ; Z = #<buffer ...>
+
+Behavior:
+  - All expressions must be ground (fully instantiated)
+  - Expressions evaluated as (progn Expression1 Expression2 ...)
+  - Final result unified with RESULT-VARIABLE
+  - Succeeds if unification succeeds, fails otherwise
+  - Integrates with backtracking and choice points
+
+See also: lisp!/1+ for side effects, lispp/1+ for boolean tests."
+  (eprolog--eval-lisp-expressions expressions
+    (lambda (evaluated-result)
+      (let* ((result-term (eprolog--substitute-bindings eprolog-current-bindings result-variable))
+             (new-bindings (eprolog--unify result-term evaluated-result eprolog-current-bindings)))
+        (if (eprolog--failure-p new-bindings)
+            (make-eprolog--failure)
+          (eprolog--prove-goal-sequence eprolog-remaining-goals new-bindings))))))
 
 (eprolog-define-lisp-predicate lisp! (&rest expressions)
   "Lisp evaluation predicate: lisp!(EXPRESSIONS...).
-Evaluates EXPRESSIONS as Lisp code for side effects, always succeeds."
-  (if (not (eprolog--ground-p expressions))
-    (make-eprolog--failure)
-    (let* ((lisp-expression (eprolog--substitute-bindings eprolog-current-bindings `(progn ,@expressions))))
-      (eval lisp-expression)
-      (eprolog--prove-goal-sequence eprolog-remaining-goals eprolog-current-bindings))))
+
+Evaluates EXPRESSIONS as Lisp code for side effects, always succeeds.
+
+Usage:
+  (eprolog-query (lisp! (message \"Hello from Prolog!\")))
+  (eprolog-query (lisp! (setq my-var 42) (push 'item my-list)))
+
+Behavior:
+  - All expressions must be ground (fully instantiated)
+  - Expressions evaluated as (progn Expression1 Expression2 ...)
+  - Return value is ignored
+  - Always succeeds and continues proof
+  - Useful for side effects: I/O, variable assignment, etc.
+
+See also: lisp/2+ for capturing results, lispp/1+ for boolean tests."
+  (eprolog--eval-lisp-expressions expressions))
 
 (eprolog-define-lisp-predicate lispp (&rest expressions)
   "Lisp evaluation predicate: lispp(EXPRESSIONS...).
-Evaluates EXPRESSIONS as Lisp code and succeeds if the result is non-nil."
-  (if (not (eprolog--ground-p expressions))
-    (make-eprolog--failure)
-    (let* ((lisp-expression (eprolog--substitute-bindings eprolog-current-bindings `(progn ,@expressions)))
-           (evaluated-result (eval lisp-expression)))
+
+Evaluates EXPRESSIONS as Lisp code and succeeds if the result is non-nil.
+
+Usage:
+  (eprolog-query (lispp (> X 0)))             ; succeeds if X > 0
+  (eprolog-query (lispp (member Item List)))  ; succeeds if Item in List
+  (eprolog-query (lispp (file-exists-p \"path\")))
+
+Behavior:
+  - All expressions must be ground (fully instantiated)
+  - Expressions evaluated as (progn Expression1 Expression2 ...)
+  - Succeeds if final result is non-nil
+  - Fails if final result is nil
+  - Used for Lisp-based conditions in Prolog rules
+
+Examples in rules:
+  (eprolog-assert! (positive X) (lispp (> X 0)))
+  (eprolog-assert! (file-exists Path) (lispp (file-exists-p Path)))
+
+See also: lisp/2+ for capturing results, lisp!/1+ for side effects."
+  (eprolog--eval-lisp-expressions expressions
+    (lambda (evaluated-result)
       (if (not evaluated-result)
           (make-eprolog--failure)
         (eprolog--prove-goal-sequence eprolog-remaining-goals eprolog-current-bindings)))))
