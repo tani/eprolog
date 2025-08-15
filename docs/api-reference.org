@@ -1,0 +1,140 @@
+#+TITLE: API Reference
+#+AUTHOR: Masaya Taniguchi
+#+PROPERTY: header-args:emacs-lisp :tangle yes
+
+* API Reference
+
+This section provides comprehensive documentation for all ε-prolog API functions, predicates, and usage patterns.
+
+** Predicate Definition
+
+*** eprolog-define-prolog-predicate
+Define a Prolog clause (fact or rule) and add it to the database.
+
+#+BEGIN_SRC emacs-lisp :eval never :tangle no
+(eprolog-define-prolog-predicate (name arg1 arg2 ...) goal1 goal2 ...)
+#+END_SRC
+
+The first argument is a head term containing the predicate name and its arguments. For facts with no arguments, you can omit the parentheses: ~(eprolog-define-prolog-predicate name)~.
+
+*Alias*: ~eprolog-define-predicate~
+
+*** eprolog-define-prolog-predicate!
+Define a Prolog clause, replacing existing clauses with the same arity.
+
+#+BEGIN_SRC emacs-lisp :eval never :tangle no
+(eprolog-define-prolog-predicate! (name arg1 arg2 ...) goal1 goal2 ...)
+#+END_SRC
+
+The first argument is a head term containing the predicate name and its arguments. For facts with no arguments, you can omit the parentheses: ~(eprolog-define-prolog-predicate! name)~.
+
+*Alias*: ~eprolog-define-predicate!~
+
+*** eprolog-define-lisp-predicate
+Define a predicate implemented in Emacs Lisp.
+
+#+BEGIN_SRC emacs-lisp :eval never :tangle no
+(eprolog-define-lisp-predicate name (arg1 arg2 ...)
+  ;; Lisp code returning success or failure object
+  )
+#+END_SRC
+
+** Query Execution
+
+*** eprolog-query
+Execute an interactive Prolog query.
+
+#+BEGIN_SRC emacs-lisp :eval never :tangle no
+(eprolog-query goal1 goal2 ...)
+#+END_SRC
+
+*** eprolog-solve
+Programmatically solve goals with optional keyword callbacks.
+
+#+BEGIN_SRC emacs-lisp :eval never :tangle no
+;; Basic usage - just solve goals, ignore results
+(eprolog-solve goals)
+
+;; With success callback only
+(eprolog-solve goals :success (lambda (bindings) ...))
+
+;; With both callbacks
+(eprolog-solve goals 
+  :success (lambda (bindings) ...)
+  :failure (lambda () ...))
+#+END_SRC
+
+** DCG Support
+
+*** eprolog-define-grammar
+Define a DCG rule, adding to existing rules with the same arity.
+
+#+BEGIN_SRC emacs-lisp :eval never :tangle no
+(eprolog-define-grammar head body-element1 body-element2 ...)
+#+END_SRC
+
+Adds a new DCG rule without replacing existing ones. This allows multiple alternatives for the same non-terminal.
+
+*** eprolog-define-grammar!
+Define a DCG rule, replacing existing rules with the same arity.
+
+#+BEGIN_SRC emacs-lisp :eval never :tangle no
+(eprolog-define-grammar! head body-element1 body-element2 ...)
+#+END_SRC
+
+Similar to ~eprolog-define-grammar~ but removes existing rules for the same non-terminal with the same arity before adding the new rule. Used for redefinition or when you want only one rule for a non-terminal.
+
+** Test Runner
+
+The test runner provides a convenient way to execute all tests and verify system functionality:
+
+#+BEGIN_SRC emacs-lisp
+(defun eprolog-usage-run-all-tests ()
+  "Run all ε-prolog usage tests and display summary."
+  (interactive)
+  (let ((test-results (ert-run-tests-batch "eprolog-usage-")))
+    (message "ε-prolog test suite completed. Check *Messages* for detailed results.")
+    test-results))
+
+;; Test specific categories
+(defun eprolog-usage-run-core-tests ()
+  "Run core Prolog functionality tests."
+  (interactive)
+  (ert-run-tests-batch "eprolog-usage.*\\(facts\\|rules\\|unification\\|equality\\)"))
+
+(defun eprolog-usage-run-builtin-tests ()
+  "Run built-in predicate tests."
+  (interactive)
+  (ert-run-tests-batch "eprolog-usage.*\\(type\\|list\\|higher-order\\)"))
+
+(defun eprolog-usage-run-control-flow-tests ()
+  "Run control flow tests."
+  (interactive)
+  (ert-run-tests-batch "eprolog-usage.*\\(control\\|logical\\|cut\\|call\\)"))
+
+(defun eprolog-usage-run-lisp-integration-tests ()
+  "Run Lisp integration tests."
+  (interactive)
+  (ert-run-tests-batch "eprolog-usage.*\\(lisp\\|dynamic\\)"))
+
+(defun eprolog-usage-run-dcg-tests ()
+  "Run DCG tests."
+  (interactive)
+  (ert-run-tests-batch "eprolog-usage.*dcg"))
+
+;; Utility for running tests interactively
+(defun eprolog-usage-run-interactive ()
+  "Run ε-prolog tests interactively with ERT."
+  (interactive)
+  (ert "eprolog-usage-"))
+#+END_SRC
+
+** Conclusion
+
+This comprehensive exploration of ε-prolog demonstrates the rich expressiveness and practical utility of logic programming within the Emacs environment. From basic facts and rules to sophisticated DCG parsing, from simple arithmetic to complex family relationship modeling, ε-prolog provides a powerful platform for declarative problem solving.
+
+The modular documentation structure allows focused exploration of specific topics while maintaining comprehensive test coverage. Each example has been carefully crafted to be both educational and executable, ensuring that theory and practice remain tightly coupled.
+
+The journey through these examples illustrates a fundamental truth about Prolog: it's not just a programming language, but a different way of thinking about computation. Instead of telling the computer how to solve problems, we describe what we know and what relationships exist, then let logical inference find the solutions.
+
+This document serves multiple purposes: it's a learning resource for understanding ε-prolog's capabilities, a comprehensive test suite ensuring system reliability, and a demonstration of how logical programming can elegantly solve complex problems. Each example has been carefully crafted to be both educational and executable, ensuring that theory and practice remain tightly coupled.

@@ -1,0 +1,176 @@
+#+TITLE: Lisp Integration
+#+AUTHOR: Masaya Taniguchi
+#+PROPERTY: header-args:emacs-lisp :tangle yes
+
+* Lisp Integration
+
+One of ε-prolog's most remarkable achievements is its seamless fusion with Emacs Lisp, creating a hybrid programming environment where logical and functional paradigms complement each other naturally. This integration isn't just a technical convenience—it's a bridge between two fundamentally different ways of thinking about computation.
+
+The beauty of this integration lies in its bidirectional nature. Prolog queries can invoke Lisp functions to perform calculations, access Emacs features, or manipulate data structures, while Lisp code can query the Prolog knowledge base. This creates a powerful symbiosis where each language contributes its strengths to solve complex problems.
+
+** Basic Lisp Interface
+
+The basic Lisp interface provides predicates that bridge the gap between Prolog's logical world and Lisp's functional world. These predicates are essential for practical programming in ε-prolog.
+
+The basic Lisp interface provides predicates for calling Lisp code from within Prolog queries. This is essential for accessing Emacs functions, performing calculations, and integrating with the Emacs environment.
+
+This subsection covers:
+- ~lisp/2~ for evaluating Lisp expressions and capturing results
+- ~lispp/1~ for evaluating Lisp expressions as boolean tests
+- ~lisp!/1~ for evaluating Lisp expressions for side effects only
+- How to pass data between Prolog and Lisp
+
+The following test demonstrates the three main ways to interface with Lisp:
+
+#+BEGIN_SRC emacs-lisp
+(ert-deftest eprolog-usage-lisp-integration ()
+  "Test Lisp integration predicates from README.org examples."
+  (eprolog-test--restore-builtins)
+  
+  ;; Test lisp/2 as shown in README
+  (let ((solutions (eprolog-test--collect-solutions '((lisp _result (+ 1 2 3))))))
+    (should (= (length solutions) 1))
+    (should (= (cdr (assoc '_result (car solutions))) 6)))
+  
+  ;; Test lispp/1 as shown in README
+  (should (eprolog-test--has-solution-p '((lispp (> 5 3)))))
+  (should-not (eprolog-test--has-solution-p '((lispp (< 5 3)))))
+  
+  ;; Test lisp!/1 side effects
+  (let ((test-var nil))
+    (should (eprolog-test--has-solution-p `((lisp! (setq test-var 'success)))))
+    (should (eq test-var 'success))))
+#+END_SRC
+
+Evaluating Lisp expressions and capturing their results enables powerful computations:
+
+#+BEGIN_SRC emacs-lisp
+(ert-deftest eprolog-usage-lisp-predicate ()
+  "Test Lisp evaluation predicate as standalone test."
+  (eprolog-test--restore-builtins)
+  (let ((solutions (eprolog-test--collect-solutions '((lisp _x (+ 2 3))))))
+    (should (= (length solutions) 1))
+    (should (equal (cdr (assoc '_x (car solutions))) 5))))
+#+END_SRC
+
+Sometimes you need to execute Lisp code for its side effects rather than its return value:
+
+#+BEGIN_SRC emacs-lisp
+(ert-deftest eprolog-usage-lisp-side-effects ()
+  "Test Lisp side effect predicate as standalone test."
+  (eprolog-test--restore-builtins)
+  (setq eprolog-test--temp-var nil)
+  (should (eprolog-test--has-solution-p `((lisp! (setq eprolog-test--temp-var 'modified)))))
+  (should (eq eprolog-test--temp-var 'modified)))
+#+END_SRC
+
+Using Lisp expressions as boolean tests enables complex conditional logic:
+
+#+BEGIN_SRC emacs-lisp
+(ert-deftest eprolog-usage-lisp-conditional ()
+  "Test Lisp conditional predicate as standalone test."
+  (eprolog-test--restore-builtins)
+  (should (eprolog-test--has-solution-p '((lispp (> 5 3)))))
+  (should-not (eprolog-test--has-solution-p '((lispp (> 3 5))))))
+#+END_SRC
+
+** Lisp Integration Negative Tests
+
+The lisp predicate should fail with invalid expressions and unification failures:
+
+#+BEGIN_SRC emacs-lisp
+(ert-deftest eprolog-usage-lisp-negative-tests ()
+  "Test negative cases for lisp predicate."
+  (eprolog-test--restore-builtins)
+
+  (should-error (eprolog-test--has-solution-p '((lisp _x (undef)))))
+  (should-not (eprolog-test--has-solution-p '((lisp _x (_undef))))))
+#+END_SRC
+
+** Lisp Side Effects (lisp!) Negative Tests
+
+The lisp! predicate should fail with invalid expressions:
+
+#+BEGIN_SRC emacs-lisp
+(ert-deftest eprolog-usage-lisp-side-effects-negative-tests ()
+  "Test negative cases for lisp! predicate."
+  (eprolog-test--restore-builtins)
+
+  (should-error (eprolog-test--has-solution-p '((lisp! (undef)))))
+  (should-not (eprolog-test--has-solution-p '((lisp! (_undef)))))
+  )
+#+END_SRC
+
+** Lisp Conditional (lispp) Negative Tests
+
+The lispp predicate should fail when expressions return nil or false:
+
+#+BEGIN_SRC emacs-lisp
+(ert-deftest eprolog-usage-lispp-negative-tests ()
+  "Test negative cases for lispp predicate."
+  (eprolog-test--restore-builtins)
+  
+  ;; Expressions that return nil should fail
+  (should-not (eprolog-test--has-solution-p '((lispp (> 2 5)))))
+  (should-not (eprolog-test--has-solution-p '((lispp (equal 'a 'b)))))
+  (should-not (eprolog-test--has-solution-p '((lispp (< 10 5)))))
+  (should-not (eprolog-test--has-solution-p '((lispp nil))))
+
+  (should-error (eprolog-test--has-solution-p '((lispp (undef)))))
+  (should-not (eprolog-test--has-solution-p '((lispp (_undef)))))
+
+  ;; Complex boolean expressions that evaluate to false
+  (should-not (eprolog-test--has-solution-p '((lispp (and t nil)))))
+  (should-not (eprolog-test--has-solution-p '((lispp (or nil nil))))))
+#+END_SRC
+
+** Dynamic Parameters
+
+Dynamic parameters provide a way to maintain state across predicate calls within a query. They enable sharing of information between different parts of a Prolog program and facilitate communication between Prolog and Lisp components.
+
+Dynamic parameters provide a sophisticated mechanism for maintaining state and sharing data across different parts of a Prolog computation:
+- ~dynamic-put/2~: Store a value associated with a key
+- ~dynamic-get/2~: Retrieve a value by its key
+- State persistence during query execution
+- Integration with Lisp for complex data manipulation
+
+This mechanism is particularly useful for accumulating results, maintaining counters, or sharing computed values across different predicate invocations.
+
+#+BEGIN_SRC emacs-lisp
+(ert-deftest eprolog-usage-dynamic-parameters ()
+  "Test dynamic parameter predicates."
+  (eprolog-test--restore-builtins)
+  
+  ;; Test dynamic-put and dynamic-get
+  (should (eprolog-test--has-solution-p 
+           '((dynamic-put test-key 42)
+             (dynamic-get test-key _value)
+             (= _value 42))))
+  
+  ;; Test parameter persistence across goals
+  (should (eprolog-test--has-solution-p
+           '((dynamic-put counter 0)
+             (dynamic-get counter _old)
+             (is _new (+ _old 1))
+             (dynamic-put counter _new)
+             (dynamic-get counter 1)))))
+#+END_SRC
+
+** Dynamic Parameters Negative Tests
+
+Dynamic parameter predicates should fail with invalid keys or expressions:
+
+#+BEGIN_SRC emacs-lisp
+(ert-deftest eprolog-usage-dynamic-get-negative-tests ()
+  "Test negative cases for dynamic-get predicate."
+  (eprolog-test--restore-builtins)
+  
+  ;; Getting non-existent keys should fail
+  (should-not (eprolog-test--has-solution-p '((dynamic-get nonexistent-key _value))))
+  (should-not (eprolog-test--has-solution-p '((dynamic-get missing-key _x))))
+  
+  ;; Unification failures with retrieved values
+  (should (eprolog-test--has-solution-p '((dynamic-put test-key 42))))
+  (should-not (eprolog-test--has-solution-p '((dynamic-get test-key "forty-two"))))
+  (should-not (eprolog-test--has-solution-p '((dynamic-get test-key (a b c))))))
+#+END_SRC

@@ -40,7 +40,7 @@ Place =eprolog.el= in your Emacs load path and add to your configuration:
 
 * Quick Start
 
-For detailed examples, tutorials, and comprehensive documentation, see [[file:BOOK.org][BOOK.org]].
+For detailed examples, tutorials, and comprehensive documentation, see the docs/ directory.
 
 Basic usage involves defining facts and rules, then querying the knowledge base:
 
@@ -63,18 +63,18 @@ Basic usage involves defining facts and rules, then querying the knowledge base:
 - ~eprolog-define-predicate~ for ~eprolog-define-prolog-predicate~
 - ~eprolog-define-predicate!~ for ~eprolog-define-prolog-predicate!~
 
-For complete API documentation, advanced examples, and comprehensive tutorials, see [[file:BOOK.org][BOOK.org]].
+For complete API documentation, advanced examples, and comprehensive tutorials, see the docs/ directory.
 
 * Testing
 
-ε-prolog includes a comprehensive test suite in [[file:BOOK.org][BOOK.org]] with 59 tests covering all major functionality.
+ε-prolog includes a comprehensive test suite in the docs/ directory with tests covering all major functionality.
 
 Run tests with:
 #+BEGIN_SRC bash
 make test
 #+END_SRC
 
-See [[file:BOOK.org][BOOK.org]] for detailed testing instructions and interactive test examples.
+See the docs/ directory for detailed testing instructions and interactive test examples.
 
 * Debugging
 
@@ -85,7 +85,7 @@ Enable spy mode to trace predicate execution:
 (setq eprolog-spy-state 'prompt) ; or 'always or 'disabled
 #+END_SRC
 
-See [[file:BOOK.org][BOOK.org]] for comprehensive debugging examples and techniques.
+See the docs/ directory for comprehensive debugging examples and techniques.
 
 * Implementation Details
 

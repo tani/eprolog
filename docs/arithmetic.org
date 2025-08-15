@@ -1,0 +1,266 @@
+#+TITLE: Arithmetic and Mathematics
+#+AUTHOR: Masaya Taniguchi
+#+PROPERTY: header-args:emacs-lisp :tangle yes
+
+* Arithmetic and Mathematics
+
+Arithmetic in Prolog requires explicit evaluation, which distinguishes it from many other programming languages. This section explores how ε-prolog handles mathematical computations and provides predicates for numerical operations.
+
+Arithmetic in Prolog requires explicit evaluation using the ~is/2~ predicate. Unlike many programming languages, arithmetic expressions are not automatically evaluated - they remain as symbolic structures until explicitly computed.
+
+** Basic Arithmetic
+
+The ~is/2~ predicate is the cornerstone of arithmetic in Prolog, providing explicit evaluation of mathematical expressions.
+
+The ~is/2~ predicate evaluates arithmetic expressions and unifies the result with a variable. This is the primary way to perform calculations in Prolog.
+
+This subsection demonstrates:
+- Basic arithmetic operations (~+~, ~-~, ~*~, ~/~, ~mod~)
+- Complex arithmetic expressions with nested operations
+- How ~is/2~ evaluates expressions and binds results
+- Integration with mathematical functions (~sqrt~, ~expt~, etc.)
+
+The following test demonstrates basic and complex arithmetic operations:
+
+#+BEGIN_SRC emacs-lisp
+(ert-deftest eprolog-usage-arithmetic ()
+  "Test arithmetic evaluation with is/2 and mathematical functions."
+  (eprolog-test--restore-builtins)
+
+  ;; Test basic arithmetic
+  (let ((solutions (eprolog-test--collect-solutions '((is _result (+ 2 3))))))
+    (should (= (length solutions) 1))
+    (should (= (cdr (assoc '_result (car solutions))) 5)))
+
+  ;; Test complex expressions
+  (let ((solutions (eprolog-test--collect-solutions '((is _result (* (+ 2 3) 4))))))
+    (should (= (length solutions) 1))
+    (should (= (cdr (assoc '_result (car solutions))) 20)))
+
+  ;; Test comprehensive examples
+  (let ((solutions (eprolog-test--collect-solutions '((is _x (+ 15 25))))))
+    (should (= (length solutions) 1))
+    (should (equal (cdr (assoc '_x (car solutions))) 40)))
+
+  (let ((solutions (eprolog-test--collect-solutions '((is _x (+ (* 2 3) (/ 8 2)))))))
+    (should (= (length solutions) 1))
+    (should (equal (cdr (assoc '_x (car solutions))) 10)))
+
+  ;; Test is/2 safety: unbound variables in expression should fail or error
+  ;; Note: ε-prolog may throw errors for unbound variables in arithmetic
+  (should (not (eprolog-test--has-solution-p '((is _result (+ _unbound 3))))))
+  (should (not (eprolog-test--has-solution-p '((is _result (* _x _y))))))
+  )
+#+END_SRC
+
+The ~is/2~ predicate serves as the foundation for all arithmetic operations:
+
+#+BEGIN_SRC emacs-lisp
+(ert-deftest eprolog-usage-is-predicate ()
+  "Test basic is/2 predicate as standalone test."
+  (eprolog-test--restore-builtins)
+  (let ((solutions (eprolog-test--collect-solutions '((is _x (+ 2 3))))))
+    (should (= (length solutions) 1))
+    (should (equal (cdr (assoc '_x (car solutions))) 5))))
+#+END_SRC
+
+Testing various arithmetic operations demonstrates the range of mathematical capabilities:
+
+#+BEGIN_SRC emacs-lisp
+(ert-deftest eprolog-usage-basic-arithmetic-operations ()
+  "Test basic arithmetic operations with is/2."
+  (eprolog-test--restore-builtins)
+  (let ((solutions (eprolog-test--collect-solutions '((is _x (+ 15 25))))))
+    (should (= (length solutions) 1))
+    (should (equal (cdr (assoc '_x (car solutions))) 40)))
+  
+  (let ((solutions (eprolog-test--collect-solutions '((is _x (* 12 8))))))
+    (should (= (length solutions) 1))
+    (should (equal (cdr (assoc '_x (car solutions))) 96)))
+  
+  (let ((solutions (eprolog-test--collect-solutions '((is _x (- 100 37))))))
+    (should (= (length solutions) 1))
+    (should (equal (cdr (assoc '_x (car solutions))) 63))))
+#+END_SRC
+
+Complex expressions and mathematical functions extend the computational capabilities:
+
+#+BEGIN_SRC emacs-lisp
+(ert-deftest eprolog-usage-complex-arithmetic ()
+  "Test complex arithmetic expressions."
+  (eprolog-test--restore-builtins)
+  (let ((solutions (eprolog-test--collect-solutions '((is _x (+ (* 2 3) (/ 8 2)))))))
+    (should (= (length solutions) 1))
+    (should (equal (cdr (assoc '_x (car solutions))) 10)))
+  
+  (let ((solutions (eprolog-test--collect-solutions '((is _x (sqrt 16))))))
+    (should (= (length solutions) 1))
+    (should (equal (cdr (assoc '_x (car solutions))) 4.0))))
+#+END_SRC
+
+** Mathematical Predicates
+
+Building mathematical predicates demonstrates how to combine arithmetic with logical programming:
+
+#+BEGIN_SRC emacs-lisp
+(ert-deftest eprolog-usage-mathematical-predicates ()
+  "Test mathematical predicates."
+  (eprolog-test--restore-builtins)
+  
+  ;; Define even and odd predicates
+  (eprolog-define-prolog-predicate (even-num _n)
+    (is _r (mod _n 2))
+    (lispp (= _r 0)))
+  (eprolog-define-prolog-predicate (odd-num _n)
+    (is _r (mod _n 2))
+    (lispp (= _r 1)))
+  
+  ;; Test even/odd checking
+  (should (eprolog-test--has-solution-p '((even-num 10))))
+  (should (eprolog-test--has-solution-p '((odd-num 7))))
+  (should-not (eprolog-test--has-solution-p '((even-num 7))))
+  (should-not (eprolog-test--has-solution-p '((odd-num 10))))
+  
+  ;; Define power of 2 predicate
+  (eprolog-define-prolog-predicate (power-of-2 _n _result)
+    (is _result (expt 2 _n)))
+  
+  ;; Define sum-to predicate
+  (eprolog-define-prolog-predicate (sum-to _n _sum)
+    (lispp (<= _n 0))
+    !
+    (is _sum 0))
+  (eprolog-define-prolog-predicate (sum-to _n _sum)
+    (lispp (> _n 0))
+    (is _n1 (- _n 1))
+    (sum-to _n1 _sum1)
+    (is _sum (+ _n _sum1)))
+  
+  ;; Test power of 2
+  (let ((solutions (eprolog-test--collect-solutions '((power-of-2 8 _result)))))
+    (should (= (length solutions) 1))
+    (should (equal (cdr (assoc '_result (car solutions))) 256)))
+  
+  ;; Test sum-to
+  (let ((solutions (eprolog-test--collect-solutions '((sum-to 5 _result)))))
+    (should (= (length solutions) 1))
+    (should (equal (cdr (assoc '_result (car solutions))) 15))))
+#+END_SRC
+
+Arithmetic comparisons are essential for numerical reasoning in Prolog:
+
+#+BEGIN_SRC emacs-lisp
+(ert-deftest eprolog-usage-arithmetic-comparisons ()
+  "Test arithmetic comparisons using lispp."
+  (eprolog-test--restore-builtins)
+  
+  ;; Test basic comparisons
+  (should (eprolog-test--has-solution-p '((lispp (> 15 8)))))
+  (should (eprolog-test--has-solution-p '((lispp (< 3 10)))))
+  (should (eprolog-test--has-solution-p '((lispp (>= 7 7)))))
+  (should (eprolog-test--has-solution-p '((lispp (<= 4 9)))))
+  (should (eprolog-test--has-solution-p '((lispp (= 12 12)))))
+  (should (eprolog-test--has-solution-p '((lispp (/= 5 8)))))
+  
+  ;; Test negative cases
+  (should-not (eprolog-test--has-solution-p '((lispp (> 3 10)))))
+  (should-not (eprolog-test--has-solution-p '((lispp (< 15 8)))))
+  (should-not (eprolog-test--has-solution-p '((lispp (= 5 8))))))
+#+END_SRC
+
+Custom comparison predicates demonstrate how to build domain-specific numerical logic:
+
+#+BEGIN_SRC emacs-lisp
+(ert-deftest eprolog-usage-custom-comparison-predicates ()
+  "Test custom comparison predicates using lispp."
+  (eprolog-test--restore-builtins)
+  
+  ;; Define custom predicates
+  (eprolog-define-prolog-predicate (greater _x _y)
+    (lispp (> _x _y)))
+  (eprolog-define-prolog-predicate (between _x _low _high)
+    (lispp (>= _x _low))
+    (lispp (<= _x _high)))
+  (eprolog-define-prolog-predicate (positive _x)
+    (lispp (> _x 0)))
+  
+  ;; Test custom predicates
+  (should (eprolog-test--has-solution-p '((greater 20 15))))
+  (should (eprolog-test--has-solution-p '((between 7 5 10))))
+  (should (eprolog-test--has-solution-p '((positive 42))))
+  (should-not (eprolog-test--has-solution-p '((between 12 5 10))))
+  (should-not (eprolog-test--has-solution-p '((positive -5)))))
+#+END_SRC
+
+Mathematical utility predicates like absolute value and min/max are common requirements:
+
+#+BEGIN_SRC emacs-lisp
+(ert-deftest eprolog-usage-absolute-value-and-minmax ()
+  "Test absolute value and min/max predicates."
+  (eprolog-test--restore-builtins)
+  
+  ;; Define absolute value predicate
+  (eprolog-define-prolog-predicate (abs-val _x _abs)
+    (lispp (>= _x 0))
+    !
+    (is _abs _x))
+  (eprolog-define-prolog-predicate (abs-val _x _abs)
+    (lispp (< _x 0))
+    (is _abs (- _x)))
+  
+  ;; Define max predicate
+  (eprolog-define-prolog-predicate (max-of _a _b _max)
+    (lispp (>= _a _b))
+    !
+    (is _max _a))
+  (eprolog-define-prolog-predicate (max-of _a _b _max)
+    (is _max _b))
+  
+  ;; Test absolute value
+  (let ((solutions (eprolog-test--collect-solutions '((abs-val -17 _abs)))))
+    (should (= (length solutions) 1))
+    (should (equal (cdr (assoc '_abs (car solutions))) 17)))
+  
+  (let ((solutions (eprolog-test--collect-solutions '((abs-val 25 _abs)))))
+    (should (= (length solutions) 1))
+    (should (equal (cdr (assoc '_abs (car solutions))) 25)))
+  
+  ;; Test max
+  (let ((solutions (eprolog-test--collect-solutions '((max-of 15 23 _max)))))
+    (should (= (length solutions) 1))
+    (should (equal (cdr (assoc '_max (car solutions))) 23))))
+#+END_SRC
+
+** Geometric Calculations
+
+Geometric calculations demonstrate how to build more complex mathematical predicates:
+
+#+BEGIN_SRC emacs-lisp
+(ert-deftest eprolog-usage-geometric-calculations ()
+  "Test geometric calculations."
+  (eprolog-test--restore-builtins)
+  
+  ;; Define distance predicate
+  (eprolog-define-prolog-predicate (distance (_x1 _y1) (_x2 _y2) _d)
+    (is _dx (- _x2 _x1))
+    (is _dy (- _y2 _y1))
+    (is _dx2 (* _dx _dx))
+    (is _dy2 (* _dy _dy))
+    (is _d (sqrt (+ _dx2 _dy2))))
+  
+  ;; Define circle area predicate
+  (eprolog-define-prolog-predicate (circle-area _radius _area)
+    (is _pi 3.14159)
+    (is _r2 (* _radius _radius))
+    (is _area (* _pi _r2)))
+  
+  ;; Test distance calculation
+  (let ((solutions (eprolog-test--collect-solutions '((distance (0 0) (3 4) _dist)))))
+    (should (= (length solutions) 1))
+    (should (equal (cdr (assoc '_dist (car solutions))) 5.0)))
+  
+  ;; Test circle area calculation
+  (let ((solutions (eprolog-test--collect-solutions '((circle-area 5 _area)))))
+    (should (= (length solutions) 1))
+    (should (< (abs (- (cdr (assoc '_area (car solutions))) 78.53975)) 0.001))))
+#+END_SRC

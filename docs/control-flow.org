@@ -1,0 +1,282 @@
+#+TITLE: Control Flow
+#+AUTHOR: Masaya Taniguchi
+#+PROPERTY: header-args:emacs-lisp :tangle yes
+
+* Control Flow
+
+Control flow in Prolog differs fundamentally from imperative languages. Instead of explicit control structures like loops and conditionals, Prolog uses logical constructs that guide the search for solutions. This section explores how ε-prolog manages the flow of execution through logical operators, meta-predicates, and the powerful cut mechanism.
+
+Understanding Prolog's control flow is essential for writing efficient and predictable programs. The system's built-in backtracking provides automatic exploration of alternative solutions, while predicates like cut give you fine-grained control over when and how this exploration occurs.
+
+** Basic Control Predicates
+
+The fundamental control predicates provide the building blocks for managing program flow in Prolog. These predicates control success, failure, and logical combinations.
+
+Basic control predicates form the foundation of logical programming:
+- ~true/0~: Always succeeds
+- ~fail/0~: Always fails  
+- ~!/0~ (cut): Prevents backtracking
+- ~not/1~: Succeeds if goal fails (negation as failure)
+
+These predicates control the logical flow of your programs and determine when backtracking occurs.
+
+#+BEGIN_SRC emacs-lisp
+(ert-deftest eprolog-usage-basic-control-predicates ()
+  "Test basic control flow predicates."
+  (eprolog-test--restore-builtins)
+  
+  ;; Test true/0
+  (should (eprolog-test--has-solution-p '((true))))
+  
+  ;; Test fail/0  
+  (should-not (eprolog-test--has-solution-p '((fail))))
+  
+  ;; Test not/1
+  (should (eprolog-test--has-solution-p '((not fail))))
+  (should-not (eprolog-test--has-solution-p '((not true)))))
+#+END_SRC
+
+This is the main control predicate test that covers all basic control flow operations. Additionally, here are more focused individual tests:
+
+#+BEGIN_SRC emacs-lisp
+(ert-deftest eprolog-usage-control-predicates ()
+  "Test control predicates."
+  (eprolog-test--restore-builtins)
+  
+  ;; Test basic control predicates
+  (should-not (eprolog-test--has-solution-p '((fail))))
+  (should (eprolog-test--has-solution-p '((true))))
+  (should-not (eprolog-test--has-solution-p '((false))))
+  
+  ;; Test not/1
+  (should (eprolog-test--has-solution-p '((not fail))))
+  (should-not (eprolog-test--has-solution-p '((not true)))))
+#+END_SRC
+
+The fail predicate serves a specific purpose in forcing backtracking:
+
+#+BEGIN_SRC emacs-lisp
+(ert-deftest eprolog-usage-fail-predicate ()
+  "Test the fail predicate."
+  (eprolog-test--restore-builtins)
+  (should-not (eprolog-test--has-solution-p '((fail)))))
+#+END_SRC
+
+The cut operator provides individual testing separate from the more complex cut semantics:
+
+#+BEGIN_SRC emacs-lisp
+(ert-deftest eprolog-usage-cut-predicate ()
+  "Test cut (!) behavior as standalone predicate."
+  (eprolog-test--restore-builtins)
+  (eprolog-define-predicate! (choice a))
+  (eprolog-define-predicate (choice b))
+  (eprolog-define-predicate (choice c))
+  
+  (eprolog-define-predicate! (test-cut _x)
+    (choice _x) !)
+  
+  (let ((solutions (eprolog-test--collect-solutions '((test-cut _x)))))
+    (should (= (length solutions) 1))
+    (should (equal (cdr (assoc '_x (car solutions))) 'a))))
+#+END_SRC
+
+The call predicate enables meta-programming:
+
+#+BEGIN_SRC emacs-lisp
+(ert-deftest eprolog-usage-call-predicate ()
+  "Test the call predicate."
+  (eprolog-test--restore-builtins)
+  (eprolog-define-predicate (likes mary food))
+  
+  (should (eprolog-test--has-solution-p '((call likes mary food))))
+  (should (eprolog-test--has-solution-p '((call = _x 42) (= _x 42)))))
+#+END_SRC
+
+** Logical Operators
+
+Logical operators enable complex boolean reasoning within Prolog queries. They provide structured ways to combine multiple conditions and control execution flow.
+
+The logical operators provide structured ways to combine goals:
+- ~and/2-4~: All arguments must succeed
+- ~or/2-4~: At least one argument must succeed  
+- ~if/2-3~: Conditional execution (if-then or if-then-else)
+
+These operators let you build complex logical expressions that mirror natural reasoning patterns.
+
+#+BEGIN_SRC emacs-lisp
+(ert-deftest eprolog-usage-logical-predicates ()
+  "Test logical conjunction and disjunction predicates."
+  (eprolog-test--restore-builtins)
+  
+  ;; Test and/0-4
+  (should (eprolog-test--has-solution-p '((and))))
+  (should (eprolog-test--has-solution-p '((and true))))
+  (should (eprolog-test--has-solution-p '((and true true))))
+  (should-not (eprolog-test--has-solution-p '((and true fail))))
+  
+  ;; Test or/0-4
+  (should-not (eprolog-test--has-solution-p '((or))))
+  (should (eprolog-test--has-solution-p '((or true))))
+  (should (eprolog-test--has-solution-p '((or fail true))))
+  (should-not (eprolog-test--has-solution-p '((or fail fail))))
+  
+  ;; Test if/2 and if/3
+  (should (eprolog-test--has-solution-p '((if true true))))
+  (should-not (eprolog-test--has-solution-p '((if fail true))))
+  (should (eprolog-test--has-solution-p '((if true true fail))))
+  (should (eprolog-test--has-solution-p '((if fail fail true)))))
+#+END_SRC
+
+Conditional execution provides if-then-else semantics in a logical context:
+
+#+BEGIN_SRC emacs-lisp
+(ert-deftest eprolog-usage-if-then-else ()
+  "Test conditional predicate (if) as standalone test."
+  (eprolog-test--restore-builtins)
+  (eprolog-define-predicate true-pred)
+  (eprolog-define-predicate then-pred)
+  (eprolog-define-predicate else-pred)
+  
+  (should (eprolog-test--has-solution-p '((if true-pred then-pred))))
+  (should (eprolog-test--has-solution-p '((if fail then-pred else-pred)))))
+#+END_SRC
+
+** Meta-predicates
+
+Meta-predicates operate on other predicates, enabling powerful meta-programming capabilities in Prolog. The ~call~ predicate is the most fundamental meta-predicate, allowing dynamic execution of goals.
+
+Meta-predicates treat other predicates as data, enabling powerful metaprogramming:
+- ~call/1+~: Dynamically execute goals
+- Higher-order predicates that operate on other predicates
+- Dynamic goal construction and execution
+
+This capability enables sophisticated programming patterns where the structure of queries can be determined at runtime.
+
+#+BEGIN_SRC emacs-lisp
+(ert-deftest eprolog-usage-metacall-predicates ()
+  "Test meta-call predicates."
+  (eprolog-test--restore-builtins)
+  
+  ;; Define test predicate
+  (eprolog-define-predicate (test-pred success))
+  
+  ;; Test call/1
+  (should (eprolog-test--has-solution-p '((call test-pred success))))
+  (should (eprolog-test--has-solution-p '((call = _x 42) (= _x 42))))
+  (should (eprolog-test--has-solution-p '((call = foo foo)))))
+#+END_SRC
+
+** Call Predicate Negative Tests
+
+The call predicate should fail with undefined predicates, invalid arguments, and malformed terms:
+
+#+BEGIN_SRC emacs-lisp
+(ert-deftest eprolog-usage-call-negative-tests ()
+  "Test negative cases for call predicate."
+  (eprolog-test--restore-builtins)
+  
+  ;; Call with undefined predicates
+  (should-not (eprolog-test--has-solution-p '((call undefined-predicate))))
+  (should-not (eprolog-test--has-solution-p '((call nonexistent foo bar))))
+  (should-not (eprolog-test--has-solution-p '((call missing-pred _x))))
+  
+  ;; Call with malformed predicate terms
+  (should-not (eprolog-test--has-solution-p '((call 42))))
+  (should-not (eprolog-test--has-solution-p '((call "invalid-call"))))
+  (should-not (eprolog-test--has-solution-p '((call ())))))
+  
+  ;; Call with predicates that should fail
+  (eprolog-define-predicate! (always-fails) (fail))
+  (should-not (eprolog-test--has-solution-p '((call always-fails))))
+  (should-not (eprolog-test--has-solution-p '((call = foo bar))))
+#+END_SRC
+
+** Cut and Backtracking Control
+
+Understanding how cut affects backtracking is crucial for writing efficient Prolog programs. The cut mechanism provides fine-grained control over the search space.
+
+The cut (~!~) is Prolog's mechanism for controlling backtracking:
+- Commits to the current choice point
+- Prevents backtracking past the cut
+- Essential for deterministic programming
+- Used to implement once-only predicates
+
+Proper use of cut can dramatically improve program efficiency and ensure predicates behave deterministically when needed.
+
+#+BEGIN_SRC emacs-lisp
+(ert-deftest eprolog-usage-cut-semantics ()
+  "Test cut (!) semantics."
+  (eprolog-test--restore-builtins)
+  
+  ;; Define choice predicates
+  (eprolog-define-predicate! (choice a))
+  (eprolog-define-predicate (choice b))
+  (eprolog-define-predicate (choice c))
+  
+  ;; Test without cut
+  (let ((solutions (eprolog-test--collect-solutions '((choice _x)))))
+    (should (= (length solutions) 3)))
+  
+  ;; Define predicate with cut
+  (eprolog-define-predicate! (first-choice _x)
+    (choice _x) !)
+  
+  ;; Test with cut
+  (let ((solutions (eprolog-test--collect-solutions '((first-choice _x)))))
+    (should (= (length solutions) 1))
+    (should (equal (cdr (assoc '_x (car solutions))) 'a))))
+#+END_SRC
+
+The repeat predicate creates infinite choice points, useful for implementing loops:
+
+#+BEGIN_SRC emacs-lisp
+(ert-deftest eprolog-usage-repeat-predicate ()
+  "Test repeat predicate for infinite choice points."
+  (eprolog-test--restore-builtins)
+  
+  ;; Test repeat with cut (should succeed once)
+  (let ((counter 0))
+    (eprolog-define-predicate (test-repeat-usage)
+      (repeat)
+      (lisp! (setq counter (1+ counter)))
+      (lispp (>= counter 3))
+      !)
+    (should (eprolog-test--has-solution-p '((test-repeat-usage))))
+    (should (= counter 3))))
+#+END_SRC
+
+** Cut (!) Negative Tests
+
+The cut predicate controls backtracking, and these tests verify proper failure behavior in cut-controlled branches:
+
+#+BEGIN_SRC emacs-lisp
+(ert-deftest eprolog-usage-cut-negative-tests ()
+  "Test negative cases for cut (!) predicate."
+  (eprolog-test--restore-builtins)
+  
+  ;; Cut preventing backtracking to failing alternatives
+  (eprolog-define-predicate! (test-cut-fail _x)
+    (= _x a)
+    !
+    (fail))
+  (eprolog-define-predicate (test-cut-fail _x)
+    (= _x b))
+  
+  ;; Should fail because cut prevents backtracking to second clause
+  (should-not (eprolog-test--has-solution-p '((test-cut-fail _x))))
+  
+  ;; Cut with impossible subsequent goals
+  (eprolog-define-predicate! (cut-then-impossible _x)
+    (= _x success)
+    !
+    (= _x failure))
+  
+  (should-not (eprolog-test--has-solution-p '((cut-then-impossible _x))))
+  
+  ;; Cut preventing recovery from failed branch
+  (eprolog-define-predicate! (cut-branch-fail)
+    !
+    (fail))
+  
+  (should-not (eprolog-test--has-solution-p '((cut-branch-fail)))))
+#+END_SRC

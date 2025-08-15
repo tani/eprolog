@@ -1,0 +1,133 @@
+#+TITLE: The ε-prolog Book: Comprehensive Guide and Reference
+#+AUTHOR: Masaya Taniguchi
+#+PROPERTY: header-args:emacs-lisp :tangle yes
+
+* Introduction
+
+Welcome to the comprehensive guide and test suite for ε-prolog, a sophisticated implementation of Prolog within the Emacs Lisp ecosystem. This document bridges theoretical understanding and practical application by combining educational examples with executable tests using ERT (Emacs Lisp Regression Testing).
+
+What makes this document unique is its dual nature: every example is both a learning tool and a working test case. As you read through the explanations and examples, you're also examining a complete test suite that validates ε-prolog's functionality. This approach ensures that all examples are accurate, up-to-date, and actually work as described.
+
+The document draws from practical examples in README.org and the implementation details in eprolog.el, presenting them in a structured, progressive manner that builds your understanding from basic concepts to advanced applications.
+
+** Quick Start
+
+ε-prolog provides convenient aliases for commonly used functions:
+- ~eprolog-define-predicate~ for ~eprolog-define-prolog-predicate~
+- ~eprolog-define-predicate!~ for ~eprolog-define-prolog-predicate!~
+
+*** Basic Examples
+
+Here are the fundamental examples that demonstrate how to define facts, rules, and query the knowledge base:
+
+#+BEGIN_SRC emacs-lisp :eval never :tangle no
+;; Define facts (using convenient alias)
+(eprolog-define-predicate (parent tom bob))
+(eprolog-define-predicate (parent tom liz))
+(eprolog-define-predicate (parent bob ann))
+(eprolog-define-predicate (parent bob pat))
+(eprolog-define-predicate (parent pat jim))
+
+;; Define rules
+(eprolog-define-predicate (grandparent _x _z)
+  (parent _x _y)
+  (parent _y _z))
+
+;; Query the database
+(eprolog-query (grandparent tom _x))
+;; Returns: _x = ann, _x = pat
+#+END_SRC
+
+*** Built-in Predicates Examples
+
+#+BEGIN_SRC emacs-lisp :eval never :tangle no
+;; List operations
+(eprolog-query (member _x (a b c)))
+;; Returns: _x = a, _x = b, _x = c
+
+;; Append lists
+(eprolog-query (append (1 2) (3 4) _result))
+;; Returns: _result = (1 2 3 4)
+
+;; Type checking
+(eprolog-query (atom foo))     ;; Returns: t
+(eprolog-query (number 42))    ;; Returns: t
+(eprolog-query (var _x))       ;; Returns: t
+#+END_SRC
+
+*** Lisp Integration Examples
+
+#+BEGIN_SRC emacs-lisp :eval never :tangle no
+;; Lisp expression evaluation
+(eprolog-query (lisp _result (+ 2 3)))
+;; Returns: _result = 5
+
+;; Conditional evaluation
+(eprolog-query (lispp (> 5 3)))
+;; Returns: t
+
+;; Side effects
+(eprolog-query (lisp! (message "Hello from Prolog!")))
+#+END_SRC
+
+** Running Tests
+
+All examples in this documentation can be executed as tests using ERT (Emacs Lisp Regression Testing):
+
+#+BEGIN_SRC emacs-lisp :eval never :tangle no
+;; Load the main file and documentation
+(load "eprolog.el")
+(org-babel-load-file "docs/index.org")
+
+;; Run all tests
+(ert-run-tests-batch-and-exit "eprolog-usage-")
+#+END_SRC
+
+** Documentation Structure
+
+This documentation is organized into focused modules, each covering specific aspects of ε-prolog:
+
+- **[[file:api-reference.org][API Reference]]** - Complete function and predicate documentation
+- **[[file:arithmetic.org][Arithmetic and Mathematics]]** - Mathematical operations and comparisons
+- **[[file:builtin-predicates.org][Built-in Predicates]]** - Type checking, list operations, and higher-order predicates  
+- **[[file:control-flow.org][Control Flow]]** - Cut, backtracking, logical operators, and meta-predicates
+- **[[file:core-prolog.org][Core Prolog Functionality]]** - Facts, rules, unification, and basic Prolog operations
+- **[[file:dcg.org][Definite Clause Grammars]]** - Grammar definition and parsing capabilities
+- **[[file:examples.org][Complex Examples]]** - Advanced applications, family trees, and recursive algorithms
+- **[[file:lisp-integration.org][Lisp Integration]]** - Seamless Prolog-Lisp interoperability and dynamic parameters
+
+Each module combines comprehensive explanations with executable test cases, ensuring both educational value and system reliability.
+
+* Setup
+
+Before exploring the specific modules, let's establish the testing environment that all examples will use:
+
+#+BEGIN_SRC emacs-lisp
+;; Helper function to test query success
+(defun eprolog-test--has-solution-p (goals)
+  "Test if GOALS has at least one solution."
+  (let ((found-solution nil))
+    (eprolog-solve goals 
+      :success (lambda (_) (setq found-solution t)))
+    found-solution))
+
+;; Helper function to collect all solutions
+(defun eprolog-test--collect-solutions (goals)
+  "Collect all solutions for GOALS."
+  (let ((solutions '()))
+    (eprolog-solve goals
+      :success (lambda (solution) 
+                 (push solution solutions)))
+    (nreverse solutions)))
+
+;; Store built-in predicates for restoration
+(defvar eprolog-usage--builtin-predicates
+  (when (boundp 'eprolog-clause-database)
+    (copy-alist eprolog-clause-database))
+  "Saved copy of built-in predicates for test restoration.")
+
+;; Helper function to restore builtins (same as existing tests)
+(defun eprolog-test--restore-builtins ()
+  "Restore built-in predicates and clear user-defined ones."
+  (setq eprolog-clause-database (copy-alist eprolog-usage--builtin-predicates)))
+#+END_SRC
