@@ -92,9 +92,9 @@ will be displayed according to `eprolog-spy-state'.")
 (defvar eprolog-spy-state 'prompt
   "Current spy mode for debugging.
 Valid values are:
-- \\='prompt: Ask user for each spy action
-- \\='always: Show all spy messages without prompting
-- \\='disabled: No spy output")
+- \='prompt: Ask user for each spy action
+- \='always: Show all spy messages without prompting
+- \='disabled: No spy output")
 
 (defvar eprolog-occurs-check t
   "Whether to perform occurs check during unification.
@@ -338,10 +338,10 @@ overloading with different arities."
   "Create a copy of EXPRESSION with all variables renamed to fresh symbols.
 EXPRESSION is the term to rename variables in.
 
-Generates new variable names using `gensym\\=' based on the original
+Generates new variable names using `gensym\=' based on the original
 variable names.  Used to avoid variable name conflicts when applying
 clauses during resolution.  Each variable gets a unique replacement that
-preserves the original variable\\='s base name."
+preserves the original variable\='s base name."
   (cl-labels ((make-renaming-pair (variable)
                 (let ((var-string (symbol-name variable)))
                   (cons variable (gensym var-string))))
@@ -527,7 +527,7 @@ Returns non-nil if execution should continue, nil to abort."
 
 (defun eprolog--spy-message (kind goal bindings)
   "Display a spy trace message of KIND for GOAL with BINDINGS.
-KIND is typically \\='CALL\\=', \\='EXIT\\=', or \\='FAIL\\='.
+KIND is typically \='CALL\=', \='EXIT\=', or \='FAIL\='.
 GOAL is the goal being traced.
 BINDINGS is the current variable binding environment.
 
@@ -567,7 +567,7 @@ Returns the result of executing THUNK."
   "Display variable BINDINGS as a solution.
 BINDINGS is an alist of variable-value pairs.
 
-Shows \\='Yes\\=' for solutions with no variable bindings (pure facts),
+Shows \='Yes\=' for solutions with no variable bindings (pure facts),
 otherwise displays each variable-value pair on separate lines."
   (if (null bindings)
       (eprolog--printf "\\nYes")
@@ -579,8 +579,8 @@ otherwise displays each variable-value pair on separate lines."
 GOALS is the list of goals to execute.
 
 Displays each solution and prompts whether to continue searching for more.
-Shows \\='No\\=' if no solutions exist.  This is the main entry point for
-interactive queries initiated by `eprolog-query\\='."
+Shows \='No\=' if no solutions exist.  This is the main entry point for
+interactive queries initiated by `eprolog-query\='."
   (cl-block query-exit
     (eprolog-solve
      goals
@@ -643,9 +643,9 @@ This is the core solution iterator that drives the proof search and handles
 solution enumeration through backtracking.
 
 Examples:
-  (eprolog-solve \\='((parent tom _x)))
-  (eprolog-solve \\='((parent tom _x)) :success #\\='print)
-  (eprolog-solve \\='((parent tom _x))
+  (eprolog-solve \='((parent tom _x)))
+  (eprolog-solve \='((parent tom _x)) :success #\='print)
+  (eprolog-solve \='((parent tom _x))
     :success (lambda (bindings) (message \\\"Found: %S\\\" bindings))
     :failure (lambda () (message \\\"No more solutions\\\")))"
   (let* ((on-success (or (plist-get args :success) (lambda (_))))
@@ -673,8 +673,8 @@ ARGS is the list of formal parameters for the predicate.
 BODY is the Lisp implementation that should return a success or failure
 object.
 
-The predicate can access `eprolog-current-bindings\\=' and
-`eprolog-remaining-goals\\=' to interact with the proof engine.
+The predicate can access `eprolog-current-bindings\=' and
+`eprolog-remaining-goals\=' to interact with the proof engine.
 Built-in predicates use this macro."
   (declare (indent defun))
   `(eprolog--set-clauses ',name (lambda ,args ,@body)))
@@ -703,7 +703,7 @@ HEAD is the predicate head, a list of (NAME . ARGS), or a symbol for
 predicates with no arguments.
 BODY is the optional list of goals forming the rule body.
 
-Similar to `eprolog-define-prolog-predicate\\=' but removes existing
+Similar to `eprolog-define-prolog-predicate\=' but removes existing
 clauses for the predicate with the same arity before adding the new
 clause.  Used for predicate redefinition.
 
@@ -797,7 +797,7 @@ Evaluates EXPRESSIONS as Lisp code and unifies the result with RESULT-VARIABLE.
 
 Usage:
   (eprolog-query (lisp X (+ 2 3)))           ; X = 5
-  (eprolog-query (lisp Y (length \\='(a b c)))) ; Y = 3
+  (eprolog-query (lisp Y (length \='(a b c)))) ; Y = 3
   (eprolog-query (lisp Z (current-buffer)))  ; Z = #<buffer ...>
 
 Behavior:
@@ -824,7 +824,7 @@ Evaluates EXPRESSIONS as Lisp code for side effects, always succeeds.
 
 Usage:
   (eprolog-query (lisp! (message \\\"Hello from Prolog!\\\")))
-  (eprolog-query (lisp! (setq my-var 42) (push \\='item my-list)))
+  (eprolog-query (lisp! (setq my-var 42) (push \='item my-list)))
 
 Behavior:
   - All expressions must be ground (fully instantiated)
@@ -1063,7 +1063,7 @@ DCG Conventions:
 - Symbols (word) are non-terminals
 - Lists ((word args...)) are non-terminals with arguments
 - nil represents empty production (epsilon)
-- (@ goal...) are semantic actions (constraints that don\\='t consume input)
+- (@ goal...) are semantic actions (constraints that don\='t consume input)
 - ! is cut (prevents backtracking)
 
 Examples:
@@ -1088,7 +1088,7 @@ Examples:
 Syntax: (eprolog-add-grammar head body1 body2 ...)
      or (eprolog-add-grammar (head args...) body1 body2 ...)
 
-Similar to `eprolog-define-grammar!\\=' but adds clauses without replacing
+Similar to `eprolog-define-grammar!\=' but adds clauses without replacing
 existing ones.  This allows multiple DCG rules for the same non-terminal.
 
 DCG Conventions:
@@ -1096,7 +1096,7 @@ DCG Conventions:
 - Symbols (word) are non-terminals
 - Lists ((word args...)) are non-terminals with arguments
 - nil represents empty production (epsilon)
-- (@ goal...) are semantic actions (constraints that don\\='t consume input)
+- (@ goal...) are semantic actions (constraints that don\='t consume input)
 - ! is cut (prevents backtracking)
 
 Examples:
