@@ -591,7 +591,7 @@ interactive queries initiated by `eprolog-query\='."
          (cl-return-from query-exit)))
      :failure
      (lambda ()
-       (eprolog--printf "\\nNo")
+       (eprolog--printf "\nNo")
        (cl-return-from query-exit)))))
 
 ;;; Lisp Integration Helper
@@ -646,8 +646,8 @@ Examples:
   (eprolog-solve \='((parent tom _x)))
   (eprolog-solve \='((parent tom _x)) :success #\='print)
   (eprolog-solve \='((parent tom _x))
-    :success (lambda (bindings) (message \\\"Found: %S\\\" bindings))
-    :failure (lambda () (message \\\"No more solutions\\\")))"
+    :success (lambda (bindings) (message \"Found: %S\" bindings))
+    :failure (lambda () (message \"No more solutions\")))"
   (let* ((on-success (or (plist-get args :success) (lambda (_))))
          (on-failure (or (plist-get args :failure) (lambda ()))))
     (cl-labels ((initial-continuation ()
@@ -823,7 +823,7 @@ See also: lisp!/1+ for side effects, lispp/1+ for boolean tests."
 Evaluates EXPRESSIONS as Lisp code for side effects, always succeeds.
 
 Usage:
-  (eprolog-query (lisp! (message \\\"Hello from Prolog!\\\")))
+  (eprolog-query (lisp! (message \"Hello from Prolog!\")))
   (eprolog-query (lisp! (setq my-var 42) (push \='item my-list)))
 
 Behavior:
@@ -844,7 +844,7 @@ Evaluates EXPRESSIONS as Lisp code and succeeds if the result is non-nil.
 Usage:
   (eprolog-query (lispp (> X 0)))             ; succeeds if X > 0
   (eprolog-query (lispp (member Item List)))  ; succeeds if Item in List
-  (eprolog-query (lispp (file-exists-p \\\"path\\\")))
+  (eprolog-query (lispp (file-exists-p \"path\")))
 
 Behavior:
   - All expressions must be ground (fully instantiated)
@@ -1060,7 +1060,7 @@ Syntax: (eprolog-define-grammar head body1 body2 ...)
 Transforms DCG notation into standard Prolog clauses with difference lists.
 
 DCG Conventions:
-- Strings (\\\"word\\\") are terminals
+- Strings (\"word\") are terminals
 - Symbols (word) are non-terminals
 - Lists ((word args...)) are non-terminals with arguments
 - nil represents empty production (epsilon)
@@ -1070,7 +1070,7 @@ DCG Conventions:
 Examples:
   (eprolog-define-grammar s np vp)
   (eprolog-define-grammar (s _x) (np _x) (vp _x))
-  (eprolog-define-grammar noun \\\"cat\\\")
+  (eprolog-define-grammar noun \"cat\")
   (eprolog-define-grammar optional nil)
   (eprolog-define-grammar (s _num) (@ (= _num 3)) (np _num) (vp _num))
   ; With constraint"
@@ -1093,7 +1093,7 @@ Similar to `eprolog-define-grammar!\=' but adds clauses without replacing
 existing ones.  This allows multiple DCG rules for the same non-terminal.
 
 DCG Conventions:
-- Strings (\\\"word\\\") are terminals
+- Strings (\"word\") are terminals
 - Symbols (word) are non-terminals
 - Lists ((word args...)) are non-terminals with arguments
 - nil represents empty production (epsilon)
@@ -1101,9 +1101,9 @@ DCG Conventions:
 - ! is cut (prevents backtracking)
 
 Examples:
-  (eprolog-define-grammar noun \\\"cat\\\")
-  (eprolog-define-grammar noun \\\"dog\\\")
-  (eprolog-define-grammar (det _num) \\\"the\\\")"
+  (eprolog-define-grammar noun \"cat\")
+  (eprolog-define-grammar noun \"dog\")
+  (eprolog-define-grammar (det _num) \"the\")"
   (let* ((head (car dcg-parts))
          (body (cdr dcg-parts))
          (head-name (if (consp head) (car head) head))
