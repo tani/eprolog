@@ -879,12 +879,13 @@ VALUE-EXPRESSION is evaluated as Lisp code before storing."
 (eprolog-define-lisp-predicate dynamic-get (variable-symbol prolog-variable)
   "Dynamic parameter predicate: dynamic-get(SYMBOL, VAR).
 Retrieves the value associated with SYMBOL and unifies it with VAR."
-  (let* ((key-value (assoc variable-symbol eprolog-dynamic-parameters))
-         (value (if key-value (cdr key-value) nil))
-         (new-bindings (eprolog--unify prolog-variable value eprolog-current-bindings)))
-    (if (eprolog--failure-p new-bindings)
+  (let ((key-value (assoc variable-symbol eprolog-dynamic-parameters)))
+    (if (null key-value)
         (make-eprolog--failure)
-      (eprolog--prove-goal-sequence eprolog-remaining-goals new-bindings))))
+      (let ((new-bindings (eprolog--unify prolog-variable (cdr key-value) eprolog-current-bindings)))
+        (if (eprolog--failure-p new-bindings)
+            (make-eprolog--failure)
+          (eprolog--prove-goal-sequence eprolog-remaining-goals new-bindings))))))
 
 ;;; Built-in Prolog Predicates
 
