@@ -228,7 +228,7 @@ BINDINGS is the current variable binding environment.
 
 Prevents infinite structures during unification by detecting circular
 references.  Returns non-nil if VARIABLE is found within EXPRESSION
-\\(directly or through bindings), nil otherwise.  Follows variable
+(directly or through bindings), nil otherwise.  Follows variable
 bindings recursively."
   (cond
    ((and (symbolp expression) (eq variable expression)) t)
@@ -533,7 +533,7 @@ BINDINGS is the current variable binding environment.
 
 Shows the resolved goal after applying current variable bindings."
   (let ((resolved (eprolog--substitute-bindings bindings goal)))
-    (eprolog--printf "\\n** %s: %S" kind resolved)))
+    (eprolog--printf "\n** %s: %S" kind resolved)))
 
 (defun eprolog--with-spy (goal bindings thunk)
   "Execute THUNK with spy tracing for GOAL using BINDINGS.
@@ -570,9 +570,9 @@ BINDINGS is an alist of variable-value pairs.
 Shows \='Yes\=' for solutions with no variable bindings (pure facts),
 otherwise displays each variable-value pair on separate lines."
   (if (null bindings)
-      (eprolog--printf "\\nYes")
+      (eprolog--printf "\nYes")
     (dolist (var-val bindings)
-      (eprolog--printf "\\n%s = %s" (car var-val) (cdr var-val)))))
+      (eprolog--printf "\n%s = %s" (car var-val) (cdr var-val)))))
 
 (defun eprolog--run (goals)
   "Execute GOALS as an interactive query with user continuation prompt.
