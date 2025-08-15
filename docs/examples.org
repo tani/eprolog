@@ -27,7 +27,7 @@ This subsection covers:
 The following test establishes a comprehensive family tree with multiple types of relationships:
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-family-tree-comprehensive ()
+(ert-deftest eprolog-example-family-tree-comprehensive ()
   "Test comprehensive family tree with Sazae-san characters."
   (eprolog-test--restore-builtins)
   
@@ -68,7 +68,7 @@ The following test establishes a comprehensive family tree with multiple types o
 Derived relationships show the power of logical inference in Prolog:
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-family-tree-derived-relationships ()
+(ert-deftest eprolog-example-family-tree-derived-relationships ()
   "Test derived family relationships."
   (eprolog-test--restore-builtins)
   
@@ -107,7 +107,7 @@ Derived relationships show the power of logical inference in Prolog:
 Extended family relationships demonstrate more complex logical derivations:
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-family-tree-uncle-aunt-cousin ()
+(ert-deftest eprolog-example-family-tree-uncle-aunt-cousin ()
   "Test uncle, aunt, and cousin relationships."
   (eprolog-test--restore-builtins)
   
@@ -142,7 +142,7 @@ Extended family relationships demonstrate more complex logical derivations:
 Complex queries demonstrate Prolog's ability to find multiple solutions:
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-family-tree-complex-queries ()
+(ert-deftest eprolog-example-family-tree-complex-queries ()
   "Test complex family tree queries with multiple solutions."
   (eprolog-test--restore-builtins)
   
@@ -199,7 +199,7 @@ Understanding backtracking is essential for mastering Prolog. This section explo
 The cut operator provides fine-grained control over Prolog's backtracking mechanism:
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-complex-backtracking-with-cut ()
+(ert-deftest eprolog-example-complex-backtracking-with-cut ()
   "Test complex backtracking scenarios with cut."
   (eprolog-test--restore-builtins)
   
@@ -225,7 +225,7 @@ The cut operator provides fine-grained control over Prolog's backtracking mechan
 The repeat predicate combined with cut creates controlled loops:
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-repeat-with-complex-conditions ()
+(ert-deftest eprolog-example-repeat-with-complex-conditions ()
   "Test repeat predicate with complex termination conditions."
   (eprolog-test--restore-builtins)
   
@@ -250,7 +250,7 @@ The true test of any programming paradigm lies in its ability to express complex
 Factorial calculation demonstrates basic recursion in Prolog:
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-factorial ()
+(ert-deftest eprolog-example-factorial ()
   "Test recursive factorial implementation."
   (eprolog-test--restore-builtins)
   
@@ -279,7 +279,7 @@ Factorial calculation demonstrates basic recursion in Prolog:
 The Fibonacci sequence shows more complex recursive patterns:
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-fibonacci ()
+(ert-deftest eprolog-example-fibonacci ()
   "Test Fibonacci sequence implementation."
   (eprolog-test--restore-builtins)
   
@@ -311,7 +311,7 @@ The Fibonacci sequence shows more complex recursive patterns:
 The Greatest Common Divisor algorithm demonstrates iterative computation in Prolog:
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-gcd-algorithm ()
+(ert-deftest eprolog-example-gcd-algorithm ()
   "Test Greatest Common Divisor algorithm."
   (eprolog-test--restore-builtins)
   
@@ -345,7 +345,7 @@ Key performance dimensions evaluated:
 Comprehensive performance testing evaluates multiple aspects of system performance:
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-performance-tests ()
+(ert-deftest eprolog-example-performance-tests ()
   "Test performance with larger databases and deep recursion."
   (eprolog-test--restore-builtins)
 
@@ -380,7 +380,7 @@ Comprehensive performance testing evaluates multiple aspects of system performan
 Additional performance tests focus on specific aspects of system behavior:
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-large-database ()
+(ert-deftest eprolog-example-large-database ()
   "Test performance with larger clause database."
   (eprolog-test--restore-builtins)
   (dotimes (i 100)
@@ -393,7 +393,7 @@ Additional performance tests focus on specific aspects of system behavior:
 Stress testing pushes the system to its limits:
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-stress-testing ()
+(ert-deftest eprolog-example-stress-testing ()
   "Test system behavior under stress conditions."
   (eprolog-test--restore-builtins)
   

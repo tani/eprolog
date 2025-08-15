@@ -27,7 +27,7 @@ test: $(DOC_TARGETS)
 	$(EMACS) -batch -l $(MAIN_FILE) \
 		-l docs/index.el \
 		$(foreach doc,$(filter-out docs/index.el,$(DOC_TARGETS)),-l $(doc)) \
-		--eval '(ert-run-tests-batch-and-exit "eprolog-usage-")'
+		--eval '(ert-run-tests-batch-and-exit "eprolog-")'
 
 
 # Lint and validate code

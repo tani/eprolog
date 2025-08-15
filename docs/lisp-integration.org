@@ -23,7 +23,7 @@ This subsection covers:
 The following test demonstrates the three main ways to interface with Lisp:
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-lisp-integration ()
+(ert-deftest eprolog-feature-lisp-integration ()
   "Test Lisp integration predicates from README.org examples."
   (eprolog-test--restore-builtins)
   
@@ -45,7 +45,7 @@ The following test demonstrates the three main ways to interface with Lisp:
 Evaluating Lisp expressions and capturing their results enables powerful computations:
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-lisp-predicate ()
+(ert-deftest eprolog-feature-lisp-predicate ()
   "Test Lisp evaluation predicate as standalone test."
   (eprolog-test--restore-builtins)
   (let ((solutions (eprolog-test--collect-solutions '((lisp _x (+ 2 3))))))
@@ -56,7 +56,7 @@ Evaluating Lisp expressions and capturing their results enables powerful computa
 Sometimes you need to execute Lisp code for its side effects rather than its return value:
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-lisp-side-effects ()
+(ert-deftest eprolog-feature-lisp-side-effects ()
   "Test Lisp side effect predicate as standalone test."
   (eprolog-test--restore-builtins)
   (setq eprolog-test--temp-var nil)
@@ -67,7 +67,7 @@ Sometimes you need to execute Lisp code for its side effects rather than its ret
 Using Lisp expressions as boolean tests enables complex conditional logic:
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-lisp-conditional ()
+(ert-deftest eprolog-feature-lisp-conditional ()
   "Test Lisp conditional predicate as standalone test."
   (eprolog-test--restore-builtins)
   (should (eprolog-test--has-solution-p '((lispp (> 5 3)))))
@@ -79,7 +79,7 @@ Using Lisp expressions as boolean tests enables complex conditional logic:
 The lisp predicate should fail with invalid expressions and unification failures:
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-lisp-negative-tests ()
+(ert-deftest eprolog-feature-lisp-negative-tests ()
   "Test negative cases for lisp predicate."
   (eprolog-test--restore-builtins)
 
@@ -92,7 +92,7 @@ The lisp predicate should fail with invalid expressions and unification failures
 The lisp! predicate should fail with invalid expressions:
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-lisp-side-effects-negative-tests ()
+(ert-deftest eprolog-feature-lisp-side-effects-negative-tests ()
   "Test negative cases for lisp! predicate."
   (eprolog-test--restore-builtins)
 
@@ -106,7 +106,7 @@ The lisp! predicate should fail with invalid expressions:
 The lispp predicate should fail when expressions return nil or false:
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-lispp-negative-tests ()
+(ert-deftest eprolog-feature-lisp-lispp-negative-tests ()
   "Test negative cases for lispp predicate."
   (eprolog-test--restore-builtins)
   
@@ -137,7 +137,7 @@ Dynamic parameters provide a sophisticated mechanism for maintaining state and s
 This mechanism is particularly useful for accumulating results, maintaining counters, or sharing computed values across different predicate invocations.
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-dynamic-parameters ()
+(ert-deftest eprolog-feature-lisp-dynamic-parameters ()
   "Test dynamic parameter predicates."
   (eprolog-test--restore-builtins)
   
@@ -161,7 +161,7 @@ This mechanism is particularly useful for accumulating results, maintaining coun
 Dynamic parameter predicates should fail with invalid keys or expressions:
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-dynamic-get-negative-tests ()
+(ert-deftest eprolog-feature-lisp-dynamic-get-negative-tests ()
   "Test negative cases for dynamic-get predicate."
   (eprolog-test--restore-builtins)
   

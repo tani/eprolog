@@ -21,7 +21,7 @@ Basic control predicates form the foundation of logical programming:
 These predicates control the logical flow of your programs and determine when backtracking occurs.
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-basic-control-predicates ()
+(ert-deftest eprolog-feature-control-basic-predicates ()
   "Test basic control flow predicates."
   (eprolog-test--restore-builtins)
   
@@ -39,7 +39,7 @@ These predicates control the logical flow of your programs and determine when ba
 This is the main control predicate test that covers all basic control flow operations. Additionally, here are more focused individual tests:
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-control-predicates ()
+(ert-deftest eprolog-feature-control-predicates ()
   "Test control predicates."
   (eprolog-test--restore-builtins)
   
@@ -56,7 +56,7 @@ This is the main control predicate test that covers all basic control flow opera
 The fail predicate serves a specific purpose in forcing backtracking:
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-fail-predicate ()
+(ert-deftest eprolog-feature-control-fail-predicate ()
   "Test the fail predicate."
   (eprolog-test--restore-builtins)
   (should-not (eprolog-test--has-solution-p '((fail)))))
@@ -65,7 +65,7 @@ The fail predicate serves a specific purpose in forcing backtracking:
 The cut operator provides individual testing separate from the more complex cut semantics:
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-cut-predicate ()
+(ert-deftest eprolog-feature-control-cut-predicate ()
   "Test cut (!) behavior as standalone predicate."
   (eprolog-test--restore-builtins)
   (eprolog-define-predicate! (choice a))
@@ -83,7 +83,7 @@ The cut operator provides individual testing separate from the more complex cut 
 The call predicate enables meta-programming:
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-call-predicate ()
+(ert-deftest eprolog-feature-control-call-predicate ()
   "Test the call predicate."
   (eprolog-test--restore-builtins)
   (eprolog-define-predicate (likes mary food))
@@ -104,7 +104,7 @@ The logical operators provide structured ways to combine goals:
 These operators let you build complex logical expressions that mirror natural reasoning patterns.
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-logical-predicates ()
+(ert-deftest eprolog-feature-control-logical-predicates ()
   "Test logical conjunction and disjunction predicates."
   (eprolog-test--restore-builtins)
   
@@ -130,7 +130,7 @@ These operators let you build complex logical expressions that mirror natural re
 Conditional execution provides if-then-else semantics in a logical context:
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-if-then-else ()
+(ert-deftest eprolog-feature-control-if-then-else ()
   "Test conditional predicate (if) as standalone test."
   (eprolog-test--restore-builtins)
   (eprolog-define-predicate true-pred)
@@ -153,7 +153,7 @@ Meta-predicates treat other predicates as data, enabling powerful metaprogrammin
 This capability enables sophisticated programming patterns where the structure of queries can be determined at runtime.
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-metacall-predicates ()
+(ert-deftest eprolog-feature-control-metacall-predicates ()
   "Test meta-call predicates."
   (eprolog-test--restore-builtins)
   
@@ -171,7 +171,7 @@ This capability enables sophisticated programming patterns where the structure o
 The call predicate should fail with undefined predicates, invalid arguments, and malformed terms:
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-call-negative-tests ()
+(ert-deftest eprolog-feature-control-call-negative-tests ()
   "Test negative cases for call predicate."
   (eprolog-test--restore-builtins)
   
@@ -204,7 +204,7 @@ The cut (~!~) is Prolog's mechanism for controlling backtracking:
 Proper use of cut can dramatically improve program efficiency and ensure predicates behave deterministically when needed.
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-cut-semantics ()
+(ert-deftest eprolog-feature-control-cut-semantics ()
   "Test cut (!) semantics."
   (eprolog-test--restore-builtins)
   
@@ -230,7 +230,7 @@ Proper use of cut can dramatically improve program efficiency and ensure predica
 The repeat predicate creates infinite choice points, useful for implementing loops:
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-repeat-predicate ()
+(ert-deftest eprolog-feature-control-repeat-predicate ()
   "Test repeat predicate for infinite choice points."
   (eprolog-test--restore-builtins)
   
@@ -250,7 +250,7 @@ The repeat predicate creates infinite choice points, useful for implementing loo
 The cut predicate controls backtracking, and these tests verify proper failure behavior in cut-controlled branches:
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-cut-negative-tests ()
+(ert-deftest eprolog-feature-control-cut-negative-tests ()
   "Test negative cases for cut (!) predicate."
   (eprolog-test--restore-builtins)
   

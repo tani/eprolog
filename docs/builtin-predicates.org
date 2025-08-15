@@ -24,7 +24,7 @@ The type checking arsenal in ε-prolog includes:
 The following test demonstrates the basic type checking predicates available in ε-prolog:
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-type-checking ()
+(ert-deftest eprolog-feature-builtin-type-checking ()
   "Test type checking predicates from README.org."
   (eprolog-test--restore-builtins)
   
@@ -50,7 +50,7 @@ This test shows how to use the basic type checking predicates. These are fundame
 The ground predicate is particularly useful for checking whether a term is fully instantiated:
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-ground-predicate ()
+(ert-deftest eprolog-feature-builtin-ground-predicate ()
   "Test ground term checking."
   (eprolog-test--restore-builtins)
   
@@ -69,7 +69,7 @@ The ground predicate is particularly useful for checking whether a term is fully
 The var predicate should fail for all ground terms and bound variables:
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-var-negative-tests ()
+(ert-deftest eprolog-feature-builtin-var-negative-tests ()
   "Test negative cases for var predicate."
   (eprolog-test--restore-builtins)
   
@@ -104,7 +104,7 @@ Core list manipulation predicates:
 The following test demonstrates the versatility of list operations in Prolog:
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-list-operations ()
+(ert-deftest eprolog-feature-builtin-list-operations ()
   "Test list operation predicates from README.org examples."
   (eprolog-test--restore-builtins)
   
@@ -159,7 +159,7 @@ This subsection demonstrates:
 The following test shows how to use higher-order predicates for list transformation:
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-higher-order-predicates ()
+(ert-deftest eprolog-feature-builtin-higher-order-predicates ()
   "Test maplist higher-order predicates."
   (eprolog-test--restore-builtins)
   

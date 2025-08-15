@@ -143,7 +143,7 @@ This subsection demonstrates:
 The following test introduces basic DCG concepts with a simple grammar:
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-dcg-basic ()
+(ert-deftest eprolog-feature-dcg-basic ()
   "Test basic DCG functionality."
   (eprolog-test--restore-builtins)
   (eprolog-define-grammar! noun "cat")
@@ -159,7 +159,7 @@ The following test introduces basic DCG concepts with a simple grammar:
 A more complete grammar demonstrates how DCGs can parse natural language structures:
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-dcg-basic-grammar ()
+(ert-deftest eprolog-feature-dcg-basic-grammar ()
   "Test basic DCG grammar definition and parsing."
   (eprolog-test--restore-builtins)
   
@@ -185,7 +185,7 @@ A more complete grammar demonstrates how DCGs can parse natural language structu
 DCGs can also parse partial input, returning the unparsed remainder:
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-dcg-parsing-with-remainder ()
+(ert-deftest eprolog-feature-dcg-parsing-with-remainder ()
   "Test DCG parsing with remainder."
   (eprolog-test--restore-builtins)
   
@@ -209,7 +209,7 @@ DCGs can also parse partial input, returning the unparsed remainder:
 Advanced DCG features enable more sophisticated parsing and generation capabilities:
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-dcg-epsilon-productions ()
+(ert-deftest eprolog-feature-dcg-epsilon-productions ()
   "Test DCG epsilon (empty) productions."
   (eprolog-test--restore-builtins)
   
@@ -228,7 +228,7 @@ Advanced DCG features enable more sophisticated parsing and generation capabilit
 DCGs with arguments enable grammatical agreement and semantic processing:
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-dcg-with-args ()
+(ert-deftest eprolog-feature-dcg-with-args ()
   "Test DCG with arguments."
   (eprolog-test--restore-builtins)
   
@@ -252,7 +252,7 @@ DCGs with arguments enable grammatical agreement and semantic processing:
 Semantic actions in DCGs allow you to build parse trees or perform computations during parsing:
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-dcg-semantic-actions ()
+(ert-deftest eprolog-feature-dcg-semantic-actions ()
   "Test DCG semantic actions."
   (eprolog-test--restore-builtins)
   
@@ -274,7 +274,7 @@ Semantic actions in DCGs allow you to build parse trees or perform computations 
 Cut operations in DCGs provide control over parsing alternatives:
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-dcg-cut-operations ()
+(ert-deftest eprolog-feature-dcg-cut-operations ()
   "Test DCG cut operations."
   (eprolog-test--restore-builtins)
   
@@ -293,7 +293,7 @@ Cut operations in DCGs provide control over parsing alternatives:
 DCGs work bidirectionally - they can generate sentences as well as parse them:
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-dcg-generation ()
+(ert-deftest eprolog-feature-dcg-generation ()
   "Test DCG sentence generation."
   (eprolog-test--restore-builtins)
   
@@ -314,7 +314,7 @@ DCGs work bidirectionally - they can generate sentences as well as parse them:
 Length-constrained generation demonstrates how to combine DCGs with other predicates:
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-dcg-length-constrained-generation ()
+(ert-deftest eprolog-feature-dcg-length-constrained-generation ()
   "Test DCG generation with length constraints."
   (eprolog-test--restore-builtins)
   
@@ -339,7 +339,7 @@ Length-constrained generation demonstrates how to combine DCGs with other predic
 DCGs can handle complex parsing tasks like arithmetic expressions:
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-dcg-arithmetic-expressions ()
+(ert-deftest eprolog-feature-dcg-arithmetic-expressions ()
   "Test arithmetic expression parsing with DCG."
   (eprolog-test--restore-builtins)
   
@@ -366,7 +366,7 @@ DCGs can handle complex parsing tasks like arithmetic expressions:
 Nested structure parsing showcases DCGs' recursive capabilities:
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-dcg-nested-structures ()
+(ert-deftest eprolog-feature-dcg-nested-structures ()
   "Test nested structure parsing with DCG."
   (eprolog-test--restore-builtins)
   
@@ -384,7 +384,7 @@ Nested structure parsing showcases DCGs' recursive capabilities:
 CSV-style parsing demonstrates practical text processing:
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-dcg-csv-parsing ()
+(ert-deftest eprolog-feature-dcg-csv-parsing ()
   "Test CSV-style parsing with DCG."
   (eprolog-test--restore-builtins)
   

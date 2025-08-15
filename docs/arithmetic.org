@@ -23,7 +23,7 @@ This subsection demonstrates:
 The following test demonstrates basic and complex arithmetic operations:
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-arithmetic ()
+(ert-deftest eprolog-feature-arithmetic-basic ()
   "Test arithmetic evaluation with is/2 and mathematical functions."
   (eprolog-test--restore-builtins)
 
@@ -56,7 +56,7 @@ The following test demonstrates basic and complex arithmetic operations:
 The ~is/2~ predicate serves as the foundation for all arithmetic operations:
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-is-predicate ()
+(ert-deftest eprolog-feature-arithmetic-is-predicate ()
   "Test basic is/2 predicate as standalone test."
   (eprolog-test--restore-builtins)
   (let ((solutions (eprolog-test--collect-solutions '((is _x (+ 2 3))))))
@@ -67,7 +67,7 @@ The ~is/2~ predicate serves as the foundation for all arithmetic operations:
 Testing various arithmetic operations demonstrates the range of mathematical capabilities:
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-basic-arithmetic-operations ()
+(ert-deftest eprolog-feature-arithmetic-operations ()
   "Test basic arithmetic operations with is/2."
   (eprolog-test--restore-builtins)
   (let ((solutions (eprolog-test--collect-solutions '((is _x (+ 15 25))))))
@@ -86,7 +86,7 @@ Testing various arithmetic operations demonstrates the range of mathematical cap
 Complex expressions and mathematical functions extend the computational capabilities:
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-complex-arithmetic ()
+(ert-deftest eprolog-feature-arithmetic-complex ()
   "Test complex arithmetic expressions."
   (eprolog-test--restore-builtins)
   (let ((solutions (eprolog-test--collect-solutions '((is _x (+ (* 2 3) (/ 8 2)))))))
@@ -103,7 +103,7 @@ Complex expressions and mathematical functions extend the computational capabili
 Building mathematical predicates demonstrates how to combine arithmetic with logical programming:
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-mathematical-predicates ()
+(ert-deftest eprolog-feature-arithmetic-mathematical-predicates ()
   "Test mathematical predicates."
   (eprolog-test--restore-builtins)
   
@@ -150,7 +150,7 @@ Building mathematical predicates demonstrates how to combine arithmetic with log
 Arithmetic comparisons are essential for numerical reasoning in Prolog:
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-arithmetic-comparisons ()
+(ert-deftest eprolog-feature-arithmetic-comparisons ()
   "Test arithmetic comparisons using lispp."
   (eprolog-test--restore-builtins)
   
@@ -171,7 +171,7 @@ Arithmetic comparisons are essential for numerical reasoning in Prolog:
 Custom comparison predicates demonstrate how to build domain-specific numerical logic:
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-custom-comparison-predicates ()
+(ert-deftest eprolog-feature-arithmetic-custom-comparisons ()
   "Test custom comparison predicates using lispp."
   (eprolog-test--restore-builtins)
   
@@ -195,7 +195,7 @@ Custom comparison predicates demonstrate how to build domain-specific numerical 
 Mathematical utility predicates like absolute value and min/max are common requirements:
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-absolute-value-and-minmax ()
+(ert-deftest eprolog-feature-arithmetic-absolute-minmax ()
   "Test absolute value and min/max predicates."
   (eprolog-test--restore-builtins)
   
@@ -236,7 +236,7 @@ Mathematical utility predicates like absolute value and min/max are common requi
 Geometric calculations demonstrate how to build more complex mathematical predicates:
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-geometric-calculations ()
+(ert-deftest eprolog-feature-arithmetic-geometric ()
   "Test geometric calculations."
   (eprolog-test--restore-builtins)
   

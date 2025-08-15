@@ -25,7 +25,7 @@ Key concepts demonstrated in this subsection:
 This test demonstrates the fundamental pattern of Prolog programming: starting with basic facts and building complex relationships through rules. We create a family tree and then derive grandparent relationships from parent facts:
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-basic-facts-and-rules ()
+(ert-deftest eprolog-core-basic-facts-and-rules ()
   "Test basic fact and rule definition from README.org examples."
   (eprolog-test--restore-builtins)
   
@@ -50,214 +50,297 @@ This test demonstrates the fundamental pattern of Prolog programming: starting w
   (should (eprolog-test--has-solution-p '((grandparent tom ann))))
   (should (eprolog-test--has-solution-p '((grandparent tom pat))))
   (should (eprolog-test--has-solution-p '((grandparent bob jim))))
-  (should-not (eprolog-test--has-solution-p '((grandparent ann tom))))
+  (should-not (eprolog-test--has-solution-p '((grandparent pat tom))))
   
-  ;; Test solution collection
+  ;; Test query with variable
   (let ((solutions (eprolog-test--collect-solutions '((grandparent tom _x)))))
     (should (= (length solutions) 2))
-    (should (member 'ann (mapcar (lambda (s) (cdr (assoc '_x s))) solutions)))
-    (should (member 'pat (mapcar (lambda (s) (cdr (assoc '_x s))) solutions)))))
+    (should (member '((_x . ann)) solutions))
+    (should (member '((_x . pat)) solutions)))
+  
+  ;; More tests for verification
+  (should-not (eprolog-test--has-solution-p '((parent alice bob)))))
 #+END_SRC
 
-This test demonstrates the basic building blocks of Prolog programming: facts and rules. We create a simple family tree with parent relationships and then define a rule to derive grandparent relationships. The test shows how to verify that facts are correctly stored and that rules correctly infer new information.
-
-The following test focuses on the mechanics of defining predicates, showing how facts are stored in the knowledge base:
+This test shows how to dynamically define predicates with various arities:
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-predicate-definition-tests ()
-  "Test basic predicate definition functionality."
+(ert-deftest eprolog-core-predicate-definition-tests ()
+  "Test different ways of defining predicates."
   (eprolog-test--restore-builtins)
   
-  ;; Test defining simple facts
-  (eprolog-define-predicate (parent tom bob))
-  (eprolog-define-predicate (parent bob ann))
+  ;; Facts with different arities
+  (eprolog-define-predicate (zero-arity))
+  (eprolog-define-predicate (one-arity foo))
+  (eprolog-define-predicate (two-arity foo bar))
   
-  (should (eprolog-test--has-solution-p '((parent tom bob))))
-  (should (eprolog-test--has-solution-p '((parent bob ann))))
-  (should-not (eprolog-test--has-solution-p '((parent ann tom)))))
+  ;; Test they can be queried
+  (should (eprolog-test--has-solution-p '((zero-arity))))
+  (should (eprolog-test--has-solution-p '((one-arity foo))))
+  (should (eprolog-test--has-solution-p '((two-arity foo bar))))
+  
+  ;; Test failure cases
+  (should-not (eprolog-test--has-solution-p '((one-arity bar))))
+  (should-not (eprolog-test--has-solution-p '((two-arity bar foo)))))
 #+END_SRC
 
-This test focuses specifically on the mechanics of defining facts. It shows the most basic operation in Prolog: asserting that certain relationships hold. This forms the foundation for more complex logical reasoning.
-
-Sometimes you need to replace all clauses of a predicate rather than adding new ones. The exclamation mark syntax provides this capability:
+This test demonstrates predicate replacement:
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-predicate-replacement ()
-  "Test predicate replacement with ! operator."
+(ert-deftest eprolog-core-predicate-replacement ()
+  "Test predicate replacement with same arity."
   (eprolog-test--restore-builtins)
   
-  ;; Define multiple clauses for same predicate
-  (eprolog-define-predicate (test-pred a))
-  (eprolog-define-predicate (test-pred b))
-  (should (= (length (eprolog-test--collect-solutions '((test-pred _x)))) 2))
+  ;; Define initial predicates
+  (eprolog-define-predicate (replaceable-pred old-value))
+  (should (eprolog-test--has-solution-p '((replaceable-pred old-value))))
   
-  ;; Replace with ! - should clear existing clauses
-  (eprolog-define-predicate! (test-pred c))
-  (let ((solutions (eprolog-test--collect-solutions '((test-pred _x)))))
-    (should (= (length solutions) 1))
-    (should (equal (cdr (assoc '_x (car solutions))) 'c))))
+  ;; Add more clauses without replacement
+  (eprolog-define-predicate (replaceable-pred another-value))
+  (should (= (length (eprolog-test--collect-solutions '((replaceable-pred _x)))) 2))
+  
+  ;; Replace with new definition using !
+  (eprolog-define-predicate! (replaceable-pred new-value))
+  (should (eprolog-test--has-solution-p '((replaceable-pred new-value))))
+  (should-not (eprolog-test--has-solution-p '((replaceable-pred old-value))))
+  (should-not (eprolog-test--has-solution-p '((replaceable-pred another-value))))
+  (should (= (length (eprolog-test--collect-solutions '((replaceable-pred _x)))) 1)))
 #+END_SRC
 
-This test demonstrates predicate replacement semantics in ε-prolog. When you use ~eprolog-define-predicate!~ with the exclamation mark, it replaces all existing clauses for that predicate. This is important for understanding how to update your knowledge base dynamically.
-
-Here's a more culturally diverse example using Japanese anime characters, demonstrating the same concepts with different data:
+This test demonstrates a family tree from the Sazae-san manga/anime:
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-family-tree-sazae-san ()
-  "Test family tree relationships with Sazae-san characters."
+(ert-deftest eprolog-core-family-tree-sazae-san ()
+  "Test family tree with Sazae-san family."
   (eprolog-test--restore-builtins)
   
-  ;; Setup family tree (parent Parent Child)
-  (eprolog-define-prolog-predicate! (parent fune katsuo))
-  (eprolog-define-prolog-predicate (parent fune wakame))
-  (eprolog-define-prolog-predicate (parent fune sazae))
-  (eprolog-define-prolog-predicate (parent sazae tarao))
+  ;; Define the Isono/Fuguta family tree
+  (eprolog-define-predicate (parent namihei sazae))
+  (eprolog-define-predicate (parent namihei katsuo))
+  (eprolog-define-predicate (parent namihei wakame))
+  (eprolog-define-predicate (parent fune sazae))
+  (eprolog-define-predicate (parent fune katsuo))
+  (eprolog-define-predicate (parent fune wakame))
+  (eprolog-define-predicate (parent sazae tarao))
+  (eprolog-define-predicate (parent masuo tarao))
   
-  (eprolog-define-prolog-predicate! (grandparent _x _z)
+  ;; Test direct relationships
+  (should (eprolog-test--has-solution-p '((parent namihei sazae))))
+  (should (eprolog-test--has-solution-p '((parent sazae tarao))))
+  
+  ;; Define grandparent rule
+  (eprolog-define-predicate (grandparent _x _z)
     (parent _x _y)
     (parent _y _z))
   
-  ;; Test basic parent relationships
-  (should (eprolog-test--has-solution-p '((parent fune katsuo))))
-  (should (eprolog-test--has-solution-p '((parent sazae tarao))))
+  ;; Test grandparent relationships
+  (should (eprolog-test--has-solution-p '((grandparent namihei tarao))))
+  (should (eprolog-test--has-solution-p '((grandparent fune tarao))))
   
-  ;; Test grandparent relationship
-  (should (eprolog-test--has-solution-p '((grandparent fune tarao)))))
+  ;; Test finding all grandchildren of namihei
+  (let ((grandchildren (eprolog-test--collect-solutions '((grandparent namihei _x)))))
+    (should (= (length grandchildren) 1))
+    (should (member '((_x . tarao)) grandchildren))))
 #+END_SRC
 
 ** Unification and Equality
 
-Unification is the beating heart of Prolog's inference engine—the fundamental process that makes logical programming possible. It's more sophisticated than simple equality checking; unification actively attempts to make two terms identical by finding appropriate values for variables, essentially solving equations in the realm of symbolic logic.
+Unification is the pattern matching engine at the heart of Prolog. When Prolog tries to match a goal against facts or rules, it uses unification to determine if terms can be made identical by finding appropriate variable bindings. This process is fundamental to how Prolog explores the solution space and propagates constraints through your logic programs.
 
-Consider unification as Prolog's way of pattern matching with intelligence. When you ask whether two terms can be made equal, Prolog doesn't just check if they're already identical—it explores whether there's a way to bind variables that would make them match. This capability transforms static queries into dynamic problem-solving.
+The equals predicate (=) performs unification between two terms. If the terms can be unified (made identical through variable bindings), the predicate succeeds; otherwise, it fails. This isn't the same as testing for existing equality—it actively creates bindings to make the terms equal if possible.
 
-The distinction between different types of equality is crucial for understanding Prolog's behavior. While mathematical equality is binary (either equal or not), Prolog offers nuanced comparison operations tailored to different logical needs.
+Key unification concepts:
+- *Variable Binding*: Unbound variables can be unified with any term
+- *Structural Matching*: Complex terms unify if their structure and components match
+- *Bidirectional Nature*: Unification works symmetrically (X=Y is the same as Y=X)
+- *Occurs Check*: Prevents creating infinite structures (optional in ε-prolog)
 
-Essential concepts in this subsection:
-- *Unification* (~=/2~): Intelligent pattern matching that binds variables to achieve equality
-- *Strict Equality* (~==/2~): Traditional equality checking without variable modification  
-- *Variable Binding*: How Prolog assigns values to variables during unification
-- *Pattern Matching*: The process of matching structural templates with concrete data
-
-The following test demonstrates the fundamental difference between unification and strict equality:
+Understanding the difference between unification (=) and strict equality (==) is crucial for effective Prolog programming. While unification creates bindings, strict equality only tests existing values without creating new bindings.
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-unification-and-equality ()
-  "Test unification and equality predicates."
+(ert-deftest eprolog-core-unification-and-equality ()
+  "Test unification and strict equality from README.org."
   (eprolog-test--restore-builtins)
   
-  ;; Test =/2 (unification)
-  (should (eprolog-test--has-solution-p '((= foo foo))))
-  (should (eprolog-test--has-solution-p '((= _x bar) (= _x bar))))
-  (should-not (eprolog-test--has-solution-p '((= foo bar))))
-  (should-not (eprolog-test--has-solution-p '((= _x foo) (= _x bar))))
+  ;; Test unification (=)
+  (should (eprolog-test--has-solution-p '((= 3 3))))
+  (should (eprolog-test--has-solution-p '((= _x 3))))
+  (should (eprolog-test--has-solution-p '((= _x _y))))
+  (should (eprolog-test--has-solution-p '((= (f _x) (f 3)))))
+  (should-not (eprolog-test--has-solution-p '((= 3 4))))
+  (should-not (eprolog-test--has-solution-p '((= (f _x) (g _x)))))
   
-  ;; Test ==/2 (strict equality)
-  (should (eprolog-test--has-solution-p '((== foo foo))))
-  (should-not (eprolog-test--has-solution-p '((== _x foo))))
-  (should-not (eprolog-test--has-solution-p '((== foo bar)))))
+  ;; Test strict equality (==)  
+  (should (eprolog-test--has-solution-p '((== 3 3))))
+  (should-not (eprolog-test--has-solution-p '((== _x 3))))
+  (should-not (eprolog-test--has-solution-p '((== _x _y))))
+  (should (eprolog-test--has-solution-p '((= _x 3) (== _x 3))))
+  
+  ;; Unification with structures
+  (should (eprolog-test--has-solution-p '((= (person john 30) (person john 30)))))
+  (should (eprolog-test--has-solution-p '((= (person _name 30) (person john 30)))))
+  (should-not (eprolog-test--has-solution-p '((= (person john 30) (person jane 30))))))
 #+END_SRC
-
-This test illustrates the core difference between unification (~=/2~) and strict equality (~==/2~). Unification can bind variables to make terms equal, while strict equality only succeeds if terms are already identical.
 
 ** Unification (=) Negative Tests
 
-The unification predicate should fail when terms cannot be unified, including type mismatches, structural incompatibilities, and occurs check violations:
+These tests verify that unification properly fails in cases where terms cannot be made equal:
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-unification-negative-tests ()
-  "Test negative cases for unification (=) predicate."
+(ert-deftest eprolog-core-unification-negative-tests ()
+  "Test cases where unification should fail."
   (eprolog-test--restore-builtins)
   
-  ;; Type mismatch failures
-  (should-not (eprolog-test--has-solution-p '((= 42 foo))))
-  (should-not (eprolog-test--has-solution-p '((= "hello" world))))
-  (should-not (eprolog-test--has-solution-p '((= (a b) atom))))
-  (should-not (eprolog-test--has-solution-p '((= 3.14 "3.14"))))
+  ;; Atoms that don't match
+  (should-not (eprolog-test--has-solution-p '((= foo bar))))
+  (should-not (eprolog-test--has-solution-p '((= atom1 atom2))))
   
-  ;; Complex structure mismatches
-  (should-not (eprolog-test--has-solution-p '((= (a b c) (a b)))))
-  (should-not (eprolog-test--has-solution-p '((= (f a) (g a)))))
-  (should-not (eprolog-test--has-solution-p '((= (a (b c)) (a (b d))))))
-  (should-not (eprolog-test--has-solution-p '((= (1 2 3) (1 2 4)))))
+  ;; Numbers that don't match
+  (should-not (eprolog-test--has-solution-p '((= 42 43))))
+  (should-not (eprolog-test--has-solution-p '((= 0 1))))
   
-  ;; Multiple variable binding conflicts
-  (should-not (eprolog-test--has-solution-p '((= _x a) (= _x b))))
+  ;; Structures with different functors
+  (should-not (eprolog-test--has-solution-p '((= (f _x) (g _x)))))
+  (should-not (eprolog-test--has-solution-p '((= (foo _a _b) (bar _a _b)))))
+  
+  ;; Structures with different arities
+  (should-not (eprolog-test--has-solution-p '((= (f _x) (f _x _y)))))
+  (should-not (eprolog-test--has-solution-p '((= (pred _a) (pred _a _b _c)))))
+  
+  ;; Lists of different lengths
+  (should-not (eprolog-test--has-solution-p '((= (1 2) (1 2 3)))))
+  (should-not (eprolog-test--has-solution-p '((= () (a)))))
+  
+  ;; Conflicting variable bindings
   (should-not (eprolog-test--has-solution-p '((= _x 1) (= _x 2))))
-  (should-not (eprolog-test--has-solution-p '((= _x _y) (= _x foo) (= _y bar))))
-  
-  ;; Nested structure failures with variables
-  (should-not (eprolog-test--has-solution-p '((= (_x _y) (a b)) (= _x _y))))
-  (should-not (eprolog-test--has-solution-p '((= (f _x) (f a)) (= _x b)))))
+  (should-not (eprolog-test--has-solution-p '((= (f _x _x) (f 1 2))))))
 #+END_SRC
 
 ** Strict Equality (==) Negative Tests
 
-Strict equality should fail when terms are not already identical, including any variable comparisons and type mismatches:
+These tests verify that strict equality properly fails when terms are not already identical:
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-strict-equality-negative-tests ()
-  "Test negative cases for strict equality (==) predicate."
+(ert-deftest eprolog-core-strict-equality-negative-tests ()
+  "Test cases where strict equality should fail."
   (eprolog-test--restore-builtins)
   
-  ;; Type mismatch failures  
-  (should-not (eprolog-test--has-solution-p '((== 42 "42"))))
-  (should-not (eprolog-test--has-solution-p '((== foo bar))))
-  (should-not (eprolog-test--has-solution-p '((== (a b) atom))))
-  (should-not (eprolog-test--has-solution-p '((== 3.14 3))))
-  
-  ;; Variable vs ground term failures
-  (should-not (eprolog-test--has-solution-p '((== _x foo))))
+  ;; Unbound variables
   (should-not (eprolog-test--has-solution-p '((== _x _y))))
   (should-not (eprolog-test--has-solution-p '((== _x 42))))
+  (should-not (eprolog-test--has-solution-p '((== _unbound atom))))
   
-  ;; Complex structure failures
-  (should-not (eprolog-test--has-solution-p '((== (a b c) (a b d)))))
-  (should-not (eprolog-test--has-solution-p '((== (f a) (g a)))))
-  (should-not (eprolog-test--has-solution-p '((== (1 2) (1 2 3))))))
+  ;; Different atoms
+  (should-not (eprolog-test--has-solution-p '((== foo bar))))
+  (should-not (eprolog-test--has-solution-p '((== yes no))))
   
-  ;; Note: Identical variable patterns may succeed in strict equality)
+  ;; Different numbers
+  (should-not (eprolog-test--has-solution-p '((== 1 2))))
+  ;; Note: 0 and -0 might be considered equal in some implementations
+  (should-not (eprolog-test--has-solution-p '((== 1 0))))
+  
+  ;; Different structures
+  (should-not (eprolog-test--has-solution-p '((== (f a) (f b)))))
+  (should-not (eprolog-test--has-solution-p '((== (point 1 2) (point 2 1)))))
+  
+  ;; Variables bound to different values
+  (should-not (eprolog-test--has-solution-p '((= _x 1) (= _y 2) (== _x _y))))
+  (should-not (eprolog-test--has-solution-p '((= _x foo) (= _y bar) (== _x _y)))))
 #+END_SRC
 
 ** Variable Unification Edge Cases
 
-Anonymous variables (represented by ~_~) are special in Prolog. Each ~_~ is treated as a unique variable that you don't care about the value of. This is useful when you need to match a pattern but don't need to use some of the matched values.
+This test explores edge cases and special behaviors in variable unification:
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-anonymous-variables ()
-  "Test anonymous variable handling."
+(ert-deftest eprolog-core-anonymous-variables ()
+  "Test anonymous variable behavior."
   (eprolog-test--restore-builtins)
   
-  ;; Test anonymous variables don't unify with each other
-  (eprolog-define-predicate (test _ _))
-  (should (eprolog-test--has-solution-p '((test a b))))
-  (should (eprolog-test--has-solution-p '((test foo bar))))
-  (should (eprolog-test--has-solution-p '((test _x _y)))))
+  ;; Anonymous variables don't unify with each other
+  (eprolog-define-predicate (has-parts _ _))
+  (should (eprolog-test--has-solution-p '((has-parts a b))))
+  (should (eprolog-test--has-solution-p '((has-parts x y))))
+  
+  ;; Each _ is a separate variable
+  (eprolog-define-predicate (test-anon _x _y) (= _x 1) (= _y 2))
+  (should (eprolog-test--has-solution-p '((test-anon _ _))))
+  
+  ;; Anonymous variables in queries
+  (eprolog-define-predicate (triple a b c))
+  (eprolog-define-predicate (triple x y z))
+  (should (= (length (eprolog-test--collect-solutions '((triple _ _ _)))) 2)))
 #+END_SRC
 
-Advanced variable unification tests demonstrate complex unification scenarios:
+This test demonstrates more complex unification scenarios:
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-variable-unification-advanced ()
-  "Test advanced variable unification scenarios."
+(ert-deftest eprolog-core-variable-unification-advanced ()
+  "Test advanced variable unification patterns."
   (eprolog-test--restore-builtins)
   
-  ;; Define test predicates
-  (eprolog-define-predicate (likes mary food))
-  (eprolog-define-predicate (likes mary wine))
-  (eprolog-define-predicate (likes john wine))
+  ;; Unification creates bindings that persist through the query
+  (let ((solutions (eprolog-test--collect-solutions '((= _x 42) (= _y _x)))))
+    (should (= (length solutions) 1))
+    (let ((bindings (car solutions)))
+      (should (equal (assoc '_x bindings) '(_x . 42)))
+      (should (equal (assoc '_y bindings) '(_y . 42)))))
   
-  ;; Test multiple solutions with same variable
-  (let ((solutions (eprolog-test--collect-solutions '((likes mary _x)))))
-    (should (= (length solutions) 2))
-    (should (member '((_x . food)) solutions))
-    (should (member '((_x . wine)) solutions)))
+  ;; Unification with complex structures
+  (let ((solutions (eprolog-test--collect-solutions 
+                    '((= (person _name _age) (person john 30))))))
+    (should (= (length solutions) 1))
+    (let ((bindings (car solutions)))
+      (should (equal (assoc '_name bindings) '(_name . john)))
+      (should (equal (assoc '_age bindings) '(_age . 30)))))
   
-  ;; Test variable unification across multiple clauses
-  (let ((solutions (eprolog-test--collect-solutions '((likes _person wine)))))
-    (should (= (length solutions) 2))
-    (should (member '((_person . mary)) solutions))
-    (should (member '((_person . john)) solutions))))
+  ;; Circular bindings through unification
+  (let ((solutions (eprolog-test--collect-solutions 
+                    '((= _x _y) (= _y _z) (= _z 100)))))
+    (should (= (length solutions) 1))
+    (let ((bindings (car solutions)))
+      ;; All variables should be bound to 100
+      (should (equal (cdr (assoc '_x bindings)) 100))
+      (should (equal (cdr (assoc '_y bindings)) 100))
+      (should (equal (cdr (assoc '_z bindings)) 100))))
+  
+  ;; Partial structure unification
+  (let ((solutions (eprolog-test--collect-solutions 
+                    '((= (f _x (g _y)) (f a (g b)))))))
+    (should (= (length solutions) 1))
+    (let ((bindings (car solutions)))
+      (should (equal (assoc '_x bindings) '(_x . a)))
+      (should (equal (assoc '_y bindings) '(_y . b)))))
+  
+  ;; Failed unification doesn't create partial bindings
+  (should-not (eprolog-test--has-solution-p 
+               '((= (pair _x _x) (pair 1 2)))))
+  
+  ;; Unification order test (variable names may differ)
+  (let ((sol1 (eprolog-test--collect-solutions '((= _x _y) (= _y 5))))
+        (sol2 (eprolog-test--collect-solutions '((= _y 5) (= _x _y)))))
+    ;; Both should have solutions with the same values
+    (should (= (length sol1) 1))
+    (should (= (length sol2) 1)))
+  
+  ;; List unification
+  (let ((solutions (eprolog-test--collect-solutions 
+                    '((= (_head . _tail) (1 2 3))))))
+    (should (= (length solutions) 1))
+    (let ((bindings (car solutions)))
+      (should (equal (assoc '_head bindings) '(_head . 1)))
+      (should (equal (assoc '_tail bindings) '(_tail 2 3)))))
+  
+  ;; Verify proper variable scoping in nested structures
+  (eprolog-define-predicate (nested-test _person)
+    (= _person (person _name _age))
+    (= _name john))
+  
+  (let ((solutions (eprolog-test--collect-solutions '((nested-test _person)))))
+    (should (= (length solutions) 1))
+    ;; Should have a solution with john as the name
+    (let ((person-binding (cdr (assoc '_person (car solutions)))))
+      (should (member 'john person-binding)))))
 #+END_SRC
 
 ** Occurs Check
@@ -265,7 +348,7 @@ Advanced variable unification tests demonstrate complex unification scenarios:
 The occurs check prevents the creation of infinite structures during unification:
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-usage-occurs-check ()
+(ert-deftest eprolog-core-occurs-check ()
   "Test occurs check in unification."
   (eprolog-test--restore-builtins)
   
@@ -273,4 +356,148 @@ The occurs check prevents the creation of infinite structures during unification
   (let ((eprolog-occurs-check t))
     (should-not (eprolog-test--has-solution-p '((= _x (_x)))))
     (should-not (eprolog-test--has-solution-p '((= _x (f _x)))))))
+#+END_SRC
+
+** Core Engine Internal Tests
+
+These tests verify the internal engine functions that power ε-prolog. While these test private APIs, they provide valuable regression testing for the core functionality.
+
+*** Variable Handling Functions
+
+#+BEGIN_SRC emacs-lisp
+(ert-deftest eprolog-core-variable-handling ()
+  "Test core variable handling functions."
+  (eprolog-test--restore-builtins)
+  
+  ;; Test variable detection
+  (should (eprolog--variable-p '_x))
+  (should (eprolog--variable-p '_foo))
+  (should-not (eprolog--variable-p 'atom))
+  (should-not (eprolog--variable-p 123))
+  (should-not (eprolog--variable-p "string"))
+  (should-not (eprolog--variable-p '(list)))
+  
+  ;; Test named variable detection
+  (should (eprolog--named-variable-p '_x))
+  (should (eprolog--named-variable-p '_foo))
+  (should-not (eprolog--named-variable-p '_))
+  (should-not (eprolog--named-variable-p 'atom))
+  
+  ;; Test anonymous variable replacement
+  (let ((term '(foo _ bar _)))
+    (let ((result (eprolog--replace-anonymous-variables term)))
+      ;; Should replace _ with unique variables
+      (should (equal (car result) 'foo))
+      (should (equal (caddr result) 'bar))
+      ;; Anonymous variables should be replaced with unique ones
+      (should (eprolog--variable-p (cadr result)))
+      (should (eprolog--variable-p (cadddr result)))
+      ;; They should be different
+      (should-not (equal (cadr result) (cadddr result))))))
+
+(ert-deftest eprolog-core-variables-in ()
+  "Test extraction of variables from terms."
+  (eprolog-test--restore-builtins)
+  
+  ;; Test simple cases
+  (should (equal (eprolog--variables-in 'atom) nil))
+  (should (equal (eprolog--variables-in '_x) '(_x)))
+  
+  ;; Test compound terms
+  (let ((vars (eprolog--variables-in '(foo _x _y _x))))
+    (should (= (length vars) 2))
+    (should (member '_x vars))
+    (should (member '_y vars)))
+  
+  ;; Test nested structures
+  (let ((vars (eprolog--variables-in '(foo (_x bar) (baz _y _x)))))
+    (should (= (length vars) 2))
+    (should (member '_x vars))
+    (should (member '_y vars))))
+
+(ert-deftest eprolog-core-ground-predicate ()
+  "Test ground term detection."
+  (eprolog-test--restore-builtins)
+  
+  ;; Ground terms
+  (should (eprolog--ground-p 'atom))
+  (should (eprolog--ground-p 123))
+  (should (eprolog--ground-p "string"))
+  (should (eprolog--ground-p '(foo bar baz)))
+  (should (eprolog--ground-p '(nested (structure (with atoms)))))
+  
+  ;; Non-ground terms
+  (should-not (eprolog--ground-p '_x))
+  (should-not (eprolog--ground-p '(foo _x)))
+  (should-not (eprolog--ground-p '(nested (structure _var)))))
+#+END_SRC
+
+*** Substitution and Binding Functions
+
+#+BEGIN_SRC emacs-lisp
+(ert-deftest eprolog-core-substitution ()
+  "Test substitution of bindings in terms."
+  (eprolog-test--restore-builtins)
+  
+  ;; Test simple substitution (note: function signature is (bindings expression))
+  (let ((bindings '((_x . atom) (_y . 123))))
+    (should (equal (eprolog--substitute-bindings bindings '_x) 'atom))
+    (should (equal (eprolog--substitute-bindings bindings '_y) 123))
+    (should (equal (eprolog--substitute-bindings bindings '_z) '_z))
+    (should (equal (eprolog--substitute-bindings bindings 'atom) 'atom)))
+  
+  ;; Test compound substitution
+  (let ((bindings '((_x . foo) (_y . bar))))
+    (should (equal (eprolog--substitute-bindings bindings '(pair _x _y))
+                   '(pair foo bar))))
+  
+  ;; Test nested substitution
+  (let ((bindings '((_x . _y) (_y . value))))
+    (should (equal (eprolog--substitute-bindings bindings '_x) 'value))
+    (should (equal (eprolog--substitute-bindings bindings '(nested _x))
+                   '(nested value)))))
+
+(ert-deftest eprolog-core-variable-lookup ()
+  "Test variable lookup in bindings."
+  (eprolog-test--restore-builtins)
+  
+  ;; Test direct lookup
+  (let ((bindings '((_x . atom) (_y . 123))))
+    (should (equal (eprolog--lookup-variable '_x bindings) 'atom))
+    (should (equal (eprolog--lookup-variable '_y bindings) 123))
+    (should (equal (eprolog--lookup-variable '_z bindings) nil)))
+  
+  ;; Test chained lookup (lookup only does direct lookup, not transitive)
+  (let ((bindings '((_x . _y) (_y . _z) (_z . final))))
+    (should (equal (eprolog--lookup-variable '_x bindings) '_y))
+    (should (equal (eprolog--lookup-variable '_y bindings) '_z))
+    (should (equal (eprolog--lookup-variable '_z bindings) 'final))))
+#+END_SRC
+
+*** Variable Renaming Functions
+
+#+BEGIN_SRC emacs-lisp
+(ert-deftest eprolog-core-rename-vars ()
+  "Test variable renaming functionality."
+  (eprolog-test--restore-builtins)
+  
+  ;; Test simple renaming
+  (let ((term '(foo _x _y)))
+    (let ((renamed (eprolog--rename-vars term)))
+      ;; Structure should be preserved
+      (should (equal (car renamed) 'foo))
+      ;; Variables should be renamed
+      (should (eprolog--variable-p (cadr renamed)))
+      (should (eprolog--variable-p (caddr renamed)))
+      ;; Renamed variables should be different from originals
+      (should-not (equal (cadr renamed) '_x))
+      (should-not (equal (caddr renamed) '_y))))
+  
+  ;; Test consistent renaming
+  (let ((term '(foo _x _x _y)))
+    (let ((renamed (eprolog--rename-vars term)))
+      ;; Same variable should be renamed consistently
+      (should (equal (cadr renamed) (caddr renamed)))
+      ;; Different variables should get different names
+      (should-not (equal (cadr renamed) (cadddr renamed))))))
 #+END_SRC
