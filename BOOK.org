@@ -787,30 +787,31 @@ The following test demonstrates basic and complex arithmetic operations:
 (ert-deftest eprolog-usage-arithmetic ()
   "Test arithmetic evaluation with is/2 and mathematical functions."
   (eprolog-test--restore-builtins)
-  
+
   ;; Test basic arithmetic
   (let ((solutions (eprolog-test--collect-solutions '((is _result (+ 2 3))))))
     (should (= (length solutions) 1))
     (should (= (cdr (assoc '_result (car solutions))) 5)))
-  
+
   ;; Test complex expressions
   (let ((solutions (eprolog-test--collect-solutions '((is _result (* (+ 2 3) 4))))))
     (should (= (length solutions) 1))
     (should (= (cdr (assoc '_result (car solutions))) 20)))
-  
+
   ;; Test comprehensive examples
   (let ((solutions (eprolog-test--collect-solutions '((is _x (+ 15 25))))))
     (should (= (length solutions) 1))
     (should (equal (cdr (assoc '_x (car solutions))) 40)))
-  
+
   (let ((solutions (eprolog-test--collect-solutions '((is _x (+ (* 2 3) (/ 8 2)))))))
     (should (= (length solutions) 1))
     (should (equal (cdr (assoc '_x (car solutions))) 10)))
-  
+
   ;; Test is/2 safety: unbound variables in expression should fail or error
   ;; Note: ε-prolog may throw errors for unbound variables in arithmetic
-  (should-error (eprolog-test--has-solution-p '((is _result (+ _unbound 3)))))
-  (should-error (eprolog-test--has-solution-p '((is _result (* _x _y))))))
+  (should (not (eprolog-test--has-solution-p '((is _result (+ _unbound 3))))))
+  (should (not (eprolog-test--has-solution-p '((is _result (* _x _y))))))
+  )
 #+END_SRC
 
 The ~is/2~ predicate serves as the foundation for all arithmetic operations:

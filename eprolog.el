@@ -768,21 +768,23 @@ PRED can be an atom or a compound term."
 
 ;; Type checking predicates
 
-(eprolog-define-lisp-predicate atom (term)
-  "Type predicate: atom(TERM).
-Succeeds if TERM is an atom (symbol that is not a variable)."
-  (let ((value (eprolog--substitute-bindings eprolog-current-bindings term)))
-    (if (and (symbolp value) (not (eprolog--variable-p value)))
-        (eprolog--prove-goal-sequence eprolog-remaining-goals eprolog-current-bindings)
-      (make-eprolog--failure))))
+(eprolog-define-prolog-predicate! (atom _term)
+  (lispp (atom '_term)))
 
-(eprolog-define-lisp-predicate atomic (term)
-  "Type predicate: atomic(TERM).
-Succeeds if TERM is atomic (not a variable and not a compound term)."
-  (let ((value (eprolog--substitute-bindings eprolog-current-bindings term)))
-    (if (and (not (eprolog--variable-p value)) (not (consp value)))
-        (eprolog--prove-goal-sequence eprolog-remaining-goals eprolog-current-bindings)
-      (make-eprolog--failure))))
+(eprolog-define-prolog-predicate! (atomic _term)
+  (lispp (not (consp '_term))))
+
+(eprolog-define-prolog-predicate! (number _term)
+  (lispp (numberp '_term)))
+
+(eprolog-define-prolog-predicate! (string _term)
+  (lispp (stringp '_term)))
+
+(eprolog-define-prolog-predicate! (ground _term)
+  (lisp! (list '_term)))
+
+(eprolog-define-prolog-predicate! (fail)
+  (lisp! (list '_)))
 
 (eprolog-define-lisp-predicate var (term)
   "Type predicate: var(TERM).
@@ -791,64 +793,40 @@ Succeeds if TERM is an unbound variable."
       (eprolog--prove-goal-sequence eprolog-remaining-goals eprolog-current-bindings)
     (make-eprolog--failure)))
 
-(eprolog-define-lisp-predicate ground (term)
-  "Type predicate: ground(TERM).
-Succeeds if TERM is fully ground (contains no unbound variables)."
-  (if (eprolog--ground-p term)
-      (eprolog--prove-goal-sequence eprolog-remaining-goals eprolog-current-bindings)
-    (make-eprolog--failure)))
-
-(eprolog-define-lisp-predicate number (term)
-  "Type predicate: number(TERM).
-Succeeds if TERM is a number."
-  (let ((value (eprolog--substitute-bindings eprolog-current-bindings term)))
-    (if (numberp value)
-        (eprolog--prove-goal-sequence eprolog-remaining-goals eprolog-current-bindings)
-      (make-eprolog--failure))))
-
-(eprolog-define-lisp-predicate string (term)
-  "Type predicate: string(TERM).
-Succeeds if TERM is a string."
-  (let ((value (eprolog--substitute-bindings eprolog-current-bindings term)))
-    (if (stringp value)
-        (eprolog--prove-goal-sequence eprolog-remaining-goals eprolog-current-bindings)
-      (make-eprolog--failure))))
-
-;; Control predicates
-
-(eprolog-define-lisp-predicate fail ()
-  "Control predicate: fail.
-Always fails, forcing backtracking."
-  (make-eprolog--failure))
-
 ;; Lisp evaluation predicates
 
 (eprolog-define-lisp-predicate lisp (result-variable &rest expressions)
   "Lisp evaluation predicate: lisp(RESULT, EXPRESSIONS...).
 Evaluates EXPRESSIONS as Lisp code and unifies the result with RESULT-VARIABLE."
-  (let* ((lisp-expression (eprolog--substitute-bindings eprolog-current-bindings `(progn ,@expressions)))
-         (evaluated-result (eval lisp-expression))
-         (result-term (eprolog--substitute-bindings eprolog-current-bindings result-variable))
-         (new-bindings (eprolog--unify result-term evaluated-result eprolog-current-bindings)))
-    (if (eprolog--failure-p new-bindings)
-        (make-eprolog--failure)
-      (eprolog--prove-goal-sequence eprolog-remaining-goals new-bindings))))
+  (if (not (eprolog--ground-p expressions))
+    (make-eprolog--failure)
+    (let* ((lisp-expression (eprolog--substitute-bindings eprolog-current-bindings `(progn ,@expressions)))
+           (evaluated-result (eval lisp-expression))
+           (result-term (eprolog--substitute-bindings eprolog-current-bindings result-variable))
+           (new-bindings (eprolog--unify result-term evaluated-result eprolog-current-bindings)))
+      (if (eprolog--failure-p new-bindings)
+          (make-eprolog--failure)
+        (eprolog--prove-goal-sequence eprolog-remaining-goals new-bindings)))))
 
 (eprolog-define-lisp-predicate lisp! (&rest expressions)
   "Lisp evaluation predicate: lisp!(EXPRESSIONS...).
 Evaluates EXPRESSIONS as Lisp code for side effects, always succeeds."
-  (let* ((lisp-expression (eprolog--substitute-bindings eprolog-current-bindings `(progn ,@expressions))))
-    (eval lisp-expression)
-    (eprolog--prove-goal-sequence eprolog-remaining-goals eprolog-current-bindings)))
+  (if (not (eprolog--ground-p expressions))
+    (make-eprolog--failure)
+    (let* ((lisp-expression (eprolog--substitute-bindings eprolog-current-bindings `(progn ,@expressions))))
+      (eval lisp-expression)
+      (eprolog--prove-goal-sequence eprolog-remaining-goals eprolog-current-bindings))))
 
 (eprolog-define-lisp-predicate lispp (&rest expressions)
   "Lisp evaluation predicate: lispp(EXPRESSIONS...).
 Evaluates EXPRESSIONS as Lisp code and succeeds if the result is non-nil."
-  (let* ((lisp-expression (eprolog--substitute-bindings eprolog-current-bindings `(progn ,@expressions)))
-         (evaluated-result (eval lisp-expression)))
-    (if (not evaluated-result)
-        (make-eprolog--failure)
-      (eprolog--prove-goal-sequence eprolog-remaining-goals eprolog-current-bindings))))
+  (if (not (eprolog--ground-p expressions))
+    (make-eprolog--failure)
+    (let* ((lisp-expression (eprolog--substitute-bindings eprolog-current-bindings `(progn ,@expressions)))
+           (evaluated-result (eval lisp-expression)))
+      (if (not evaluated-result)
+          (make-eprolog--failure)
+        (eprolog--prove-goal-sequence eprolog-remaining-goals eprolog-current-bindings)))))
 
 ;; Dynamic parameter predicates
 
