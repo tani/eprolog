@@ -1790,6 +1790,226 @@ Stress testing pushes the system to its limits:
   (should (eprolog-test--has-solution-p '((deep-recursion 10 done)))))
 #+END_SRC
 
+* Lisp-Predicate Negative Tests
+
+This section provides comprehensive negative testing for all lisp-predicates defined in ε-prolog. While positive tests demonstrate correct behavior, negative tests ensure proper error handling and failure conditions, which is crucial for robust Prolog programs.
+
+These tests verify that lisp-predicates correctly fail when they should, handle invalid inputs gracefully, and maintain proper logical semantics even in edge cases. Each lisp-predicate has dedicated negative test coverage to ensure comprehensive validation.
+
+** Unification (=) Negative Tests
+
+The unification predicate should fail when terms cannot be unified, including type mismatches, structural incompatibilities, and occurs check violations:
+
+#+BEGIN_SRC emacs-lisp
+(ert-deftest eprolog-usage-unification-negative-tests ()
+  "Test negative cases for unification (=) predicate."
+  (eprolog-test--restore-builtins)
+  
+  ;; Type mismatch failures
+  (should-not (eprolog-test--has-solution-p '((= 42 foo))))
+  (should-not (eprolog-test--has-solution-p '((= "hello" world))))
+  (should-not (eprolog-test--has-solution-p '((= (a b) atom))))
+  (should-not (eprolog-test--has-solution-p '((= 3.14 "3.14"))))
+  
+  ;; Complex structure mismatches
+  (should-not (eprolog-test--has-solution-p '((= (a b c) (a b)))))
+  (should-not (eprolog-test--has-solution-p '((= (f a) (g a)))))
+  (should-not (eprolog-test--has-solution-p '((= (a (b c)) (a (b d))))))
+  (should-not (eprolog-test--has-solution-p '((= (1 2 3) (1 2 4)))))
+  
+  ;; Multiple variable binding conflicts
+  (should-not (eprolog-test--has-solution-p '((= _x a) (= _x b))))
+  (should-not (eprolog-test--has-solution-p '((= _x 1) (= _x 2))))
+  (should-not (eprolog-test--has-solution-p '((= _x _y) (= _x foo) (= _y bar))))
+  
+  ;; Nested structure failures with variables
+  (should-not (eprolog-test--has-solution-p '((= (_x _y) (a b)) (= _x _y))))
+  (should-not (eprolog-test--has-solution-p '((= (f _x) (f a)) (= _x b)))))
+#+END_SRC
+
+** Strict Equality (==) Negative Tests
+
+Strict equality should fail when terms are not already identical, including any variable comparisons and type mismatches:
+
+#+BEGIN_SRC emacs-lisp
+(ert-deftest eprolog-usage-strict-equality-negative-tests ()
+  "Test negative cases for strict equality (==) predicate."
+  (eprolog-test--restore-builtins)
+  
+  ;; Type mismatch failures  
+  (should-not (eprolog-test--has-solution-p '((== 42 "42"))))
+  (should-not (eprolog-test--has-solution-p '((== foo bar))))
+  (should-not (eprolog-test--has-solution-p '((== (a b) atom))))
+  (should-not (eprolog-test--has-solution-p '((== 3.14 3))))
+  
+  ;; Variable vs ground term failures
+  (should-not (eprolog-test--has-solution-p '((== _x foo))))
+  (should-not (eprolog-test--has-solution-p '((== _x _y))))
+  (should-not (eprolog-test--has-solution-p '((== _x 42))))
+  
+  ;; Complex structure failures
+  (should-not (eprolog-test--has-solution-p '((== (a b c) (a b d)))))
+  (should-not (eprolog-test--has-solution-p '((== (f a) (g a)))))
+  (should-not (eprolog-test--has-solution-p '((== (1 2) (1 2 3))))))
+  
+  ;; Note: Identical variable patterns may succeed in strict equality)
+#+END_SRC
+
+** Cut (!) Negative Tests
+
+The cut predicate controls backtracking, and these tests verify proper failure behavior in cut-controlled branches:
+
+#+BEGIN_SRC emacs-lisp
+(ert-deftest eprolog-usage-cut-negative-tests ()
+  "Test negative cases for cut (!) predicate."
+  (eprolog-test--restore-builtins)
+  
+  ;; Cut preventing backtracking to failing alternatives
+  (eprolog-define-predicate! (test-cut-fail _x)
+    (= _x a)
+    !
+    (fail))
+  (eprolog-define-predicate (test-cut-fail _x)
+    (= _x b))
+  
+  ;; Should fail because cut prevents backtracking to second clause
+  (should-not (eprolog-test--has-solution-p '((test-cut-fail _x))))
+  
+  ;; Cut with impossible subsequent goals
+  (eprolog-define-predicate! (cut-then-impossible _x)
+    (= _x success)
+    !
+    (= _x failure))
+  
+  (should-not (eprolog-test--has-solution-p '((cut-then-impossible _x))))
+  
+  ;; Cut preventing recovery from failed branch
+  (eprolog-define-predicate! (cut-branch-fail)
+    !
+    (fail))
+  
+  (should-not (eprolog-test--has-solution-p '((cut-branch-fail)))))
+#+END_SRC
+
+** Call Predicate Negative Tests
+
+The call predicate should fail with undefined predicates, invalid arguments, and malformed terms:
+
+#+BEGIN_SRC emacs-lisp
+(ert-deftest eprolog-usage-call-negative-tests ()
+  "Test negative cases for call predicate."
+  (eprolog-test--restore-builtins)
+  
+  ;; Call with undefined predicates
+  (should-not (eprolog-test--has-solution-p '((call undefined-predicate))))
+  (should-not (eprolog-test--has-solution-p '((call nonexistent foo bar))))
+  (should-not (eprolog-test--has-solution-p '((call missing-pred _x))))
+  
+  ;; Call with malformed predicate terms
+  (should-not (eprolog-test--has-solution-p '((call 42))))
+  (should-not (eprolog-test--has-solution-p '((call "invalid-call"))))
+  (should-not (eprolog-test--has-solution-p '((call ())))))
+  
+  ;; Call with predicates that should fail
+  (eprolog-define-predicate! (always-fails) (fail))
+  (should-not (eprolog-test--has-solution-p '((call always-fails))))
+  (should-not (eprolog-test--has-solution-p '((call = foo bar))))
+#+END_SRC
+
+** Variable Test (var) Negative Tests
+
+The var predicate should fail for all ground terms and bound variables:
+
+#+BEGIN_SRC emacs-lisp
+(ert-deftest eprolog-usage-var-negative-tests ()
+  "Test negative cases for var predicate."
+  (eprolog-test--restore-builtins)
+  
+  ;; Bound variables after unification should fail var test
+  (should-not (eprolog-test--has-solution-p '((= _x bound) (var _x))))
+  (should-not (eprolog-test--has-solution-p '((= _x 42) (var _x))))
+  (should-not (eprolog-test--has-solution-p '((= _x (a b)) (var _x))))
+  
+  ;; Non-variable types should fail
+  (should-not (eprolog-test--has-solution-p '((var 42))))
+  (should-not (eprolog-test--has-solution-p '((var "string"))))
+  (should-not (eprolog-test--has-solution-p '((var (a b c)))))
+  (should-not (eprolog-test--has-solution-p '((var 3.14))))
+  
+  ;; Complex structures containing variables should fail
+  (should-not (eprolog-test--has-solution-p '((var (a _x b)))))
+  (should-not (eprolog-test--has-solution-p '((var (f _y))))))
+#+END_SRC
+
+** Lisp Integration Negative Tests
+
+The lisp predicate should fail with invalid expressions and unification failures:
+
+#+BEGIN_SRC emacs-lisp
+(ert-deftest eprolog-usage-lisp-negative-tests ()
+  "Test negative cases for lisp predicate."
+  (eprolog-test--restore-builtins)
+
+  (should-error (eprolog-test--has-solution-p '((lisp _x (undef)))))
+  (should-not (eprolog-test--has-solution-p '((lisp _x (_undef))))))
+#+END_SRC
+
+** Lisp Side Effects (lisp!) Negative Tests
+
+The lisp! predicate should fail with invalid expressions:
+
+#+BEGIN_SRC emacs-lisp
+(ert-deftest eprolog-usage-lisp-side-effects-negative-tests ()
+  "Test negative cases for lisp! predicate."
+  (eprolog-test--restore-builtins)
+
+  (should-error (eprolog-test--has-solution-p '((lisp! (undef)))))
+  (should-not (eprolog-test--has-solution-p '((lisp! (_undef)))))
+  )
+#+END_SRC
+
+** Lisp Conditional (lispp) Negative Tests
+
+The lispp predicate should fail when expressions return nil or false:
+
+#+BEGIN_SRC emacs-lisp
+(ert-deftest eprolog-usage-lispp-negative-tests ()
+  "Test negative cases for lispp predicate."
+  (eprolog-test--restore-builtins)
+  
+  ;; Expressions that return nil should fail
+  (should-not (eprolog-test--has-solution-p '((lispp (> 2 5)))))
+  (should-not (eprolog-test--has-solution-p '((lispp (equal 'a 'b)))))
+  (should-not (eprolog-test--has-solution-p '((lispp (< 10 5)))))
+  (should-not (eprolog-test--has-solution-p '((lispp nil))))
+
+  (should-error (eprolog-test--has-solution-p '((lispp (undef)))))
+  (should-not (eprolog-test--has-solution-p '((lispp (_undef)))))
+
+  ;; Complex boolean expressions that evaluate to false
+  (should-not (eprolog-test--has-solution-p '((lispp (and t nil)))))
+  (should-not (eprolog-test--has-solution-p '((lispp (or nil nil))))))
+#+END_SRC
+
+** Dynamic Parameters Negative Tests
+
+Dynamic parameter predicates should fail with invalid keys or expressions:
+
+#+BEGIN_SRC emacs-lisp
+(ert-deftest eprolog-usage-dynamic-get-negative-tests ()
+  "Test negative cases for dynamic-get predicate."
+  (eprolog-test--restore-builtins)
+  
+  ;; Getting non-existent keys should fail
+  (should-not (eprolog-test--has-solution-p '((dynamic-get nonexistent-key _value))))
+  (should-not (eprolog-test--has-solution-p '((dynamic-get missing-key _x))))
+  
+  ;; Unification failures with retrieved values
+  (should (eprolog-test--has-solution-p '((dynamic-put test-key 42))))
+  (should-not (eprolog-test--has-solution-p '((dynamic-get test-key "forty-two"))))
+  (should-not (eprolog-test--has-solution-p '((dynamic-get test-key (a b c))))))
+#+END_SRC
+
 * API Reference
 
 This section provides comprehensive documentation for all ε-prolog API functions, predicates, and usage patterns.
@@ -1894,81 +2114,3 @@ This comprehensive exploration of ε-prolog demonstrates the rich expressiveness
 The journey through these examples illustrates a fundamental truth about Prolog: it's not just a programming language, but a different way of thinking about computation. Instead of telling the computer how to solve problems, we describe what we know and what relationships exist, then let logical inference find the solutions.
 
 This document serves multiple purposes: it's a learning resource for understanding ε-prolog's capabilities, a comprehensive test suite ensuring system reliability, and a demonstration of how logical programming can elegantly solve complex problems. Each example has been carefully crafted to be both educational and executable, ensuring that theory and practice remain tightly coupled.
-
-** Document Structure
-
-*** Core Prolog Functionality
-- Facts and Rules
-- Unification and Equality
-- Variable Unification Edge Cases
-- Anonymous Variables
-- Occurs Check
-
-*** Built-in Predicates  
-- Type Checking (including string/1 and ground/1)
-- List Operations
-- Higher-order Predicates
-
-*** Control Flow
-- Basic Control Predicates
-- Logical Operators
-- Meta-predicates
-- Cut and Backtracking Control
-
-*** Lisp Integration
-- Basic Lisp Interface
-- Dynamic Parameters
-
-*** Arithmetic and Mathematics
-- Basic Arithmetic
-- Mathematical Predicates
-- Arithmetic Comparisons
-- Custom Comparison Predicates
-- Absolute Value and Min/Max
-- Geometric Calculations
-
-*** DCG (Definite Clause Grammars)
-- Basic Grammar Operations
-- DCG with Arguments
-- Advanced DCG Features
-- Grammar Generation
-- Complex Grammar Applications
-
-*** Family Tree Relationships
-- Comprehensive Family Tree Tests
-- Derived Relationships (child, grandparent, sibling, etc.)
-- Extended Relationships (uncle, aunt, cousin)
-- Complex Family Queries
-
-*** Complex Backtracking and Control Flow
-- Complex Backtracking Scenarios
-- Repeat with Complex Conditions
-
-*** Advanced Applications
-- Recursive Algorithms
-
-*** Performance Testing
-- Large Database and Deep Recursion Tests
-- Stress Testing
-
-** Design Philosophy
-
-The architecture of this document reflects several key principles that make it both educational and practical:
-
-1. *Progressive Complexity*: Concepts build naturally from simple facts to sophisticated applications
-2. *Dual Purpose Design*: Every example serves as both documentation and functional test
-3. *Executable Examples*: All code can be run directly, ensuring accuracy and relevance
-4. *Comprehensive Coverage*: Examples span the full spectrum of ε-prolog capabilities
-5. *Clear Exposition*: Each concept is explained before being demonstrated
-
-** Extending This Test Suite
-
-For those interested in contributing additional examples or tests, the framework provides a solid foundation:
-
-1. *Follow Existing Patterns*: New tests should use the established ~ert-deftest~ structure
-2. *Maintain Test Isolation*: Always begin tests with ~eprolog-test--restore-builtins~  
-3. *Use Standard Helpers*: Leverage ~eprolog-test--has-solution-p~ and ~eprolog-test--collect-solutions~
-4. *Consistent Naming*: Follow the ~eprolog-usage-<feature>~ convention
-5. *Logical Organization*: Place new examples in appropriate thematic sections
-
-The goal is to maintain this document as a living resource that grows with ε-prolog while preserving its educational value and technical accuracy.
