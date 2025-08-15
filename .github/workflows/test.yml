@@ -28,6 +28,10 @@ jobs:
       with:
         version: ${{ matrix.emacs-version }}
 
+    - name: List files in current directory
+      run: |
+        ls -la
+
     - name: Show available test targets
       run: |
         make help
