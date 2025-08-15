@@ -45,11 +45,11 @@
 ;;   ;; Define facts and rules
 ;;   (eprolog-define-prolog-predicate parent (tom bob))
 ;;   (eprolog-define-prolog-predicate parent (bob ann))
-;;   
+;;
 ;;   (eprolog-define-prolog-predicate grandparent (_x _z)
 ;;     (parent _x _y)
 ;;     (parent _y _z))
-;;   
+;;
 ;;   ;; Query the database
 ;;   (eprolog-query (grandparent tom _x))
 ;;
@@ -59,7 +59,7 @@
 
 (require 'cl-lib)
 
-;;; Failure and success types
+;;; Core Data Types & Configuration
 
 (cl-defstruct eprolog--failure
   "Represents a failed Prolog computation.
@@ -74,17 +74,9 @@ the next solution via backtracking."
   bindings
   continuation)
 
-(defun eprolog--printf (format &rest args)
-  "Print formatted output using FORMAT and ARGS.
-Wrapper around `format' and `princ' for consistent output handling
-throughout the Prolog engine."
-  (princ (apply #'format format args)))
-
-;;; Cut exception for implementing Prolog's cut (!)
-
 (define-error 'eprolog-cut-exception "Cut exception" 'error)
 
-;;; Special variables (parameters) - PUBLIC API
+;; Public configuration variables
 
 (defvar eprolog-clause-database '()
   "The current Prolog clause database.
@@ -100,14 +92,16 @@ will be displayed according to `eprolog-spy-state'.")
 (defvar eprolog-spy-state 'prompt
   "Current spy mode for debugging.
 Valid values are:
-- \='prompt: Ask user for each spy action
-- \='always: Show all spy messages without prompting
-- \='disabled: No spy output")
+- \\='prompt: Ask user for each spy action
+- \\='always: Show all spy messages without prompting
+- \\='disabled: No spy output")
 
 (defvar eprolog-occurs-check t
   "Whether to perform occurs check during unification.
 When non-nil, prevents creation of infinite structures by checking
 if a variable occurs within the term it's being unified with.")
+
+;; Internal variables
 
 (defvar eprolog-current-bindings '()
   "Current variable bindings during proof.
@@ -124,43 +118,7 @@ the goal stack during resolution.")
 An alist of `symbol-value' pairs used by the dynamic-put and dynamic-get
 predicates to maintain state across Prolog goals.")
 
-;;; Internal utility functions
-
-(defun eprolog--wrap-success-with-cut-handler (result tag)
-  "Wrap RESULT so that any future cut with TAG is caught and handled.
-If RESULT is a success, its continuation is wrapped; wrapping is
-applied recursively to all subsequent successes."
-  (if (eprolog--success-p result)
-      (let ((bindings (eprolog--success-bindings result))
-            (cont     (eprolog--success-continuation result)))
-        (make-eprolog--success
-         :bindings bindings
-         :continuation
-         (lambda ()
-           (condition-case err
-               (let ((next (funcall cont)))
-                 (eprolog--wrap-success-with-cut-handler next tag))
-             (eprolog-cut-exception
-              (if (eq tag (plist-get (cdr err) :tag))
-                  (eprolog--wrap-success-with-cut-handler
-                   (plist-get (cdr err) :value) tag)
-                (signal (car err) (cdr err))))))))
-    result))
-
-(defun eprolog--call-with-current-choice-point (proc)
-  "Execute PROC with a fresh choice point tag for cut handling.
-Ensures the cut handler remains active across continuations."
-  (let ((tag (gensym "CHOICE-POINT-")))
-    (condition-case err
-        (let ((result (funcall proc tag)))
-          (eprolog--wrap-success-with-cut-handler result tag))
-      (eprolog-cut-exception
-       (if (eq tag (plist-get (cdr err) :tag))
-           (eprolog--wrap-success-with-cut-handler
-            (plist-get (cdr err) :value) tag)
-         (signal (car err) (cdr err)))))))
-
-;;; Variables and unification helpers
+;;; Variable & Term Operations
 
 (defun eprolog--variable-p (term)
   "Test if TERM is a Prolog variable.
@@ -243,7 +201,24 @@ with each other."
    (t (cons (eprolog--replace-anonymous-variables (car expression))
             (eprolog--replace-anonymous-variables (cdr expression))))))
 
-;;; Occurs check for unification
+(defun eprolog--ground-p (term)
+  "Check if TERM is fully ground (contain no unbound variables).
+TERM is the term to check for groundness.
+
+A term is ground if it contains no variables or all variables in it
+are bound to ground terms.  Uses the current binding environment
+from `eprolog-current-bindings'.
+
+Returns non-nil if TERM is ground, nil otherwise."
+  (let ((resolved-term (eprolog--substitute-bindings eprolog-current-bindings term)))
+    (cond
+     ((eprolog--variable-p resolved-term) nil)
+     ((consp resolved-term)
+      (and (eprolog--ground-p (car resolved-term))
+           (eprolog--ground-p (cdr resolved-term))))
+     (t t))))
+
+;;; Unification System
 
 (defun eprolog--occurs-check-p (variable expression bindings)
   "Check if VARIABLE occurs within EXPRESSION given current BINDINGS.
@@ -253,7 +228,7 @@ BINDINGS is the current variable binding environment.
 
 Prevents infinite structures during unification by detecting circular
 references.  Returns non-nil if VARIABLE is found within EXPRESSION
-\(directly or through bindings), nil otherwise.  Follows variable
+\\(directly or through bindings), nil otherwise.  Follows variable
 bindings recursively."
   (cond
    ((and (symbolp expression) (eq variable expression)) t)
@@ -264,12 +239,6 @@ bindings recursively."
     (or (eprolog--occurs-check-p variable (car expression) bindings)
         (eprolog--occurs-check-p variable (cdr expression) bindings)))
    (t nil)))
-
-;;; Forward declarations
-;;; (declare-function eprolog--prove-goal "eprolog-core" (goals bindings))
-;;; (declare-function eprolog--prove-goal-sequence "eprolog-core" (goals bindings))
-
-;;; Unification
 
 (defun eprolog--unify-var (variable value bindings)
   "Unify VARIABLE with VALUE given current BINDINGS.
@@ -313,7 +282,7 @@ unification algorithm."
       (eprolog--unify (cdr term1) (cdr term2) car-bindings)))
    (t (make-eprolog--failure))))
 
-;;; Clause database operations
+;;; Clause Database Management
 
 (defun eprolog--get-clauses (predicate-symbol)
   "Retrieve all clauses for PREDICATE-SYMBOL from the current clause database.
@@ -369,10 +338,10 @@ overloading with different arities."
   "Create a copy of EXPRESSION with all variables renamed to fresh symbols.
 EXPRESSION is the term to rename variables in.
 
-Generates new variable names using `gensym\=' based on the original
+Generates new variable names using `gensym\\=' based on the original
 variable names.  Used to avoid variable name conflicts when applying
 clauses during resolution.  Each variable gets a unique replacement that
-preserves the original variable\='s base name."
+preserves the original variable\\='s base name."
   (cl-labels ((make-renaming-pair (variable)
                 (let ((var-string (symbol-name variable)))
                   (cons variable (gensym var-string))))
@@ -382,7 +351,168 @@ preserves the original variable\='s base name."
            (alist (mapcar #'make-renaming-pair variables)))
       (cl-sublis alist expression :key #'symbol-to-string :test #'string=))))
 
-;;; Spy/debugging support
+;;; Cut & Choice Point Handling
+
+(defun eprolog--wrap-success-with-cut-handler (result tag)
+  "Wrap RESULT so that any future cut with TAG is caught and handled.
+If RESULT is a success, its continuation is wrapped; wrapping is
+applied recursively to all subsequent successes."
+  (if (eprolog--success-p result)
+      (let ((bindings (eprolog--success-bindings result))
+            (cont     (eprolog--success-continuation result)))
+        (make-eprolog--success
+         :bindings bindings
+         :continuation
+         (lambda ()
+           (condition-case err
+               (let ((next (funcall cont)))
+                 (eprolog--wrap-success-with-cut-handler next tag))
+             (eprolog-cut-exception
+              (if (eq tag (plist-get (cdr err) :tag))
+                  (eprolog--wrap-success-with-cut-handler
+                   (plist-get (cdr err) :value) tag)
+                (signal (car err) (cdr err))))))))
+    result))
+
+(defun eprolog--call-with-current-choice-point (proc)
+  "Execute PROC with a fresh choice point tag for cut handling.
+Ensures the cut handler remains active across continuations."
+  (let ((tag (gensym "CHOICE-POINT-")))
+    (condition-case err
+        (let ((result (funcall proc tag)))
+          (eprolog--wrap-success-with-cut-handler result tag))
+      (eprolog-cut-exception
+       (if (eq tag (plist-get (cdr err) :tag))
+           (eprolog--wrap-success-with-cut-handler
+            (plist-get (cdr err) :value) tag)
+         (signal (car err) (cdr err)))))))
+
+(defun eprolog--insert-choice-point (clause choice-point)
+  "Insert CHOICE-POINT tag into cut operators (!) within CLAUSE.
+CLAUSE is the clause to modify.
+CHOICE-POINT is the unique tag to associate with cuts in this clause.
+
+Transforms bare ! atoms and (!) lists to include the choice point tag
+for proper cut semantics.  Used to link cuts to their originating choice points."
+  (cl-labels ((insert-cut-term (term)
+                (cond
+                 ((and (consp term) (eq '! (car term)) (cadr term))
+                  (error "Invalid choice-point insertion happened"))
+                 ((and (consp term) (eq '! (car term))) (list '! choice-point))
+                 ((and (atom term) (eq '! term)) (list '! choice-point))
+                 (t term))))
+    (mapcar #'insert-cut-term clause)))
+
+(defun eprolog--merge-continuations (continuation-a continuation-b)
+  "Merge two backtracking continuations into a single continuation.
+CONTINUATION-A is the first continuation to try.
+CONTINUATION-B is the second continuation to try if the first fails.
+
+Returns a continuation that first tries CONTINUATION-A, and if that fails
+or produces no more solutions, tries CONTINUATION-B.  This is the core
+backtracking mechanism that enables trying alternative solutions."
+  (lambda ()
+    (let ((result-a (funcall continuation-a)))
+      (if (or (not result-a) (eprolog--failure-p result-a))
+          (funcall continuation-b)
+        (let* ((bindings (eprolog--success-bindings result-a))
+               (result-continuation (eprolog--success-continuation result-a))
+               (new-continuation (eprolog--merge-continuations result-continuation continuation-b)))
+          (make-eprolog--success :bindings bindings :continuation new-continuation))))))
+
+;;; Proof Engine Core
+
+(defun eprolog--prove-goal-sequence (goals bindings)
+  "Prove a sequence of GOALS with the given BINDINGS.
+GOALS is a list of goals to prove in sequence.
+BINDINGS is the current variable binding environment.
+
+Returns success with terminal continuation if all goals are proven,
+otherwise delegates to `eprolog--prove-goal' for the goal sequence.
+Base case for empty goal lists returns success with a terminal continuation."
+  (cond
+   ((eprolog--failure-p bindings) (make-eprolog--failure))
+   ((null goals)
+    (let ((terminal-cont (lambda () (make-eprolog--failure))))
+      (make-eprolog--success :bindings bindings :continuation terminal-cont)))
+   (t (eprolog--prove-goal goals bindings))))
+
+(defun eprolog--prove-goal (goals bindings)
+  "Prove the first goal in GOALS with the given BINDINGS.
+GOALS is a list of goals where the first will be proven.
+BINDINGS is the current variable binding environment.
+
+Looks up the predicate handler (clauses or built-in function) and attempts
+resolution.  Handles spy tracing and delegates to appropriate resolution method.
+This is the core resolution function that drives the proof search."
+  (let* ((goal (car goals))
+         (remaining-goals (cdr goals))
+         (predicate-symbol (if (consp goal) (car goal) goal))
+         (predicate-handler (eprolog--get-clauses predicate-symbol))
+         (args (if (consp goal) (cdr goal) '())))
+    (eprolog--with-spy
+     goal bindings
+     (lambda ()
+       (cond
+        ((functionp predicate-handler)
+         (let* ((eprolog-remaining-goals remaining-goals)
+                (eprolog-current-bindings bindings))
+           (apply predicate-handler args)))
+        (t (eprolog--search-matching-clauses goals bindings predicate-handler)))))))
+
+(defun eprolog--apply-clause-to-goal (goals bindings clause)
+  "Apply CLAUSE to prove the first goal in GOALS with BINDINGS.
+GOALS is the list of goals, where the first will be unified with the
+clause head.  BINDINGS is the current variable binding environment.
+CLAUSE is the clause to apply (head + body).
+
+Attempts to unify the goal with the clause head, then proves the
+clause body plus remaining goals if unification succeeds.
+Returns success object on success, failure object on failure."
+  (let* ((goal (car goals))
+         (remaining-goals (cdr goals))
+         (goal-for-unify (if (consp goal) goal (list goal)))
+         (renamed-clause (eprolog--rename-vars clause))
+         (clause-head (car renamed-clause))
+         (clause-body (cdr renamed-clause))
+         (new-bindings (eprolog--unify goal-for-unify clause-head bindings)))
+    (if (eprolog--failure-p new-bindings)
+        (make-eprolog--failure)
+      (eprolog--prove-goal-sequence (append clause-body remaining-goals) new-bindings))))
+
+(defun eprolog--search-matching-clauses (goals bindings all-clauses)
+  "Search through ALL-CLAUSES to find matches for the first goal in GOALS.
+GOALS is the list of goals to prove.
+BINDINGS is the current variable binding environment.
+ALL-CLAUSES is the list of clauses to try.
+
+Tries each clause with backtracking.  Uses choice points to handle cut
+operations correctly.  Returns success object with continuation for
+backtracking, or failure if no clauses match."
+  (eprolog--call-with-current-choice-point
+   (lambda (choice-point)
+     (cl-labels ((try-one-by-one (clauses-to-try)
+                   (if (null clauses-to-try)
+                       (make-eprolog--failure)
+                     (let* ((current-clause (eprolog--insert-choice-point (car clauses-to-try) choice-point))
+                            (remaining-clauses (cdr clauses-to-try))
+                            (try-next-clause (lambda () (try-one-by-one remaining-clauses)))
+                            (result (eprolog--apply-clause-to-goal goals bindings current-clause)))
+                       (if (eprolog--failure-p result)
+                           (funcall try-next-clause)
+                         (let* ((result-bindings (eprolog--success-bindings result))
+                                (result-continuation (eprolog--success-continuation result))
+                                (new-continuation (eprolog--merge-continuations result-continuation try-next-clause)))
+                           (make-eprolog--success :bindings result-bindings :continuation new-continuation)))))))
+       (try-one-by-one all-clauses)))))
+
+;;; Debugging & Output
+
+(defun eprolog--printf (format &rest args)
+  "Print formatted output using FORMAT and ARGS.
+Wrapper around `format' and `princ' for consistent output handling
+throughout the Prolog engine."
+  (princ (apply #'format format args)))
 
 (defun eprolog--spy-prompt (goal bindings)
   "Display an interactive spy prompt for GOAL with current BINDINGS.
@@ -397,13 +527,13 @@ Returns non-nil if execution should continue, nil to abort."
 
 (defun eprolog--spy-message (kind goal bindings)
   "Display a spy trace message of KIND for GOAL with BINDINGS.
-KIND is typically \='CALL\=', \='EXIT\=', or \='FAIL\='.
+KIND is typically \\='CALL\\=', \\='EXIT\\=', or \\='FAIL\\='.
 GOAL is the goal being traced.
 BINDINGS is the current variable binding environment.
 
 Shows the resolved goal after applying current variable bindings."
   (let ((resolved (eprolog--substitute-bindings bindings goal)))
-    (eprolog--printf "\n** %s: %S" kind resolved)))
+    (eprolog--printf "\\n** %s: %S" kind resolved)))
 
 (defun eprolog--with-spy (goal bindings thunk)
   "Execute THUNK with spy tracing for GOAL using BINDINGS.
@@ -433,143 +563,24 @@ Returns the result of executing THUNK."
           (eprolog--spy-message "EXIT" goal (eprolog--success-bindings result)))))
     result))
 
-;;; Prover engine
-
-(defun eprolog--prove-goal-sequence (goals bindings)
-  "Prove a sequence of GOALS with the given BINDINGS.
-GOALS is a list of goals to prove in sequence.
-BINDINGS is the current variable binding environment.
-
-Returns success with terminal continuation if all goals are proven,
-otherwise delegates to `eprolog--prove-goal' for the goal sequence.
-Base case for empty goal lists returns success with a terminal continuation."
-  (cond
-   ((eprolog--failure-p bindings) (make-eprolog--failure))
-   ((null goals)
-    (let ((terminal-cont (lambda () (make-eprolog--failure))))
-      (make-eprolog--success :bindings bindings :continuation terminal-cont)))
-   (t (eprolog--prove-goal goals bindings))))
-
-(defun eprolog--insert-choice-point (clause choice-point)
-  "Insert CHOICE-POINT tag into cut operators (!) within CLAUSE.
-CLAUSE is the clause to modify.
-CHOICE-POINT is the unique tag to associate with cuts in this clause.
-
-Transforms bare ! atoms and (!) lists to include the choice point tag
-for proper cut semantics.  Used to link cuts to their originating choice points."
-  (cl-labels ((insert-cut-term (term)
-                (cond
-                 ((and (consp term) (eq '! (car term)) (cadr term))
-                  (error "Invalid choice-point insertion happened"))
-                 ((and (consp term) (eq '! (car term))) (list '! choice-point))
-                 ((and (atom term) (eq '! term)) (list '! choice-point))
-                 (t term))))
-    (mapcar #'insert-cut-term clause)))
-
-(defun eprolog--apply-clause-to-goal (goals bindings clause)
-  "Apply CLAUSE to prove the first goal in GOALS with BINDINGS.
-GOALS is the list of goals, where the first will be unified with the
-clause head.  BINDINGS is the current variable binding environment.
-CLAUSE is the clause to apply (head + body).
-
-Attempts to unify the goal with the clause head, then proves the
-clause body plus remaining goals if unification succeeds.
-Returns success object on success, failure object on failure."
-  (let* ((goal (car goals))
-         (remaining-goals (cdr goals))
-         (goal-for-unify (if (consp goal) goal (list goal)))
-         (renamed-clause (eprolog--rename-vars clause))
-         (clause-head (car renamed-clause))
-         (clause-body (cdr renamed-clause))
-         (new-bindings (eprolog--unify goal-for-unify clause-head bindings)))
-    (if (eprolog--failure-p new-bindings)
-        (make-eprolog--failure)
-      (eprolog--prove-goal-sequence (append clause-body remaining-goals) new-bindings))))
-
-(defun eprolog--merge-continuations (continuation-a continuation-b)
-  "Merge two backtracking continuations into a single continuation.
-CONTINUATION-A is the first continuation to try.
-CONTINUATION-B is the second continuation to try if the first fails.
-
-Returns a continuation that first tries CONTINUATION-A, and if that fails
-or produces no more solutions, tries CONTINUATION-B.  This is the core
-backtracking mechanism that enables trying alternative solutions."
-  (lambda ()
-    (let ((result-a (funcall continuation-a)))
-      (if (or (not result-a) (eprolog--failure-p result-a))
-          (funcall continuation-b)
-        (let* ((bindings (eprolog--success-bindings result-a))
-               (result-continuation (eprolog--success-continuation result-a))
-               (new-continuation (eprolog--merge-continuations result-continuation continuation-b)))
-          (make-eprolog--success :bindings bindings :continuation new-continuation))))))
-
-(defun eprolog--search-matching-clauses (goals bindings all-clauses)
-  "Search through ALL-CLAUSES to find matches for the first goal in GOALS.
-GOALS is the list of goals to prove.
-BINDINGS is the current variable binding environment.
-ALL-CLAUSES is the list of clauses to try.
-
-Tries each clause with backtracking.  Uses choice points to handle cut
-operations correctly.  Returns success object with continuation for
-backtracking, or failure if no clauses match."
-  (eprolog--call-with-current-choice-point
-   (lambda (choice-point)
-     (cl-labels ((try-one-by-one (clauses-to-try)
-                   (if (null clauses-to-try)
-                       (make-eprolog--failure)
-                     (let* ((current-clause (eprolog--insert-choice-point (car clauses-to-try) choice-point))
-                            (remaining-clauses (cdr clauses-to-try))
-                            (try-next-clause (lambda () (try-one-by-one remaining-clauses)))
-                            (result (eprolog--apply-clause-to-goal goals bindings current-clause)))
-                       (if (eprolog--failure-p result)
-                           (funcall try-next-clause)
-                         (let* ((result-bindings (eprolog--success-bindings result))
-                                (result-continuation (eprolog--success-continuation result))
-                                (new-continuation (eprolog--merge-continuations result-continuation try-next-clause)))
-                           (make-eprolog--success :bindings result-bindings :continuation new-continuation)))))))
-       (try-one-by-one all-clauses)))))
-
-(defun eprolog--prove-goal (goals bindings)
-  "Prove the first goal in GOALS with the given BINDINGS.
-GOALS is a list of goals where the first will be proven.
-BINDINGS is the current variable binding environment.
-
-Looks up the predicate handler (clauses or built-in function) and attempts
-resolution.  Handles spy tracing and delegates to appropriate resolution method.
-This is the core resolution function that drives the proof search."
-  (let* ((goal (car goals))
-         (remaining-goals (cdr goals))
-         (predicate-symbol (if (consp goal) (car goal) goal))
-         (predicate-handler (eprolog--get-clauses predicate-symbol))
-         (args (if (consp goal) (cdr goal) '())))
-    (eprolog--with-spy
-     goal bindings
-     (lambda ()
-       (cond
-        ((functionp predicate-handler)
-         (let* ((eprolog-remaining-goals remaining-goals)
-                (eprolog-current-bindings bindings))
-           (apply predicate-handler args)))
-        (t (eprolog--search-matching-clauses goals bindings predicate-handler)))))))
-
 (defun eprolog--display-solution (bindings)
   "Display variable BINDINGS as a solution.
 BINDINGS is an alist of variable-value pairs.
 
-Shows \='Yes\=' for solutions with no variable bindings (pure facts),
+Shows \\='Yes\\=' for solutions with no variable bindings (pure facts),
 otherwise displays each variable-value pair on separate lines."
   (if (null bindings)
-      (eprolog--printf "\nYes")
+      (eprolog--printf "\\nYes")
     (dolist (var-val bindings)
-      (eprolog--printf "\n%s = %s" (car var-val) (cdr var-val)))))
+      (eprolog--printf "\\n%s = %s" (car var-val) (cdr var-val)))))
 
 (defun eprolog--run (goals)
   "Execute GOALS as an interactive query with user continuation prompt.
 GOALS is the list of goals to execute.
 
 Displays each solution and prompts whether to continue searching for more.
-Shows \='No\=' if no solutions exist.  This is the main entry point for
-interactive queries initiated by `eprolog-query\='."
+Shows \\='No\\=' if no solutions exist.  This is the main entry point for
+interactive queries initiated by `eprolog-query\\='."
   (cl-block query-exit
     (eprolog-solve
      goals
@@ -580,220 +591,10 @@ interactive queries initiated by `eprolog-query\='."
          (cl-return-from query-exit)))
      :failure
      (lambda ()
-       (eprolog--printf "\nNo")
+       (eprolog--printf "\\nNo")
        (cl-return-from query-exit)))))
 
-(defun eprolog--ground-p (term)
-  "Check if TERM is fully ground (contain no unbound variables).
-TERM is the term to check for groundness.
-
-A term is ground if it contains no variables or all variables in it
-are bound to ground terms.  Uses the current binding environment
-from `eprolog-current-bindings'.
-
-Returns non-nil if TERM is ground, nil otherwise."
-  (let ((resolved-term (eprolog--substitute-bindings eprolog-current-bindings term)))
-    (cond
-     ((eprolog--variable-p resolved-term) nil)
-     ((consp resolved-term)
-      (and (eprolog--ground-p (car resolved-term))
-           (eprolog--ground-p (cdr resolved-term))))
-     (t t))))
-
-;;; PUBLIC API
-
-(defun eprolog-solve (goals &rest args)
-  "Solve GOALS and call callbacks for each solution.
-GOALS is the list of goals to solve.
-
-Optional keyword arguments (ARGS):
-:success ON-SUCCESS -
-  Function called with variable bindings for each solution found.
-  Defaults to a no-op function.
-:failure ON-FAILURE -
-  Function called once when no more solutions exist.
-  Defaults to a no-op function.
-
-This is the core solution iterator that drives the proof search and handles
-solution enumeration through backtracking.
-
-Examples:
-  (eprolog-solve \='((parent tom _x)))
-  (eprolog-solve \='((parent tom _x)) :success #\='print)
-  (eprolog-solve \='((parent tom _x))
-    :success (lambda (bindings) (message \"Found: %S\" bindings))
-    :failure (lambda () (message \"No more solutions\")))"
-  (let* ((on-success (or (plist-get args :success) (lambda (_))))
-         (on-failure (or (plist-get args :failure) (lambda ()))))
-    (cl-labels ((initial-continuation ()
-                  (eprolog--call-with-current-choice-point
-                   (lambda (_choice-point)
-                     (let* ((prepared-goals (eprolog--replace-anonymous-variables goals)))
-                       (eprolog--prove-goal-sequence prepared-goals '())))))
-                (retrieve-success-bindings (result)
-                  (let* ((bindings (eprolog--success-bindings result))
-                         (query-variables (eprolog--variables-in goals))
-                         (make-binding-pair (lambda (v) (cons v (eprolog--substitute-bindings bindings v)))))
-                    (mapcar make-binding-pair query-variables)))
-                (execute-success-continuation (result)
-                  (funcall (eprolog--success-continuation result))))
-      (cl-do ((result (initial-continuation) (execute-success-continuation result)))
-          ((not (eprolog--success-p result)) (funcall on-failure))
-        (funcall on-success (retrieve-success-bindings result))))))
-
-;;; Predicate definition utility
-
-(defmacro eprolog-define-lisp-predicate (name args &rest body)
-  "Define a predicate implemented as an Emacs Lisp function.
-NAME is the predicate symbol.
-ARGS is the list of formal parameters for the predicate.
-BODY is the Lisp implementation that should return a success or failure
-object.
-
-The predicate can access `eprolog-current-bindings\=' and
-`eprolog-remaining-goals\=' to interact with the proof engine.
-Built-in predicates use this macro."
-  (declare (indent defun))
-  `(eprolog--set-clauses ',name (lambda ,args ,@body)))
-
-;;; Macros for defining clauses - PUBLIC API
-
-(defmacro eprolog-define-prolog-predicate (head &rest body)
-  "Define a Prolog clause (fact or rule) and add it to the clause database.
-HEAD is the predicate head, a list of (NAME . ARGS), or a symbol for
-predicates with no arguments.
-BODY is the optional list of goals forming the rule body.
-
-If BODY is empty, defines a fact.  If BODY is non-empty, defines a rule.
-Anonymous variables are automatically replaced with unique variables.
-
-Example: (eprolog-define-prolog-predicate (parent tom bob))
-Example: (eprolog-define-prolog-predicate (grandparent _x _z)
-          (parent _x _y) (parent _y _z))
-Example: (eprolog-define-prolog-predicate true)"
-  (declare (indent defun))
-  (let* ((head-list (if (consp head) head (list head)))
-         (clause (cons head-list body)))
-    `(eprolog--add-clause (eprolog--replace-anonymous-variables ',clause))))
-(defalias 'eprolog-define-predicate 'eprolog-define-prolog-predicate)
-
-
-(defmacro eprolog-define-prolog-predicate! (head &rest body)
-  "Define a Prolog clause, replacing existing clauses with the same arity.
-HEAD is the predicate head, a list of (NAME . ARGS), or a symbol for
-predicates with no arguments.
-BODY is the optional list of goals forming the rule body.
-
-Similar to `eprolog-define-prolog-predicate\=' but removes existing
-clauses for the predicate with the same arity before adding the new
-clause.  Used for predicate redefinition.
-
-Example: (eprolog-define-prolog-predicate! (factorial 0 1))
-Example: (eprolog-define-prolog-predicate! true)
-  replaces all factorial/2 clauses."
-  (declare (indent defun))
-  (let* ((head-list (if (consp head) head (list head)))
-         (name (car head-list))
-         (args (cdr head-list))
-         (arity (length args))
-         (clause (cons head-list body)))
-    `(progn
-       (eprolog--remove-clauses-with-arity! ',name ,arity)
-       (eprolog--add-clause (eprolog--replace-anonymous-variables ',clause)))))
-
-;;; Query macro - PUBLIC API
-
-(defmacro eprolog-query (&rest goals)
-  "Execute a Prolog query interactively.
-GOALS is a list of goals to prove.
-
-Displays solutions and prompts for continuation after each solution.
-Anonymous variables are automatically replaced with unique variables.
-Shows variable bindings for each solution found.
-
-Example: (eprolog-query (parent _x _y)) finds all parent relationships."
-  `(eprolog--run (eprolog--replace-anonymous-variables ',goals)))
-(defalias 'eprolog-define-predicate! 'eprolog-define-prolog-predicate!)
-
-;;; Core Built-in Predicates (Phase 2)
-
-;; Enhanced unification predicates
-
-(eprolog-define-lisp-predicate = (term1 term2)
-  "Unification predicate: TERM1 = TERM2.
-Attempts to unify TERM1 and TERM2, updating the binding environment.
-Succeeds if unification is possible, fails otherwise."
-  (let ((new-bindings (eprolog--unify term1 term2 eprolog-current-bindings)))
-    (if (eprolog--failure-p new-bindings)
-        (make-eprolog--failure)
-      (eprolog--prove-goal-sequence eprolog-remaining-goals new-bindings))))
-
-(eprolog-define-lisp-predicate == (term1 term2)
-  "Strict equality predicate: TERM1 == TERM2.
-Tests if TERM1 and TERM2 are identical after variable substitution.
-Does not perform unification, only tests existing equality."
-  (let* ((substituted-term1 (eprolog--substitute-bindings eprolog-current-bindings term1))
-         (substituted-term2 (eprolog--substitute-bindings eprolog-current-bindings term2)))
-    (if (equal substituted-term1 substituted-term2)
-        (eprolog--prove-goal-sequence eprolog-remaining-goals eprolog-current-bindings)
-      (make-eprolog--failure))))
-
-;; Enhanced cut operation with continuation value handling
-
-(eprolog-define-lisp-predicate ! (choice-point)
-  "Cut predicate: !.
-Commits to the current choice, preventing backtracking to alternative clauses
-for the current goal. CHOICE-POINT identifies the choice point to cut."
-  (let ((continuation-result (eprolog--prove-goal-sequence eprolog-remaining-goals eprolog-current-bindings)))
-    (signal 'eprolog-cut-exception (list :tag choice-point :value continuation-result))))
-
-;; Meta-call predicate with variadic support
-
-(eprolog-define-lisp-predicate call (pred &rest args)
-  "Meta-call predicate: call(PRED, ARGS...).
-Dynamically calls PRED with additional ARGS appended.
-PRED can be an atom or a compound term."
-  (eprolog--call-with-current-choice-point
-   (lambda (choice-point)
-     (let* ((substituted-pred (eprolog--substitute-bindings eprolog-current-bindings pred))
-            (substituted-args (eprolog--substitute-bindings eprolog-current-bindings args))
-            (goal (cond
-                   ((null substituted-args) substituted-pred)
-                   ((symbolp substituted-pred) (cons substituted-pred substituted-args))
-                   ((consp substituted-pred) (append substituted-pred substituted-args))
-                   (t (error "call: Invalid form %S" (cons substituted-pred substituted-args)))))
-            (cut-goals (eprolog--insert-choice-point (list goal) choice-point))
-            (next-goals (append cut-goals eprolog-remaining-goals)))
-       (eprolog--prove-goal-sequence next-goals eprolog-current-bindings)))))
-
-;; Type checking predicates
-
-(eprolog-define-prolog-predicate! (atom _term)
-  (lispp (atom '_term)))
-
-(eprolog-define-prolog-predicate! (atomic _term)
-  (lispp (not (consp '_term))))
-
-(eprolog-define-prolog-predicate! (number _term)
-  (lispp (numberp '_term)))
-
-(eprolog-define-prolog-predicate! (string _term)
-  (lispp (stringp '_term)))
-
-(eprolog-define-prolog-predicate! (ground _term)
-  (lisp! (list '_term)))
-
-(eprolog-define-prolog-predicate! (fail)
-  (lisp! (list '_)))
-
-(eprolog-define-lisp-predicate var (term)
-  "Type predicate: var(TERM).
-Succeeds if TERM is an unbound variable."
-  (if (eprolog--variable-p (eprolog--substitute-bindings eprolog-current-bindings term))
-      (eprolog--prove-goal-sequence eprolog-remaining-goals eprolog-current-bindings)
-    (make-eprolog--failure)))
-
-;; Lisp evaluation predicates
+;;; Lisp Integration Helper
 
 (defun eprolog--eval-lisp-expressions (expressions &optional result-handler)
   "Evaluate EXPRESSIONS as Lisp code with unified safety checks and handling.
@@ -824,6 +625,171 @@ Safety:
           (funcall result-handler evaluated-result)
         (eprolog--prove-goal-sequence eprolog-remaining-goals eprolog-current-bindings)))))
 
+;;; Public API
+
+(defun eprolog-solve (goals &rest args)
+  "Solve GOALS and call callbacks for each solution.
+GOALS is the list of goals to solve.
+
+Optional keyword arguments (ARGS):
+:success ON-SUCCESS -
+  Function called with variable bindings for each solution found.
+  Defaults to a no-op function.
+:failure ON-FAILURE -
+  Function called once when no more solutions exist.
+  Defaults to a no-op function.
+
+This is the core solution iterator that drives the proof search and handles
+solution enumeration through backtracking.
+
+Examples:
+  (eprolog-solve \\='((parent tom _x)))
+  (eprolog-solve \\='((parent tom _x)) :success #\\='print)
+  (eprolog-solve \\='((parent tom _x))
+    :success (lambda (bindings) (message \\\"Found: %S\\\" bindings))
+    :failure (lambda () (message \\\"No more solutions\\\")))"
+  (let* ((on-success (or (plist-get args :success) (lambda (_))))
+         (on-failure (or (plist-get args :failure) (lambda ()))))
+    (cl-labels ((initial-continuation ()
+                  (eprolog--call-with-current-choice-point
+                   (lambda (_choice-point)
+                     (let* ((prepared-goals (eprolog--replace-anonymous-variables goals)))
+                       (eprolog--prove-goal-sequence prepared-goals '())))))
+                (retrieve-success-bindings (result)
+                  (let* ((bindings (eprolog--success-bindings result))
+                         (query-variables (eprolog--variables-in goals))
+                         (make-binding-pair (lambda (v) (cons v (eprolog--substitute-bindings bindings v)))))
+                    (mapcar make-binding-pair query-variables)))
+                (execute-success-continuation (result)
+                  (funcall (eprolog--success-continuation result))))
+      (cl-do ((result (initial-continuation) (execute-success-continuation result)))
+          ((not (eprolog--success-p result)) (funcall on-failure))
+        (funcall on-success (retrieve-success-bindings result))))))
+
+(defmacro eprolog-define-lisp-predicate (name args &rest body)
+  "Define a predicate implemented as an Emacs Lisp function.
+NAME is the predicate symbol.
+ARGS is the list of formal parameters for the predicate.
+BODY is the Lisp implementation that should return a success or failure
+object.
+
+The predicate can access `eprolog-current-bindings\\=' and
+`eprolog-remaining-goals\\=' to interact with the proof engine.
+Built-in predicates use this macro."
+  (declare (indent defun))
+  `(eprolog--set-clauses ',name (lambda ,args ,@body)))
+
+(defmacro eprolog-define-prolog-predicate (head &rest body)
+  "Define a Prolog clause (fact or rule) and add it to the clause database.
+HEAD is the predicate head, a list of (NAME . ARGS), or a symbol for
+predicates with no arguments.
+BODY is the optional list of goals forming the rule body.
+
+If BODY is empty, defines a fact.  If BODY is non-empty, defines a rule.
+Anonymous variables are automatically replaced with unique variables.
+
+Example: (eprolog-define-prolog-predicate (parent tom bob))
+Example: (eprolog-define-prolog-predicate (grandparent _x _z)
+          (parent _x _y) (parent _y _z))
+Example: (eprolog-define-prolog-predicate true)"
+  (declare (indent defun))
+  (let* ((head-list (if (consp head) head (list head)))
+         (clause (cons head-list body)))
+    `(eprolog--add-clause (eprolog--replace-anonymous-variables ',clause))))
+
+(defmacro eprolog-define-prolog-predicate! (head &rest body)
+  "Define a Prolog clause, replacing existing clauses with the same arity.
+HEAD is the predicate head, a list of (NAME . ARGS), or a symbol for
+predicates with no arguments.
+BODY is the optional list of goals forming the rule body.
+
+Similar to `eprolog-define-prolog-predicate\\=' but removes existing
+clauses for the predicate with the same arity before adding the new
+clause.  Used for predicate redefinition.
+
+Example: (eprolog-define-prolog-predicate! (factorial 0 1))
+Example: (eprolog-define-prolog-predicate! true)
+  replaces all factorial/2 clauses."
+  (declare (indent defun))
+  (let* ((head-list (if (consp head) head (list head)))
+         (name (car head-list))
+         (args (cdr head-list))
+         (arity (length args))
+         (clause (cons head-list body)))
+    `(progn
+       (eprolog--remove-clauses-with-arity! ',name ,arity)
+       (eprolog--add-clause (eprolog--replace-anonymous-variables ',clause)))))
+
+(defmacro eprolog-query (&rest goals)
+  "Execute a Prolog query interactively.
+GOALS is a list of goals to prove.
+
+Displays solutions and prompts for continuation after each solution.
+Anonymous variables are automatically replaced with unique variables.
+Shows variable bindings for each solution found.
+
+Example: (eprolog-query (parent _x _y)) finds all parent relationships."
+  `(eprolog--run (eprolog--replace-anonymous-variables ',goals)))
+
+;; Aliases for convenience
+(defalias 'eprolog-define-predicate 'eprolog-define-prolog-predicate)
+(defalias 'eprolog-define-predicate! 'eprolog-define-prolog-predicate!)
+
+;;; Built-in Lisp Predicates
+
+;; Unification predicates
+(eprolog-define-lisp-predicate = (term1 term2)
+  "Unification predicate: TERM1 = TERM2.
+Attempts to unify TERM1 and TERM2, updating the binding environment.
+Succeeds if unification is possible, fails otherwise."
+  (let ((new-bindings (eprolog--unify term1 term2 eprolog-current-bindings)))
+    (if (eprolog--failure-p new-bindings)
+        (make-eprolog--failure)
+      (eprolog--prove-goal-sequence eprolog-remaining-goals new-bindings))))
+
+(eprolog-define-lisp-predicate == (term1 term2)
+  "Strict equality predicate: TERM1 == TERM2.
+Tests if TERM1 and TERM2 are identical after variable substitution.
+Does not perform unification, only tests existing equality."
+  (let* ((substituted-term1 (eprolog--substitute-bindings eprolog-current-bindings term1))
+         (substituted-term2 (eprolog--substitute-bindings eprolog-current-bindings term2)))
+    (if (equal substituted-term1 substituted-term2)
+        (eprolog--prove-goal-sequence eprolog-remaining-goals eprolog-current-bindings)
+      (make-eprolog--failure))))
+
+;; Control predicates
+(eprolog-define-lisp-predicate ! (choice-point)
+  "Cut predicate: !.
+Commits to the current choice, preventing backtracking to alternative clauses
+for the current goal. CHOICE-POINT identifies the choice point to cut."
+  (let ((continuation-result (eprolog--prove-goal-sequence eprolog-remaining-goals eprolog-current-bindings)))
+    (signal 'eprolog-cut-exception (list :tag choice-point :value continuation-result))))
+
+(eprolog-define-lisp-predicate call (pred &rest args)
+  "Meta-call predicate: call(PRED, ARGS...).
+Dynamically calls PRED with additional ARGS appended.
+PRED can be an atom or a compound term."
+  (eprolog--call-with-current-choice-point
+   (lambda (choice-point)
+     (let* ((substituted-pred (eprolog--substitute-bindings eprolog-current-bindings pred))
+            (substituted-args (eprolog--substitute-bindings eprolog-current-bindings args))
+            (goal (cond
+                   ((null substituted-args) substituted-pred)
+                   ((symbolp substituted-pred) (cons substituted-pred substituted-args))
+                   ((consp substituted-pred) (append substituted-pred substituted-args))
+                   (t (error "call: Invalid form %S" (cons substituted-pred substituted-args)))))
+            (cut-goals (eprolog--insert-choice-point (list goal) choice-point))
+            (next-goals (append cut-goals eprolog-remaining-goals)))
+       (eprolog--prove-goal-sequence next-goals eprolog-current-bindings)))))
+
+(eprolog-define-lisp-predicate var (term)
+  "Type predicate: var(TERM).
+Succeeds if TERM is an unbound variable."
+  (if (eprolog--variable-p (eprolog--substitute-bindings eprolog-current-bindings term))
+      (eprolog--prove-goal-sequence eprolog-remaining-goals eprolog-current-bindings)
+    (make-eprolog--failure)))
+
+;; Lisp integration predicates
 (eprolog-define-lisp-predicate lisp (result-variable &rest expressions)
   "Lisp evaluation predicate: lisp(RESULT, EXPRESSIONS...).
 
@@ -842,13 +808,14 @@ Behavior:
   - Integrates with backtracking and choice points
 
 See also: lisp!/1+ for side effects, lispp/1+ for boolean tests."
-  (eprolog--eval-lisp-expressions expressions
-    (lambda (evaluated-result)
-      (let* ((result-term (eprolog--substitute-bindings eprolog-current-bindings result-variable))
-             (new-bindings (eprolog--unify result-term evaluated-result eprolog-current-bindings)))
-        (if (eprolog--failure-p new-bindings)
-            (make-eprolog--failure)
-          (eprolog--prove-goal-sequence eprolog-remaining-goals new-bindings))))))
+  (eprolog--eval-lisp-expressions
+   expressions
+   (lambda (evaluated-result)
+     (let* ((result-term (eprolog--substitute-bindings eprolog-current-bindings result-variable))
+            (new-bindings (eprolog--unify result-term evaluated-result eprolog-current-bindings)))
+       (if (eprolog--failure-p new-bindings)
+           (make-eprolog--failure)
+         (eprolog--prove-goal-sequence eprolog-remaining-goals new-bindings))))))
 
 (eprolog-define-lisp-predicate lisp! (&rest expressions)
   "Lisp evaluation predicate: lisp!(EXPRESSIONS...).
@@ -856,7 +823,7 @@ See also: lisp!/1+ for side effects, lispp/1+ for boolean tests."
 Evaluates EXPRESSIONS as Lisp code for side effects, always succeeds.
 
 Usage:
-  (eprolog-query (lisp! (message \"Hello from Prolog!\")))
+  (eprolog-query (lisp! (message \\\"Hello from Prolog!\\\")))
   (eprolog-query (lisp! (setq my-var 42) (push 'item my-list)))
 
 Behavior:
@@ -877,7 +844,7 @@ Evaluates EXPRESSIONS as Lisp code and succeeds if the result is non-nil.
 Usage:
   (eprolog-query (lispp (> X 0)))             ; succeeds if X > 0
   (eprolog-query (lispp (member Item List)))  ; succeeds if Item in List
-  (eprolog-query (lispp (file-exists-p \"path\")))
+  (eprolog-query (lispp (file-exists-p \\\"path\\\")))
 
 Behavior:
   - All expressions must be ground (fully instantiated)
@@ -891,14 +858,14 @@ Examples in rules:
   (eprolog-assert! (file-exists Path) (lispp (file-exists-p Path)))
 
 See also: lisp/2+ for capturing results, lisp!/1+ for side effects."
-  (eprolog--eval-lisp-expressions expressions
-    (lambda (evaluated-result)
-      (if (not evaluated-result)
-          (make-eprolog--failure)
-        (eprolog--prove-goal-sequence eprolog-remaining-goals eprolog-current-bindings)))))
+  (eprolog--eval-lisp-expressions
+   expressions
+   (lambda (evaluated-result)
+     (if (not evaluated-result)
+         (make-eprolog--failure)
+       (eprolog--prove-goal-sequence eprolog-remaining-goals eprolog-current-bindings)))))
 
 ;; Dynamic parameter predicates
-
 (eprolog-define-lisp-predicate dynamic-put (variable-symbol value-expression)
   "Dynamic parameter predicate: dynamic-put(SYMBOL, VALUE).
 Stores VALUE under SYMBOL in the dynamic parameter store.
@@ -919,8 +886,28 @@ Retrieves the value associated with SYMBOL and unifies it with VAR."
         (make-eprolog--failure)
       (eprolog--prove-goal-sequence eprolog-remaining-goals new-bindings))))
 
-;; Basic logical predicates defined in Prolog
+;;; Built-in Prolog Predicates
 
+;; Type checking predicates
+(eprolog-define-prolog-predicate! (atom _term)
+  (lispp (atom '_term)))
+
+(eprolog-define-prolog-predicate! (atomic _term)
+  (lispp (not (consp '_term))))
+
+(eprolog-define-prolog-predicate! (number _term)
+  (lispp (numberp '_term)))
+
+(eprolog-define-prolog-predicate! (string _term)
+  (lispp (stringp '_term)))
+
+(eprolog-define-prolog-predicate! (ground _term)
+  (lisp! (list '_term)))
+
+(eprolog-define-prolog-predicate! (fail)
+  (lisp! (list '_)))
+
+;; Basic logical predicates
 (eprolog-define-prolog-predicate! true)
 (eprolog-define-prolog-predicate! false (fail))
 
@@ -928,8 +915,7 @@ Retrieves the value associated with SYMBOL and unifies it with VAR."
   (call _goal) ! (fail))
 (eprolog-define-prolog-predicate (not _goal))
 
-;; Logical conjunction and disjunction
-
+;; Logical operators
 (eprolog-define-prolog-predicate! and (true))
 (eprolog-define-prolog-predicate! (and _x1)
   (call _x1))
@@ -952,8 +938,6 @@ Retrieves the value associated with SYMBOL and unifies it with VAR."
 (eprolog-define-prolog-predicate (or _x1 _x2 _x3 _x4)
   (or _x1 (or _x2 _x3 _x4)))
 
-;; Conditional predicate
-
 (eprolog-define-prolog-predicate! (if _cond _then)
   (call _cond) (call _then))
 (eprolog-define-prolog-predicate! (if _cond _then _else)
@@ -961,23 +945,28 @@ Retrieves the value associated with SYMBOL and unifies it with VAR."
 (eprolog-define-prolog-predicate (if _cond _then _else)
   (call _else))
 
-;; Arithmetic evaluation
-
+;; Arithmetic
 (eprolog-define-prolog-predicate! (is _result _expression)
   (lisp _result _expression))
 
-;; Control predicate for infinite choice points
-
+;; Control flow
 (eprolog-define-prolog-predicate! repeat)
 (eprolog-define-prolog-predicate (repeat) (repeat))
 
-;; List manipulation predicates
-
+;; List operations
 (eprolog-define-prolog-predicate! (member _item (_item . _)))
 (eprolog-define-prolog-predicate (member _item (_ . _rest)) (member _item _rest))
 
-;; Higher-order predicates
+(eprolog-define-prolog-predicate! (append () _list _list))
+(eprolog-define-prolog-predicate (append (_head . _tail) _list (_head . _result))
+  (append _tail _list _result))
 
+(eprolog-define-prolog-predicate! (append () ()))
+(eprolog-define-prolog-predicate (append (_head . _tail) _result)
+  (append _tail _tail-result)
+  (append _head _tail-result _result))
+
+;; Higher-order predicates
 (eprolog-define-prolog-predicate! (maplist _goal ()))
 (eprolog-define-prolog-predicate (maplist _goal (_head . _tail))
   (call _goal _head)
@@ -997,17 +986,6 @@ Retrieves the value associated with SYMBOL and unifies it with VAR."
 (eprolog-define-prolog-predicate (maplist _goal (_head1 . _tail1) (_head2 . _tail2) (_head3 . _tail3) (_head4 . _tail4))
   (call _goal _head1 _head2 _head3 _head4)
   (maplist _goal _tail1 _tail2 _tail3 _tail4))
-
-;; List concatenation
-
-(eprolog-define-prolog-predicate! (append () _list _list))
-(eprolog-define-prolog-predicate (append (_head . _tail) _list (_head . _result))
-  (append _tail _list _result))
-
-(eprolog-define-prolog-predicate! (append () ()))
-(eprolog-define-prolog-predicate (append (_head . _tail) _result)
-  (append _tail _tail-result)
-  (append _head _tail-result _result))
 
 ;;; DCG (Definite Clause Grammar) Support
 
@@ -1031,49 +1009,47 @@ cuts (!), and epsilon (empty) productions."
         ;; epsilon means no consumption, so continue with same variables
         (let ((match-goal `(= ,in-var ,next-var)))
           (cons match-goal (eprolog--transform-dcg-body rest in-var out-var))))
-       
+
        ;; Handle cut (!) - pass through as-is, doesn't consume input
        ((eq element '!)
         (cons element (eprolog--transform-dcg-body rest in-var out-var)))
-       
+
        ;; Handle variables (pass through as-is)
        ((eprolog--variable-p element)
         (let ((match-goal `(= ,in-var (,element . ,next-var))))
           (cons match-goal (eprolog--transform-dcg-body rest next-var out-var))))
-       
+
        ;; Handle strings - terminals
        ((stringp element)
         ;; Keep string as-is for terminal matching
         (let ((match-goal `(= ,in-var (,element . ,next-var))))
           (cons match-goal (eprolog--transform-dcg-body rest next-var out-var))))
-       
+
        ;; Cut as list: (!)
        ((and (consp element) (eq (car element) '!) (null (cdr element)))
         (cons '! (eprolog--transform-dcg-body rest in-var out-var)))
-       
+
        ;; Semantic actions: (@ goal...)
        ((and (consp element) (eq (car element) '@))
         (let ((goals (cdr element)))
           (append `((= ,in-var ,next-var))
                   goals
                   (eprolog--transform-dcg-body rest in-var out-var))))
-       
+
        ;; Non-terminals with arguments (lists)
        ((consp element)
         (let* ((pred-name (car element))
                (pred-args (cdr element))
                (dcg-call `(call ,pred-name ,@pred-args ,in-var ,next-var)))
           (cons dcg-call (eprolog--transform-dcg-body rest next-var out-var))))
-       
+
        ;; Non-terminals (symbols)
        ((symbolp element)
         (let ((dcg-call `(call ,element ,in-var ,next-var)))
           (cons dcg-call (eprolog--transform-dcg-body rest next-var out-var))))
-       
+
        ;; Default case
        (t (error "Invalid DCG body element: %S" element))))))
-
-;;; DCG rule definition macros - PUBLIC API
 
 (defmacro eprolog-define-grammar! (&rest dcg-parts)
   "Define a DCG rule (DCG-PARTS), replacing existing rules with the same arity.
@@ -1083,17 +1059,17 @@ Syntax: (eprolog-define-grammar head body1 body2 ...)
 Transforms DCG notation into standard Prolog clauses with difference lists.
 
 DCG Conventions:
-- Strings (\"word\") are terminals
+- Strings (\\\"word\\\") are terminals
 - Symbols (word) are non-terminals
 - Lists ((word args...)) are non-terminals with arguments
 - nil represents empty production (epsilon)
-- (@ goal...) are semantic actions (constraints that don\='t consume input)
+- (@ goal...) are semantic actions (constraints that don\\='t consume input)
 - ! is cut (prevents backtracking)
 
 Examples:
   (eprolog-define-grammar s np vp)
   (eprolog-define-grammar (s _x) (np _x) (vp _x))
-  (eprolog-define-grammar noun \"cat\")
+  (eprolog-define-grammar noun \\\"cat\\\")
   (eprolog-define-grammar optional nil)
   (eprolog-define-grammar (s _num) (@ (= _num 3)) (np _num) (vp _num))
   ; With constraint"
@@ -1112,21 +1088,21 @@ Examples:
 Syntax: (eprolog-add-grammar head body1 body2 ...)
      or (eprolog-add-grammar (head args...) body1 body2 ...)
 
-Similar to `eprolog-define-grammar!\=' but adds clauses without replacing
+Similar to `eprolog-define-grammar!\\=' but adds clauses without replacing
 existing ones.  This allows multiple DCG rules for the same non-terminal.
 
 DCG Conventions:
-- Strings (\"word\") are terminals
+- Strings (\\\"word\\\") are terminals
 - Symbols (word) are non-terminals
 - Lists ((word args...)) are non-terminals with arguments
 - nil represents empty production (epsilon)
-- (@ goal...) are semantic actions (constraints that don\='t consume input)
+- (@ goal...) are semantic actions (constraints that don\\='t consume input)
 - ! is cut (prevents backtracking)
 
 Examples:
-  (eprolog-define-grammar noun \"cat\")
-  (eprolog-define-grammar noun \"dog\")
-  (eprolog-define-grammar (det _num) \"the\")"
+  (eprolog-define-grammar noun \\\"cat\\\")
+  (eprolog-define-grammar noun \\\"dog\\\")
+  (eprolog-define-grammar (det _num) \\\"the\\\")"
   (let* ((head (car dcg-parts))
          (body (cdr dcg-parts))
          (head-name (if (consp head) (car head) head))
@@ -1138,7 +1114,6 @@ Examples:
     `(eprolog-define-prolog-predicate (,head-name ,@transformed-args) ,@transformed-body)))
 
 ;; DCG parsing predicates
-
 (eprolog-define-prolog-predicate! (phrase _NonTerminal _List)
   (call _NonTerminal _List nil))
 
@@ -1147,4 +1122,3 @@ Examples:
 
 (provide 'eprolog)
 ;;; eprolog.el ends here
-

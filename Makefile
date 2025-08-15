@@ -3,7 +3,7 @@ MAIN_FILE = eprolog.el
 USAGE_FILE = BOOK.org
 USAGE_EL = BOOK.el
 
-.PHONY: test check clean help
+.PHONY: test check clean format help
 
 all: test
 
@@ -20,8 +20,12 @@ check:
 		-f batch-byte-compile $(MAIN_FILE)
 	@rm -f $(MAIN_FILE)c
 
+format:
+	$(EMACS) -batch \
+		--eval "(progn (load \"$(MAIN_FILE)\") (find-file \"$(MAIN_FILE)\") (emacs-lisp-mode) (untabify (point-min) (point-max)) (indent-region (point-min) (point-max)) (delete-trailing-whitespace) (save-buffer))"
+
 clean:
 	@rm -f $(USAGE_EL) *.elc
 
 help:
-	@echo "Targets: test, check, clean, help"
+	@echo "Targets: test, check, clean, format, help"
