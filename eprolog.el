@@ -597,7 +597,7 @@ interactive queries initiated by `eprolog-query\\='."
 ;;; Lisp Integration Helper
 
 (defun eprolog--eval-lisp-expressions (expressions &optional result-handler)
-  "Evaluate EXPRESSIONS as Lisp code with unified safety checks and handling.
+  "Evaluate EXPRESSIONS as Lisp code with unified safety check and handling.
 
 This is a helper function used by the Lisp evaluation predicates (lisp/2+,
 lisp!/1+, lispp/1+) to consolidate common functionality.
@@ -797,7 +797,7 @@ Evaluates EXPRESSIONS as Lisp code and unifies the result with RESULT-VARIABLE.
 
 Usage:
   (eprolog-query (lisp X (+ 2 3)))           ; X = 5
-  (eprolog-query (lisp Y (length '(a b c)))) ; Y = 3
+  (eprolog-query (lisp Y (length \\='(a b c)))) ; Y = 3
   (eprolog-query (lisp Z (current-buffer)))  ; Z = #<buffer ...>
 
 Behavior:
@@ -824,7 +824,7 @@ Evaluates EXPRESSIONS as Lisp code for side effects, always succeeds.
 
 Usage:
   (eprolog-query (lisp! (message \\\"Hello from Prolog!\\\")))
-  (eprolog-query (lisp! (setq my-var 42) (push 'item my-list)))
+  (eprolog-query (lisp! (setq my-var 42) (push \\='item my-list)))
 
 Behavior:
   - All expressions must be ground (fully instantiated)
