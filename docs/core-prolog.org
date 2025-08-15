@@ -10,17 +10,18 @@ Understanding these core concepts is essential because they form the conceptual 
 
 ** Facts and Rules
 
-Think of facts as the basic building blocks of knowledge—simple, indisputable statements about your domain. Rules, on the other hand, are logical recipes that show how to derive new knowledge from existing facts and other rules. Together, they form a powerful knowledge representation system that can answer complex questions through logical inference.
+This section introduces the fundamental building blocks of logical programming: facts and rules. These constitute the knowledge representation layer that transforms ε-prolog from a programming language into a reasoning system capable of drawing logical conclusions from stated premises.
 
-The beauty of this approach lies in its declarative nature: you don't need to specify *how* to find answers, only *what* relationships exist. The Prolog engine handles the reasoning process, exploring different logical paths to find solutions.
+Facts represent unconditional truths—basic assertions about your problem domain that require no proof or justification. They serve as the axioms of your logical system. Rules, in contrast, represent conditional knowledge—logical implications that derive new conclusions from existing information. Together, facts and rules create a deductive system where complex questions can be answered through logical inference.
 
-In ε-prolog, both facts and rules are defined using ~eprolog-define-predicate~. This unified interface makes it easy to build sophisticated knowledge bases incrementally.
+The power of this approach lies in its declarative nature: instead of writing algorithms that specify how to compute answers, you describe the logical relationships that exist in your domain. The Prolog engine becomes your reasoning partner, automatically exploring the logical consequences of your statements to find solutions.
 
-Key concepts demonstrated in this subsection:
-- *Fact Definition*: Establishing basic truths (like family relationships)
-- *Rule Creation*: Defining logical implications (deriving grandparent from parent relationships)
-- *Knowledge Base Querying*: Asking questions and getting answers
-- *Solution Collection*: Gathering all possible answers to a query
+Core concepts in this section:
+- **Fact Definition**: Establishing unconditional truths as the foundation of your knowledge base
+- **Rule Creation**: Defining conditional relationships that derive new knowledge from existing facts
+- **Knowledge Base Querying**: Formulating questions and retrieving answers through logical inference
+- **Solution Enumeration**: Systematically discovering all possible answers to logical queries
+- **Deductive Reasoning**: How the engine combines facts and rules to reach conclusions
 
 This test demonstrates the fundamental pattern of Prolog programming: starting with basic facts and building complex relationships through rules. We create a family tree and then derive grandparent relationships from parent facts:
 
@@ -145,7 +146,18 @@ This test demonstrates a family tree from the Sazae-san manga/anime:
 
 ** Unification and Equality
 
-Unification is the pattern matching engine at the heart of Prolog. When Prolog tries to match a goal against facts or rules, it uses unification to determine if terms can be made identical by finding appropriate variable bindings. This process is fundamental to how Prolog explores the solution space and propagates constraints through your logic programs.
+This section explores unification, the sophisticated pattern matching mechanism that serves as the computational engine of Prolog. Unification goes beyond simple equality checking—it's a bidirectional constraint satisfaction process that determines whether terms can be made identical through variable instantiation.
+
+Unification is what makes Prolog queries so powerful: when you ask a question, the system doesn't just check for exact matches. Instead, it intelligently explores how variables could be bound to make your query true. This process enables Prolog to work backwards from goals to find the inputs that would make those goals succeed, effectively turning your logic programs into constraint solvers.
+
+Understanding unification mechanics is crucial because it affects every aspect of Prolog execution: how goals match against clauses, how variables propagate their bindings across subgoals, and how the system explores alternative solution paths.
+
+Key unification concepts covered:
+- **Term Matching**: How structured terms unify through recursive pattern matching
+- **Variable Binding**: The process of instantiating variables to make terms identical
+- **Bidirectional Constraint Propagation**: How bindings flow through complex term structures
+- **Occurs Check**: Preventing infinite structures in unification
+- **Unification vs. Equality**: The distinction between pattern matching and value comparison
 
 The equals predicate (=) performs unification between two terms. If the terms can be unified (made identical through variable bindings), the predicate succeeds; otherwise, it fails. This isn't the same as testing for existing equality—it actively creates bindings to make the terms equal if possible.
 
@@ -250,7 +262,9 @@ These tests verify that strict equality properly fails when terms are not alread
 
 ** Variable Unification Edge Cases
 
-This test explores edge cases and special behaviors in variable unification:
+This section delves into the sophisticated aspects of variable unification, exploring edge cases, anonymous variables, and complex binding scenarios that test the limits and nuances of the unification algorithm.
+
+Variable unification in Prolog involves subtle behaviors that distinguish it from simple assignment or equality checking. Understanding these edge cases is crucial for writing robust logic programs and avoiding common pitfalls in variable handling.
 
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-core-anonymous-variables ()
@@ -434,6 +448,8 @@ These tests verify the internal engine functions that power ε-prolog. While the
 
 *** Substitution and Binding Functions
 
+This subsection tests the internal functions responsible for variable substitution and binding management—the low-level mechanisms that implement unification and maintain variable consistency throughout query execution.
+
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-core-substitution ()
   "Test substitution of bindings in terms."
@@ -504,9 +520,13 @@ These tests verify the internal engine functions that power ε-prolog. While the
 
 ** Resource Exhaustion and Performance Tests
 
-These tests verify system behavior under resource constraints and performance boundaries.
+This section rigorously tests ε-prolog's behavior under extreme conditions, including resource exhaustion, performance boundaries, and stress scenarios. These tests ensure that the system degrades gracefully under pressure rather than failing catastrophically.
+
+Understanding how a Prolog system behaves under stress is crucial for building reliable applications. These tests verify that ε-prolog maintains logical consistency and provides predictable failure modes when faced with resource constraints or computationally intensive queries.
 
 *** Deep Recursion Tests
+
+These tests explore the system's behavior with deeply recursive predicates, testing stack limits and the graceful handling of potential stack overflow conditions.
 
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-core-deep-recursion-limits ()
@@ -532,6 +552,8 @@ These tests verify system behavior under resource constraints and performance bo
 #+END_SRC
 
 *** Very Large Data Structure Tests
+
+These tests verify the system's handling of large terms, deeply nested structures, and complex data that may push memory and processing limits.
 
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-core-large-data-structures ()
@@ -560,6 +582,8 @@ These tests verify system behavior under resource constraints and performance bo
 
 *** Memory Stress Tests
 
+These tests stress the memory management systems by creating many facts, complex variable binding chains, and large knowledge bases to verify stable operation under memory pressure.
+
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-core-memory-stress ()
   "Test memory usage under stress conditions."
@@ -586,9 +610,13 @@ These tests verify system behavior under resource constraints and performance bo
 
 ** Edge Cases and Special Character Handling
 
-These tests verify robust handling of boundary conditions and special characters.
+This section explores the robustness of ε-prolog's term handling across diverse character sets, boundary conditions, and edge cases that test the limits of the parser and unification system.
+
+Comprehensive edge case testing ensures that ε-prolog handles unusual but valid inputs gracefully, maintaining consistency across different character encodings, atom naming conventions, and boundary values that might cause issues in less robust systems.
 
 *** Special Character and Unicode Tests
+
+These tests verify that ε-prolog correctly handles atoms with special characters, Unicode symbols, and non-standard naming conventions, ensuring robust internationalization support.
 
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-core-special-characters ()
@@ -618,6 +646,8 @@ These tests verify robust handling of boundary conditions and special characters
 #+END_SRC
 
 *** Empty and Boundary Value Tests
+
+This subsection tests the system's handling of empty structures, boundary numeric values, and minimal valid inputs to ensure robust behavior at the edges of the valid input space.
 
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-core-empty-and-boundary-values ()
@@ -651,6 +681,8 @@ These tests verify robust handling of boundary conditions and special characters
 #+END_SRC
 
 *** Zero and Null Value Handling
+
+This subsection explores the distinct treatment of various "empty" or "null" values in ε-prolog, testing how the system distinguishes between zero, nil, null atoms, and empty lists.
 
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-core-zero-null-handling ()

@@ -12,9 +12,13 @@ What makes DCGs truly remarkable is their bidirectional nature—the same gramma
 
 ** DCG Syntax and Elements
 
-DCGs use a special syntax that differs from regular Prolog predicates. The following elements are available:
+This section introduces the specialized syntax and core elements that make DCG notation both powerful and intuitive. Understanding these building blocks is essential for leveraging DCGs effectively in parsing and generation tasks.
+
+DCGs extend standard Prolog syntax with domain-specific constructs tailored for grammar specification. These elements allow you to express grammatical structures naturally while maintaining the full power of logical programming for semantic processing and constraint checking.
 
 *** DCG Element Types
+
+The fundamental building blocks of DCG notation each serve specific roles in grammar specification, from matching literal text to invoking complex parsing logic.
 - *Strings* - Terminal symbols (literal strings to match)
 - *Symbols* - Non-terminal symbols (other DCG rules) 
 - *(Symbol args...)* - Non-terminals with arguments
@@ -23,6 +27,8 @@ DCGs use a special syntax that differs from regular Prolog predicates. The follo
 - *(@ goal...)* - Semantic actions (constraints that don't consume input)
 
 *** DCG Rule Definition
+
+DCG rules are defined using specialized macros that automatically handle the transformation from grammar notation to difference list predicates, abstracting away the complex underlying implementation.
 
 **** eprolog-define-grammar
 Define a DCG rule, adding to existing rules with the same arity.
@@ -44,6 +50,8 @@ Similar to ~eprolog-define-grammar~ but removes existing rules for the same non-
 
 *** Parsing with phrase/2 and phrase/3
 
+The phrase predicates provide the interface between DCG rules and the input/output streams, enabling both parsing (recognition) and generation of language structures.
+
 **** phrase/2 and phrase/3
 Parse or generate using DCG rules.
 
@@ -59,6 +67,8 @@ Parse or generate using DCG rules.
 ~phrase/3~ succeeds if the non-terminal can parse a prefix, with the remainder unified with the third argument.
 
 *** DCG Examples
+
+These examples demonstrate the practical application of DCG notation, showing how to build grammars incrementally from simple terminals to complex sentence structures.
 
 **** Basic Grammar Definition
 
@@ -97,6 +107,8 @@ Parse or generate using DCG rules.
 
 *** DCG Best Practices
 
+Understanding common pitfalls and best practices is essential for writing efficient and maintainable DCG code that avoids infinite loops and performance issues.
+
 **** Left Recursion
 Avoid left recursion in DCG rules as it can cause infinite loops:
 
@@ -130,15 +142,16 @@ Use semantic actions (@ ...) for constraints that don't consume input:
 
 ** Basic Grammar Operations
 
-DCGs transform the task of parsing from explicit list manipulation to declarative grammar rules. This section introduces the fundamental concepts and operations.
+This section introduces the fundamental operations of DCG parsing, demonstrating how to move from simple terminal matching to complex hierarchical grammar structures. These examples establish the foundation for more sophisticated parsing applications.
 
-DCGs allow you to define grammars using a rule-based approach where each grammar rule corresponds to a Prolog predicate. The special DCG syntax automatically handles the threading of the input list through the grammar rules.
+DCGs transform the traditionally complex task of parsing into an elegant, declarative specification. Instead of manually managing input streams and parsing states, you describe the grammatical structure you want to recognize, and the DCG system handles the underlying mechanics automatically.
 
-This subsection demonstrates:
-- Basic terminal and non-terminal definitions
-- How DCG rules expand to regular Prolog predicates
-- The ~phrase/2~ and ~phrase/3~ predicates for parsing
-- Simple sentence parsing with determiners, nouns, and verbs
+The examples in this section progress from elementary concepts to practical parsing scenarios:
+- **Terminal Matching**: How individual tokens are recognized and consumed
+- **Non-terminal Composition**: Building complex structures from simpler components  
+- **Hierarchical Parsing**: Creating nested grammatical structures that reflect linguistic organization
+- **Partial Parsing**: Handling input streams where only a prefix matches the grammar
+- **Alternative Rules**: Expressing grammatical choices and variations within the same framework
 
 The following test introduces basic DCG concepts with a simple grammar:
 
@@ -206,7 +219,9 @@ DCGs can also parse partial input, returning the unparsed remainder:
 
 ** Advanced DCG Features
 
-Advanced DCG features enable more sophisticated parsing and generation capabilities:
+This section explores sophisticated DCG capabilities that enable complex linguistic phenomena, including epsilon productions, parametric grammars, semantic actions, and control structures. These advanced features transform DCGs from simple pattern matchers into powerful language processing systems.
+
+Understanding these advanced features is crucial for building real-world parsers that handle the complexity and variability of natural and formal languages. These capabilities allow DCGs to express linguistic constraints, build structured representations, and implement sophisticated parsing strategies.
 
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-feature-dcg-epsilon-productions ()
@@ -336,7 +351,9 @@ Length-constrained generation demonstrates how to combine DCGs with other predic
 
 ** Complex Grammar Applications
 
-DCGs can handle complex parsing tasks like arithmetic expressions:
+This section demonstrates the application of DCGs to sophisticated parsing challenges that showcase their full expressive power. These examples illustrate how DCGs can handle real-world parsing problems with elegance and clarity.
+
+The applications presented here represent common parsing scenarios that arise in language processing, compiler construction, and data processing tasks. Each example builds upon the fundamental DCG concepts to create practical, reusable parsing solutions.
 
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-feature-dcg-arithmetic-expressions ()
@@ -403,9 +420,13 @@ CSV-style parsing demonstrates practical text processing:
 
 ** DCG Error Handling and Edge Cases
 
-These tests verify robust behavior of DCG parsing under error conditions and edge cases.
+This section rigorously tests the robustness and reliability of DCG parsing under challenging conditions, ensuring that the system gracefully handles malformed grammars, edge cases, and stress scenarios.
+
+Comprehensive error handling testing is crucial for building reliable parsing systems. These tests verify that DCGs maintain logical consistency and provide predictable failure modes when confronted with invalid grammars, malformed inputs, or resource constraints.
 
 *** Malformed Grammar Rules
+
+These tests explore how the DCG system handles invalid grammar definitions, undefined non-terminals, and improper argument structures, ensuring robust failure behavior.
 
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-feature-dcg-malformed-grammar ()
@@ -431,6 +452,8 @@ These tests verify robust behavior of DCG parsing under error conditions and edg
 #+END_SRC
 
 *** Empty Input and Edge Cases
+
+This subsection tests the parsing system's behavior with empty inputs, minimal valid inputs, and boundary conditions that might expose edge cases in the parsing logic.
 
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-feature-dcg-empty-input-edge-cases ()
@@ -459,6 +482,8 @@ These tests verify robust behavior of DCG parsing under error conditions and edg
 #+END_SRC
 
 *** Large Input Stress Test
+
+These tests evaluate the DCG system's performance and stability when processing very large input streams, testing resource limits and graceful degradation under memory pressure.
 
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-feature-dcg-large-input-stress ()
@@ -490,6 +515,8 @@ These tests verify robust behavior of DCG parsing under error conditions and edg
 
 *** Left Recursion Detection
 
+Left recursion represents one of the most challenging aspects of parsing system design. These tests verify that the DCG system handles left-recursive grammars appropriately, either through transformation techniques or controlled failure.
+
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-feature-dcg-left-recursion ()
   "Test handling of left-recursive grammars."
@@ -518,6 +545,8 @@ These tests verify robust behavior of DCG parsing under error conditions and edg
 #+END_SRC
 
 *** Invalid Terminal/Non-terminal Mixing
+
+This subsection tests the system's handling of malformed grammar rules that mix invalid terminal and non-terminal constructs, ensuring robust error detection and appropriate failure modes.
 
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-feature-dcg-invalid-mixing ()

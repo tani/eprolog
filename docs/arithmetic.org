@@ -10,15 +10,16 @@ Arithmetic in Prolog requires explicit evaluation using the ~is/2~ predicate. Un
 
 ** Basic Arithmetic
 
-The ~is/2~ predicate is the cornerstone of arithmetic in Prolog, providing explicit evaluation of mathematical expressions.
+This section demonstrates the fundamental arithmetic capabilities of ε-prolog, focusing on the explicit evaluation model that distinguishes Prolog from conventional programming languages.
 
-The ~is/2~ predicate evaluates arithmetic expressions and unifies the result with a variable. This is the primary way to perform calculations in Prolog.
+The ~is/2~ predicate is the cornerstone of arithmetic in Prolog, providing explicit evaluation of mathematical expressions. Unlike languages where expressions are automatically evaluated, Prolog treats arithmetic expressions as symbolic structures until explicitly computed through ~is/2~.
 
-This subsection demonstrates:
-- Basic arithmetic operations (~+~, ~-~, ~*~, ~/~, ~mod~)
-- Complex arithmetic expressions with nested operations
-- How ~is/2~ evaluates expressions and binds results
-- Integration with mathematical functions (~sqrt~, ~expt~, etc.)
+Key concepts covered in this section:
+- Basic arithmetic operations (~+~, ~-~, ~*~, ~/~, ~mod~) and their explicit evaluation
+- Complex arithmetic expressions with nested operations and operator precedence
+- How ~is/2~ evaluates expressions and binds results to variables
+- Integration with mathematical functions (~sqrt~, ~expt~, etc.) available from the underlying Lisp system
+- Safety mechanisms: handling of unbound variables and type checking in arithmetic contexts
 
 The following test demonstrates basic and complex arithmetic operations:
 
@@ -100,7 +101,15 @@ Complex expressions and mathematical functions extend the computational capabili
 
 ** Mathematical Predicates
 
-Building mathematical predicates demonstrates how to combine arithmetic with logical programming:
+This section explores how to build sophisticated mathematical predicates by combining arithmetic operations with logical programming constructs. These examples demonstrate the power of declarative programming for mathematical reasoning.
+
+Mathematical predicates in Prolog leverage the language's pattern matching and backtracking capabilities to create elegant solutions for numerical problems. By combining ~is/2~ for arithmetic evaluation with logical constructs like cuts (~!~) and recursive definitions, we can build robust mathematical functions.
+
+The examples in this section illustrate:
+- Creating predicates for mathematical properties (even/odd, prime numbers)
+- Implementing recursive mathematical functions (factorial, sum-to-n)
+- Using cuts for deterministic mathematical computations
+- Building utility predicates for common mathematical operations
 
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-feature-arithmetic-mathematical-predicates ()
@@ -233,7 +242,15 @@ Mathematical utility predicates like absolute value and min/max are common requi
 
 ** Geometric Calculations
 
-Geometric calculations demonstrate how to build more complex mathematical predicates:
+This section demonstrates the application of arithmetic operations to geometric problems, showcasing how mathematical formulas can be elegantly expressed as Prolog predicates.
+
+Geometric calculations in Prolog illustrate the practical application of mathematical reasoning in computational geometry. These examples show how complex mathematical formulas involving multiple variables and operations can be expressed declaratively, making the code both readable and mathematically precise.
+
+The geometric predicates presented here demonstrate:
+- Multi-step calculations involving coordinate geometry (distance formula)
+- Application of mathematical constants and formulas (circle area using π)
+- Structured data representation for geometric entities (points, shapes)
+- Precision handling in floating-point geometric computations
 
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-feature-arithmetic-geometric ()
@@ -267,9 +284,20 @@ Geometric calculations demonstrate how to build more complex mathematical predic
 
 ** Error Handling and Edge Cases
 
-Critical error handling tests ensure robust arithmetic operation behavior under invalid or boundary conditions.
+This section comprehensively tests the robustness of ε-prolog's arithmetic system under challenging conditions, including error cases, boundary values, and invalid inputs.
+
+Robust error handling is crucial for any arithmetic system. These tests verify that ε-prolog handles exceptional conditions gracefully, providing appropriate error messages or controlled failures rather than system crashes. The tests cover mathematical edge cases, type safety violations, and boundary conditions that commonly occur in real-world applications.
+
+The error handling coverage includes:
+- Mathematical impossibilities (division by zero, domain errors)
+- Type system violations (arithmetic with non-numeric types)
+- Numerical limits and precision boundaries
+- Malformed expressions and syntax edge cases
+- Platform-specific arithmetic behavior (overflow, underflow, special floating-point values)
 
 *** Division by Zero Tests
+
+Division by zero represents one of the most fundamental mathematical errors. These tests verify that ε-prolog properly detects and handles division by zero in various contexts, from simple direct division to complex expressions where zero divisors emerge through computation.
 
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-feature-arithmetic-division-by-zero ()
@@ -290,6 +318,8 @@ Critical error handling tests ensure robust arithmetic operation behavior under 
 
 *** Arithmetic Overflow and Underflow Tests
 
+These tests explore the behavior of ε-prolog's arithmetic system when dealing with extremely large or small numbers that may exceed the representational limits of the underlying number system. The tests verify graceful handling of numerical boundaries.
+
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-feature-arithmetic-overflow-underflow ()
   "Test arithmetic overflow and underflow conditions."
@@ -309,6 +339,8 @@ Critical error handling tests ensure robust arithmetic operation behavior under 
 #+END_SRC
 
 *** Type Mismatch Tests
+
+Type safety in arithmetic operations is crucial for system reliability. These tests verify that ε-prolog properly rejects arithmetic operations when non-numeric types are provided, ensuring that type errors are caught early and handled appropriately.
 
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-feature-arithmetic-type-mismatches ()
@@ -333,6 +365,8 @@ Critical error handling tests ensure robust arithmetic operation behavior under 
 #+END_SRC
 
 *** Invalid Expression Tests
+
+These tests examine how ε-prolog handles malformed or unusual arithmetic expressions, including edge cases in operator usage and expressions that may be syntactically valid but semantically questionable.
 
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-feature-arithmetic-invalid-expressions ()
@@ -359,6 +393,8 @@ Critical error handling tests ensure robust arithmetic operation behavior under 
 
 *** Floating Point Edge Cases
 
+Floating-point arithmetic introduces special challenges related to precision, representation limits, and special values like infinity and NaN. These tests verify that ε-prolog handles floating-point edge cases consistently with the underlying Emacs Lisp numerical system.
+
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-feature-arithmetic-floating-point-edge-cases ()
   "Test floating point precision and special values."
@@ -380,6 +416,8 @@ Critical error handling tests ensure robust arithmetic operation behavior under 
 #+END_SRC
 
 *** Advanced Mathematical Operations
+
+This subsection tests more sophisticated mathematical operations including modular arithmetic, exponentiation, and complex computational chains. These tests verify that ε-prolog correctly handles advanced mathematical functions and their edge cases.
 
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-feature-arithmetic-advanced-operations ()

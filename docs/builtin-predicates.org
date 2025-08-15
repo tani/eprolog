@@ -66,7 +66,9 @@ The ground predicate is particularly useful for checking whether a term is fully
 
 ** Variable Test (var) Negative Tests
 
-The var predicate should fail for all ground terms and bound variables:
+This section provides comprehensive negative testing for the ~var/1~ predicate, ensuring it correctly identifies non-variable terms and fails appropriately for bound variables.
+
+The ~var/1~ predicate is fundamental for checking the instantiation state of terms. These negative tests verify that it properly fails for all categories of non-variable terms, including bound variables, ground terms, and complex structures. This defensive testing ensures robust behavior across different data types.
 
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-feature-builtin-var-negative-tests ()
@@ -147,14 +149,15 @@ The following test demonstrates the versatility of list operations in Prolog:
 
 ** Higher-order Predicates
 
-Higher-order predicates bring functional programming concepts to Prolog, allowing predicates to be passed as arguments to other predicates. This enables powerful abstraction patterns.
+Higher-order predicates represent one of the most sophisticated features of ε-prolog, bringing functional programming concepts into the logical programming paradigm. These predicates treat other predicates as first-class objects that can be passed as arguments, enabling powerful abstraction patterns and code reuse.
 
-Higher-order predicates take other predicates as arguments, enabling powerful patterns for list processing and transformation. These predicates implement common functional programming patterns in a logical setting.
+The beauty of higher-order predicates in Prolog lies in their ability to capture common patterns of computation over data structures. Instead of writing separate predicates for each specific transformation, you can write generic higher-order predicates that accept the specific logic as parameters. This leads to more modular, reusable, and expressive code.
 
-This subsection demonstrates:
-- ~maplist/2~ for applying a predicate to all elements of a list
-- ~maplist/3~ for applying a binary predicate to corresponding elements of two lists
-- How to use predicates as arguments to other predicates
+Key higher-order operations covered:
+- ~maplist/2~: Universal quantification over lists—applies a unary predicate to all elements
+- ~maplist/3~: Relational mapping—establishes relationships between corresponding elements of two lists  
+- Predicate parameterization: Using predicates as arguments to create flexible, reusable patterns
+- Failure semantics: How higher-order predicates handle failure propagation from their predicate arguments
 
 The following test shows how to use higher-order predicates for list transformation:
 
@@ -183,9 +186,13 @@ The following test shows how to use higher-order predicates for list transformat
 
 ** Type Safety and Invalid Input Tests
 
-These tests verify robust handling of type mismatches and invalid inputs across built-in predicates.
+This section rigorously tests the robustness of ε-prolog's built-in predicates when confronted with invalid inputs, type mismatches, and edge cases. Robust error handling is essential for building reliable logical programs that gracefully handle unexpected data.
+
+These comprehensive tests ensure that built-in predicates fail appropriately rather than crashing when presented with invalid arguments. They cover various categories of type violations and boundary conditions that might occur in real-world usage, helping to verify that the system maintains logical consistency even under stress.
 
 *** Type Checking with Invalid Inputs
+
+These tests verify that type checking predicates handle edge cases and unexpected input types correctly, ensuring they fail gracefully for inappropriate arguments while maintaining their intended semantics.
 
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-feature-builtin-type-checking-invalid ()
@@ -216,6 +223,8 @@ These tests verify robust handling of type mismatches and invalid inputs across 
 
 *** List Operations with Invalid Structures
 
+This subsection tests how list manipulation predicates handle non-list inputs and malformed data structures, ensuring robust failure behavior when presented with inappropriate arguments.
+
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-feature-builtin-list-operations-invalid ()
   "Test list operations with non-list and invalid inputs."
@@ -240,6 +249,8 @@ These tests verify robust handling of type mismatches and invalid inputs across 
 #+END_SRC
 
 *** Maplist with Invalid Predicates
+
+These tests verify the error handling capabilities of higher-order predicates when provided with invalid predicate arguments, undefined predicates, or mismatched arities.
 
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-feature-builtin-maplist-invalid ()
@@ -266,6 +277,8 @@ These tests verify robust handling of type mismatches and invalid inputs across 
 
 *** Ground Predicate Edge Cases
 
+This subsection thoroughly tests the ~ground/1~ predicate with complex nested structures, deeply nested terms, and boundary cases to ensure it correctly identifies the instantiation status of complex data structures.
+
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-feature-builtin-ground-edge-cases ()
   "Test ground predicate with complex and edge case structures."
@@ -291,6 +304,8 @@ These tests verify robust handling of type mismatches and invalid inputs across 
 #+END_SRC
 
 *** Empty List Handling
+
+Empty lists represent a fundamental boundary case in list processing. These tests verify that all list operations handle empty lists correctly, maintaining logical consistency and proper failure semantics when appropriate.
 
 #+BEGIN_SRC emacs-lisp
 (ert-deftest eprolog-feature-builtin-empty-list-handling ()
