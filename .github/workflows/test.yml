@@ -28,94 +28,14 @@ jobs:
       with:
         version: ${{ matrix.emacs-version }}
 
-    - name: List files in current directory
-      run: |
-        ls -la
-
     - name: Show available test targets
       run: |
         make help
 
     - name: Check syntax and style
       run: |
-        make check
+        ls -la && make check
 
     - name: Run tests
       run: |
-        make test
-
-    - name: Check test results
-      run: |
-        echo "Test run completed for Emacs ${{ matrix.emacs-version }}"
-
-  test-report:
-    runs-on: ubuntu-latest
-    needs: test
-    if: always()
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Setup Emacs
-      uses: purcell/setup-emacs@master
-      with:
-        version: '30.1'
-
-    - name: Generate detailed test report
-      run: |
-        echo "# ε-prolog Test Report" > test-report.md
-        echo "" >> test-report.md
-        echo "## Test Summary" >> test-report.md
-        echo "" >> test-report.md
-        
-        # Run syntax check and capture output
-        echo "### Syntax Check" >> test-report.md
-        if make check > syntax-check.log 2>&1; then
-          echo "- **Syntax Check**: ✅ Passed" >> test-report.md
-        else
-          echo "- **Syntax Check**: ❌ Failed" >> test-report.md
-        fi
-        echo "" >> test-report.md
-        
-        # Run tests and capture output
-        make test > test-output.log 2>&1 || true
-        
-        # Extract test results
-        if grep -q "results as expected" test-output.log; then
-          PASSED=$(grep -o '[0-9]\+ results as expected' test-output.log | grep -o '[0-9]\+' | head -1)
-          TOTAL=$(grep -o 'Running [0-9]\+ tests' test-output.log | grep -o '[0-9]\+')
-          echo "- **Total Tests**: $TOTAL" >> test-report.md
-          echo "- **Passed**: $PASSED" >> test-report.md
-          echo "- **Status**: ✅ All tests passing" >> test-report.md
-        else
-          echo "- **Status**: ❌ Some tests failed" >> test-report.md
-        fi
-        
-        echo "" >> test-report.md
-        echo "## Test Categories" >> test-report.md
-        echo "" >> test-report.md
-        echo "- **Core Prolog**: Facts, rules, unification, equality, variable binding" >> test-report.md
-        echo "- **Built-in Predicates**: Type checking, list operations, higher-order predicates" >> test-report.md
-        echo "- **Control Flow**: Cut, backtracking, logical operators, meta-predicates" >> test-report.md
-        echo "- **Lisp Integration**: Basic interface, dynamic parameters, side effects" >> test-report.md
-        echo "- **Arithmetic**: Basic operations, mathematical predicates, comparisons" >> test-report.md
-        echo "- **DCG**: Grammar parsing, generation, advanced features, complex applications" >> test-report.md
-        echo "- **Family Tree**: Comprehensive relationships using Sazae-san characters" >> test-report.md
-        echo "- **Advanced Applications**: Recursive algorithms, performance testing" >> test-report.md
-        
-        echo "" >> test-report.md
-        echo "## Syntax Check Output" >> test-report.md
-        echo "" >> test-report.md
-        echo "\`\`\`" >> test-report.md
-        cat syntax-check.log >> test-report.md
-        echo "\`\`\`" >> test-report.md
-        
-        echo "" >> test-report.md
-        echo "## Test Output" >> test-report.md
-        echo "" >> test-report.md
-        echo "\`\`\`" >> test-report.md
-        cat test-output.log >> test-report.md
-        echo "\`\`\`" >> test-report.md
-        
-        cat test-report.md
+        ls -la && make test

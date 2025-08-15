@@ -25,10 +25,9 @@ check:
 	$(EMACS) -batch \
 		--eval '(setq byte-compile-error-on-warn t)' \
 		-f batch-byte-compile $(MAIN_FILE)
-	@rm -f $(MAIN_FILE)c
+	rm -f "$(MAIN_FILE)c"
 	@echo "Running documentation check..."
 	$(EMACS) -batch \
-		--eval '(load "$(MAIN_FILE)")' \
 		--eval '(checkdoc-file "$(MAIN_FILE)")'
 
 # Format source code

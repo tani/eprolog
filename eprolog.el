@@ -228,7 +228,7 @@ BINDINGS is the current variable binding environment.
 
 Prevents infinite structures during unification by detecting circular
 references.  Returns non-nil if VARIABLE is found within EXPRESSION
-(directly or through bindings), nil otherwise.  Follows variable
+\(directly or through bindings), nil otherwise.  Follows variable
 bindings recursively."
   (cond
    ((and (symbolp expression) (eq variable expression)) t)
