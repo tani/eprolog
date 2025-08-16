@@ -124,9 +124,11 @@ The examples in this section illustrate:
     (is _r (mod _n 2))
     (lispp (= _r 1)))
   
-  ;; Test even/odd checking
-  (should (eprolog-test--has-solution-p '((even-num 10))))
-  (should (eprolog-test--has-solution-p '((odd-num 7))))
+  ;; Test even/odd checking with exact value verification
+  (let ((solutions (eprolog-test--collect-solutions '((even-num 10)))))
+    (should (= (length solutions) 1)))
+  (let ((solutions (eprolog-test--collect-solutions '((odd-num 7)))))
+    (should (= (length solutions) 1)))
   (should-not (eprolog-test--has-solution-p '((even-num 7))))
   (should-not (eprolog-test--has-solution-p '((odd-num 10))))
   
@@ -163,13 +165,19 @@ Arithmetic comparisons are essential for numerical reasoning in Prolog:
   "Test arithmetic comparisons using lispp."
   (eprolog-test--restore-builtins)
   
-  ;; Test basic comparisons
-  (should (eprolog-test--has-solution-p '((lispp (> 15 8)))))
-  (should (eprolog-test--has-solution-p '((lispp (< 3 10)))))
-  (should (eprolog-test--has-solution-p '((lispp (>= 7 7)))))
-  (should (eprolog-test--has-solution-p '((lispp (<= 4 9)))))
-  (should (eprolog-test--has-solution-p '((lispp (= 12 12)))))
-  (should (eprolog-test--has-solution-p '((lispp (/= 5 8)))))
+  ;; Test basic comparisons with exact solution verification
+  (let ((solutions (eprolog-test--collect-solutions '((lispp (> 15 8))))))
+    (should (= (length solutions) 1)))
+  (let ((solutions (eprolog-test--collect-solutions '((lispp (< 3 10))))))
+    (should (= (length solutions) 1)))
+  (let ((solutions (eprolog-test--collect-solutions '((lispp (>= 7 7))))))
+    (should (= (length solutions) 1)))
+  (let ((solutions (eprolog-test--collect-solutions '((lispp (<= 4 9))))))
+    (should (= (length solutions) 1)))
+  (let ((solutions (eprolog-test--collect-solutions '((lispp (= 12 12))))))
+    (should (= (length solutions) 1)))
+  (let ((solutions (eprolog-test--collect-solutions '((lispp (/= 5 8))))))
+    (should (= (length solutions) 1)))
   
   ;; Test negative cases
   (should-not (eprolog-test--has-solution-p '((lispp (> 3 10)))))
@@ -193,10 +201,13 @@ Custom comparison predicates demonstrate how to build domain-specific numerical 
   (eprolog-define-prolog-predicate (positive _x)
     (lispp (> _x 0)))
   
-  ;; Test custom predicates
-  (should (eprolog-test--has-solution-p '((greater 20 15))))
-  (should (eprolog-test--has-solution-p '((between 7 5 10))))
-  (should (eprolog-test--has-solution-p '((positive 42))))
+  ;; Test custom predicates with exact solution verification
+  (let ((solutions (eprolog-test--collect-solutions '((greater 20 15)))))
+    (should (= (length solutions) 1)))
+  (let ((solutions (eprolog-test--collect-solutions '((between 7 5 10)))))
+    (should (= (length solutions) 1)))
+  (let ((solutions (eprolog-test--collect-solutions '((positive 42)))))
+    (should (= (length solutions) 1)))
   (should-not (eprolog-test--has-solution-p '((between 12 5 10))))
   (should-not (eprolog-test--has-solution-p '((positive -5)))))
 #+END_SRC
@@ -383,7 +394,9 @@ These tests examine how ε-prolog handles malformed or unusual arithmetic expres
   (should (eprolog-test--has-solution-p '((is _result (+ 1 2 3 4 5 6 7 8 9)))))  ;; Returns 45
   
   ;; Test nested expressions
-  (should (eprolog-test--has-solution-p '((is _result (+ 1 (+))))))  ;; 1 + 0 = 1
+  (let ((solutions (eprolog-test--collect-solutions '((is _result (+ 1 (+))))))
+    (should (= (length solutions) 1))
+    (should (= (cdr (assoc '_result (car solutions))) 1)))
   
   ;; Test division with insufficient arguments (may error at different levels)
   (condition-case nil
@@ -402,17 +415,26 @@ Floating-point arithmetic introduces special challenges related to precision, re
   
   ;; Test precision limits
   (let ((precise-val 0.123456789012345678901234567890))
-    (should (eprolog-test--has-solution-p `((is _result ,precise-val)))))
+    (let ((solutions (eprolog-test--collect-solutions `((is _result ,precise-val))))))
+      (should (= (length solutions) 1))
+      (should (equal (cdr (assoc '_result (car solutions))) precise-val))))
   
   ;; Test very small differences
-  (should (eprolog-test--has-solution-p '((is _x 1.0000000000001) (is _y 1.0))))
+  (let ((solutions (eprolog-test--collect-solutions '((is _x 1.0000000000001) (is _y 1.0)))))
+    (should (= (length solutions) 1))
+    (should (= (cdr (assoc '_x (car solutions))) 1.0000000000001))
+    (should (= (cdr (assoc '_y (car solutions))) 1.0)))
   
   ;; Test infinity handling (Emacs Lisp returns 1.0e+INF)
   ;; Note: Emacs Lisp handles infinity gracefully
-  (should (eprolog-test--has-solution-p '((is _result (/ 1.0 0.0)))))
+  (let ((solutions (eprolog-test--collect-solutions '((is _result (/ 1.0 0.0))))))
+    (should (= (length solutions) 1))
+    (should (equal (cdr (assoc '_result (car solutions))) 1.0e+INF)))
   
   ;; Test NaN scenarios (Emacs Lisp returns 0.0e+NaN)
-  (should (eprolog-test--has-solution-p '((is _result (sqrt -1))))))
+  (let ((solutions (eprolog-test--collect-solutions '((is _result (sqrt -1))))))
+    (should (= (length solutions) 1))
+    (should (isnan (cdr (assoc '_result (car solutions)))))))
 #+END_SRC
 
 *** Advanced Mathematical Operations

@@ -84,25 +84,40 @@ The following test establishes a comprehensive family tree covering all relation
     (lispp (string< (symbol-name (quote _x)) (symbol-name (quote _y)))))
 
   ;; === BASIC RELATIONSHIP TESTS ===
-  (should (eprolog-test--has-solution-p '((parent fune katsuo))))
-  (should (eprolog-test--has-solution-p '((married fune namihei))))
-  (should (eprolog-test--has-solution-p '((male katsuo))))
-  (should (eprolog-test--has-solution-p '((female wakame))))
+  (let ((solutions (eprolog-test--collect-solutions '((parent fune katsuo)))))
+    (should (= (length solutions) 1)))
+  (let ((solutions (eprolog-test--collect-solutions '((married fune namihei)))))
+    (should (= (length solutions) 1)))
+  (let ((solutions (eprolog-test--collect-solutions '((male katsuo)))))
+    (should (= (length solutions) 1)))
+  (let ((solutions (eprolog-test--collect-solutions '((female wakame)))))
+    (should (= (length solutions) 1)))
   
   ;; === DERIVED RELATIONSHIP TESTS ===
-  (should (eprolog-test--has-solution-p '((child katsuo fune))))
-  (should (eprolog-test--has-solution-p '((grandparent fune tarao))))
-  (should (eprolog-test--has-solution-p '((sibling katsuo wakame))))
-  (should (eprolog-test--has-solution-p '((mother fune katsuo))))
-  (should (eprolog-test--has-solution-p '((sister wakame sazae))))
-  (should (eprolog-test--has-solution-p '((brother katsuo wakame))))
-  (should (eprolog-test--has-solution-p '((ancestor fune tarao))))
+  (let ((solutions (eprolog-test--collect-solutions '((child katsuo fune)))))
+    (should (= (length solutions) 1)))
+  (let ((solutions (eprolog-test--collect-solutions '((grandparent fune tarao)))))
+    (should (= (length solutions) 1)))
+  (let ((solutions (eprolog-test--collect-solutions '((sibling katsuo wakame)))))
+    (should (= (length solutions) 1)))
+  (let ((solutions (eprolog-test--collect-solutions '((mother fune katsuo)))))
+    (should (= (length solutions) 1)))
+  (let ((solutions (eprolog-test--collect-solutions '((sister wakame sazae)))))
+    (should (= (length solutions) 1)))
+  (let ((solutions (eprolog-test--collect-solutions '((brother katsuo wakame)))))
+    (should (= (length solutions) 1)))
+  (let ((solutions (eprolog-test--collect-solutions '((ancestor fune tarao)))))
+    (should (= (length solutions) 1)))
   
   ;; === EXTENDED RELATIONSHIP TESTS ===
-  (should (eprolog-test--has-solution-p '((uncle katsuo tarao))))
-  (should (eprolog-test--has-solution-p '((aunt wakame tarao))))
-  (should (eprolog-test--has-solution-p '((cousin tarao child1))))
-  (should (eprolog-test--has-solution-p '((cousin child1 child2))))
+  (let ((solutions (eprolog-test--collect-solutions '((uncle katsuo tarao)))))
+    (should (= (length solutions) 1)))
+  (let ((solutions (eprolog-test--collect-solutions '((aunt wakame tarao)))))
+    (should (= (length solutions) 1)))
+  (let ((solutions (eprolog-test--collect-solutions '((cousin tarao child1)))))
+    (should (= (length solutions) 1)))
+  (let ((solutions (eprolog-test--collect-solutions '((cousin child1 child2)))))
+    (should (= (length solutions) 1)))
   
   ;; === COMPLEX MULTI-SOLUTION QUERIES ===
   ;; Test finding all children of fune
@@ -320,8 +335,10 @@ Comprehensive performance testing evaluates multiple aspects of system performan
     (is _n1 (- _n 1))
     (deep-recursion _n1 _result))
 
-  (should (eprolog-test--has-solution-p '((deep-recursion 10 done))))
-  )
+  (let ((solutions (eprolog-test--collect-solutions '((deep-recursion 10 done)))))
+    (should (= (length solutions) 1))
+    (should (equal (cdr (assoc '_result (car solutions))) 'done))))
+  
 #+END_SRC
 
 Additional performance tests focus on specific aspects of system behavior:
@@ -359,7 +376,9 @@ Stress testing pushes the system to its limits:
     (is _n1 (- _n 1))
     (deep-recursion _n1 _result))
   
-  (should (eprolog-test--has-solution-p '((deep-recursion 10 done)))))
+  (let ((solutions (eprolog-test--collect-solutions '((deep-recursion 10 done)))))
+    (should (= (length solutions) 1))
+    (should (equal (cdr (assoc '_result (car solutions))) 'done))))
 #+END_SRC
 
 ** Integration and End-to-End Tests
@@ -397,13 +416,19 @@ These tests verify complete workflows and interactions between different ε-prol
   (eprolog-define-predicate (all-adults _adults))
   
   ;; Test the integrated workflow
-  (should (eprolog-test--has-solution-p '((adult alice))))
-  (should (eprolog-test--has-solution-p '((adult bob))))
-  (should (eprolog-test--has-solution-p '((adult charlie))))
+  (let ((solutions (eprolog-test--collect-solutions '((adult alice)))))
+    (should (= (length solutions) 1)))
+  (let ((solutions (eprolog-test--collect-solutions '((adult bob)))))
+    (should (= (length solutions) 1)))
+  (let ((solutions (eprolog-test--collect-solutions '((adult charlie)))))
+    (should (= (length solutions) 1)))
   
-  (should (eprolog-test--has-solution-p '((age-group alice young))))
-  (should (eprolog-test--has-solution-p '((age-group bob middle))))
-  (should (eprolog-test--has-solution-p '((age-group charlie middle)))))
+  (let ((solutions (eprolog-test--collect-solutions '((age-group alice young)))))
+    (should (= (length solutions) 1)))
+  (let ((solutions (eprolog-test--collect-solutions '((age-group bob middle)))))
+    (should (= (length solutions) 1)))
+  (let ((solutions (eprolog-test--collect-solutions '((age-group charlie middle)))))
+    (should (= (length solutions) 1))))
 #+END_SRC
 
 *** Real-World Database Simulation
@@ -439,16 +464,22 @@ These tests verify complete workflows and interactions between different ε-prol
     (= _count 0)) ;; Placeholder implementation
   
   ;; Test database operations
-  (should (eprolog-test--has-solution-p '((high-earner 1 "Alice"))))
-  (should (eprolog-test--has-solution-p '((high-earner 3 "Charlie"))))
+  (let ((solutions (eprolog-test--collect-solutions '((high-earner 1 "Alice")))))
+    (should (= (length solutions) 1)))
+  (let ((solutions (eprolog-test--collect-solutions '((high-earner 3 "Charlie")))))
+    (should (= (length solutions) 1)))
   (should-not (eprolog-test--has-solution-p '((high-earner 2 "Bob"))))
   
-  (should (eprolog-test--has-solution-p '((department-info "Alice" engineering "Engineering Floor"))))
-  (should (eprolog-test--has-solution-p '((department-info "Diana" marketing "Marketing Suite"))))
+  (let ((solutions (eprolog-test--collect-solutions '((department-info "Alice" engineering "Engineering Floor")))))
+    (should (= (length solutions) 1)))
+  (let ((solutions (eprolog-test--collect-solutions '((department-info "Diana" marketing "Marketing Suite")))))
+    (should (= (length solutions) 1)))
   
   ;; Test complex queries with multiple constraints
-  (should (eprolog-test--has-solution-p 
+  (let ((solutions (eprolog-test--collect-solutions 
     '((employee _id _name engineering _salary) (lispp (> _salary 70000))))))
+    (should (>= (length solutions) 1)))
+    ;; Should find Alice and Charlie who are in engineering with salary > 70000)
 #+END_SRC
 
 *** Graph Algorithm Integration
@@ -477,16 +508,22 @@ These tests verify complete workflows and interactions between different ε-prol
     (path _from _to))
   
   ;; Test direct connections
-  (should (eprolog-test--has-solution-p '((edge a b))))
-  (should (eprolog-test--has-solution-p '((edge b c))))
+  (let ((solutions (eprolog-test--collect-solutions '((edge a b)))))
+    (should (= (length solutions) 1)))
+  (let ((solutions (eprolog-test--collect-solutions '((edge b c)))))
+    (should (= (length solutions) 1)))
   
   ;; Test path finding
-  (should (eprolog-test--has-solution-p '((path a b))))
-  (should (eprolog-test--has-solution-p '((path a d))))
-  (should (eprolog-test--has-solution-p '((path a c))))
+  (let ((solutions (eprolog-test--collect-solutions '((path a b)))))
+    (should (>= (length solutions) 1)))
+  (let ((solutions (eprolog-test--collect-solutions '((path a d)))))
+    (should (>= (length solutions) 1)))
+  (let ((solutions (eprolog-test--collect-solutions '((path a c)))))
+    (should (>= (length solutions) 1)))
   
   ;; Test reachability
-  (should (eprolog-test--has-solution-p '((reachable a d))))
+  (let ((solutions (eprolog-test--collect-solutions '((reachable a d)))))
+    (should (>= (length solutions) 1)))
   (should-not (eprolog-test--has-solution-p '((reachable d a)))))
 #+END_SRC
 
@@ -509,9 +546,12 @@ These tests establish performance baselines and detect regression in critical op
     (eprolog-define-predicate (perf-fact 3 3))
     
     ;; Query the facts
-    (should (eprolog-test--has-solution-p '((perf-fact 1 1))))
-    (should (eprolog-test--has-solution-p '((perf-fact 2 2))))
-    (should (eprolog-test--has-solution-p '((perf-fact 3 3))))
+    (let ((solutions (eprolog-test--collect-solutions '((perf-fact 1 1)))))
+      (should (= (length solutions) 1)))
+    (let ((solutions (eprolog-test--collect-solutions '((perf-fact 2 2)))))
+      (should (= (length solutions) 1)))
+    (let ((solutions (eprolog-test--collect-solutions '((perf-fact 3 3)))))
+      (should (= (length solutions) 1)))
     
     (let ((elapsed (float-time (time-subtract (current-time) start-time))))
       ;; Should complete within reasonable time (very relaxed threshold)
@@ -522,7 +562,9 @@ These tests establish performance baselines and detect regression in critical op
         (start-time (current-time)))
     
     (dotimes (i 10)
-      (should (eprolog-test--has-solution-p `((= _x ,complex-term)))))
+      (let ((solutions (eprolog-test--collect-solutions `((= _x ,complex-term)))))
+        (should (= (length solutions) 1))
+        (should (equal (cdr (assoc '_x (car solutions))) complex-term))))
     
     (let ((elapsed (float-time (time-subtract (current-time) start-time))))
       (should (< elapsed 2.0))))) ;; 2 seconds threshold
@@ -537,17 +579,27 @@ These tests establish performance baselines and detect regression in critical op
   
   (let ((start-time (current-time)))
     ;; Test a few arithmetic operations (simplified)
-    (should (eprolog-test--has-solution-p '((is _result (+ 1 1)))))
-    (should (eprolog-test--has-solution-p '((is _result (+ 2 1)))))
-    (should (eprolog-test--has-solution-p '((is _result (+ 3 1)))))
+    (let ((solutions (eprolog-test--collect-solutions '((is _result (+ 1 1))))))
+      (should (= (length solutions) 1))
+      (should (= (cdr (assoc '_result (car solutions))) 2)))
+    (let ((solutions (eprolog-test--collect-solutions '((is _result (+ 2 1))))))
+      (should (= (length solutions) 1))
+      (should (= (cdr (assoc '_result (car solutions))) 3)))
+    (let ((solutions (eprolog-test--collect-solutions '((is _result (+ 3 1))))))
+      (should (= (length solutions) 1))
+      (should (= (cdr (assoc '_result (car solutions))) 4)))
     
     (let ((elapsed (float-time (time-subtract (current-time) start-time))))
       (should (< elapsed 5.0)))) ;; 5 seconds threshold
   
   ;; Test complex arithmetic expressions (simplified)
   (let ((start-time (current-time)))
-    (should (eprolog-test--has-solution-p '((is _result (+ (* 2 2) (- 5 1) (/ 8 2))))))
-    (should (eprolog-test--has-solution-p '((is _result (+ (* 3 2) (- 6 1) (/ 9 3))))))
+    (let ((solutions (eprolog-test--collect-solutions '((is _result (+ (* 2 2) (- 5 1) (/ 8 2)))))))
+      (should (= (length solutions) 1))
+      (should (= (cdr (assoc '_result (car solutions))) 10)))
+    (let ((solutions (eprolog-test--collect-solutions '((is _result (+ (* 3 2) (- 6 1) (/ 9 3)))))))
+      (should (= (length solutions) 1))
+      (should (= (cdr (assoc '_result (car solutions))) 14)))
     
     (let ((elapsed (float-time (time-subtract (current-time) start-time))))
       (should (< elapsed 5.0))))) ;; 5 seconds threshold
@@ -583,5 +635,5 @@ These tests establish performance baselines and detect regression in critical op
       (should (<= (length solutions) 10))) ;; Cut should limit solutions
     
     (let ((elapsed (float-time (time-subtract (current-time) start-time))))
-      (should (< elapsed 0.5))))) ;; Should be faster with cut
+      (should (< elapsed 0.5)))))) ;; Should be faster with cut
 #+END_SRC

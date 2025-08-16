@@ -510,7 +510,7 @@ These tests evaluate the DCG system's performance and stability when processing 
   (let ((mixed-input (append (make-list 50 "item") '("different") (make-list 50 "item"))))
     (condition-case nil
         (should-not (eprolog-test--has-solution-p `((phrase large-list ,mixed-input))))
-      (error t)))))
+      (error t))))
 #+END_SRC
 
 *** Left Recursion Detection
@@ -558,8 +558,9 @@ This subsection tests the system's handling of malformed grammar rules that mix 
   (eprolog-define-grammar! valid-nonterminal "ok")
   
   ;; Test parsing - should handle mixed elements
-  (should (eprolog-test--has-solution-p 
-    '((phrase mixed-rule ("terminal" "ok" "123" "another")))))
+  (let ((solutions (eprolog-test--collect-solutions 
+    '((phrase mixed-rule ("terminal" "ok" "123" "another"))))))
+    (should (= (length solutions) 1)))
   
   ;; Test with complex invalid structures
   (eprolog-define-grammar! complex-invalid (invalid structure) "test")

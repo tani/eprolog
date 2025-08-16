@@ -32,28 +32,37 @@ The following test demonstrates the basic type checking predicates available in 
   ;; These tests verify that type predicates correctly identify their respective types
   
   ;; Test atom/1 - should succeed for atomic values
-  (should (eprolog-test--has-solution-p '((atom foo))))
-  (should (eprolog-test--has-solution-p '((atom 'quoted-atom))))
+  (let ((solutions (eprolog-test--collect-solutions '((atom foo)))))
+    (should (= (length solutions) 1)))
+  (let ((solutions (eprolog-test--collect-solutions '((atom 'quoted-atom)))))
+    (should (= (length solutions) 1)))
   
   ;; Test var/1 - should succeed for unbound variables
-  (should (eprolog-test--has-solution-p '((var _x))))
-  (should (eprolog-test--has-solution-p '((var _unbound))))
+  (let ((solutions (eprolog-test--collect-solutions '((var _x)))))
+    (should (= (length solutions) 1)))
+  (let ((solutions (eprolog-test--collect-solutions '((var _unbound)))))
+    (should (= (length solutions) 1)))
   
   ;; Test number/1 - should succeed for numeric values
-  (should (eprolog-test--has-solution-p '((number 42))))
-  (should (eprolog-test--has-solution-p '((number 3.14))))
-  (should (eprolog-test--has-solution-p '((number -17))))
+  (let ((solutions (eprolog-test--collect-solutions '((number 42)))))
+    (should (= (length solutions) 1)))
+  (let ((solutions (eprolog-test--collect-solutions '((number 3.14)))))
+    (should (= (length solutions) 1)))
+  (let ((solutions (eprolog-test--collect-solutions '((number -17)))))
+    (should (= (length solutions) 1)))
   
   ;; Test string/1 - should succeed for string literals
-  (should (eprolog-test--has-solution-p '((string "hello"))))
-  (should (eprolog-test--has-solution-p '((string "")))))  ; empty string
+  (let ((solutions (eprolog-test--collect-solutions '((string "hello")))))
+    (should (= (length solutions) 1)))
+  (let ((solutions (eprolog-test--collect-solutions '((string "")))))
+    (should (= (length solutions) 1))))  ; empty string
   
   ;; === BASIC NEGATIVE CASES ===
   ;; These verify type predicates fail appropriately for wrong types
   
   ;; atom/1 should fail for non-atomic structures
   (should-not (eprolog-test--has-solution-p '((atom (a b)))))
-  (should-not (eprolog-test--has-solution-p '((atom 123))))
+  (should-not (eprolog-test--has-solution-p '((atom (compound term)))))
   
   ;; var/1 should fail for bound terms
   (should-not (eprolog-test--has-solution-p '((var foo))))
@@ -65,7 +74,7 @@ The following test demonstrates the basic type checking predicates available in 
   
   ;; string/1 should fail for non-string types
   (should-not (eprolog-test--has-solution-p '((string foo))))
-  (should-not (eprolog-test--has-solution-p '((string 123)))))
+  (should-not (eprolog-test--has-solution-p '((string 123))))
 #+END_SRC
 
 This test shows how to use the basic type checking predicates. These are fundamental for writing predicates that need to behave differently depending on the type of their arguments.
@@ -78,9 +87,12 @@ The ground predicate is particularly useful for checking whether a term is fully
   (eprolog-test--restore-builtins)
   
   ;; Test ground terms
-  (should (eprolog-test--has-solution-p '((ground 42))))
-  (should (eprolog-test--has-solution-p '((ground (a b c)))))
-  (should (eprolog-test--has-solution-p '((ground foo))))
+  (let ((solutions (eprolog-test--collect-solutions '((ground 42)))))
+    (should (= (length solutions) 1)))
+  (let ((solutions (eprolog-test--collect-solutions '((ground (a b c))))))
+    (should (= (length solutions) 1)))
+  (let ((solutions (eprolog-test--collect-solutions '((ground foo)))))
+    (should (= (length solutions) 1)))
   
   ;; Test non-ground terms
   (should-not (eprolog-test--has-solution-p '((ground _x))))
@@ -141,9 +153,12 @@ The following test demonstrates the versatility of list operations in Prolog:
     (should (member 'c (mapcar (lambda (s) (cdr (assoc '_x s))) solutions))))
   
   ;; Test specific membership
-  (should (eprolog-test--has-solution-p '((member a (a b c)))))
-  (should (eprolog-test--has-solution-p '((member b (a b c)))))
-  (should (eprolog-test--has-solution-p '((member c (a b c)))))
+  (let ((solutions (eprolog-test--collect-solutions '((member a (a b c))))))
+    (should (= (length solutions) 1)))
+  (let ((solutions (eprolog-test--collect-solutions '((member b (a b c))))))
+    (should (= (length solutions) 1)))
+  (let ((solutions (eprolog-test--collect-solutions '((member c (a b c))))))
+    (should (= (length solutions) 1)))
   (should-not (eprolog-test--has-solution-p '((member d (a b c)))))
   
   ;; Test append/3 as shown in README
@@ -152,9 +167,12 @@ The following test demonstrates the versatility of list operations in Prolog:
     (should (equal (cdr (assoc '_result (car solutions))) '(1 2 3 4))))
   
   ;; Test append/3 variations
-  (should (eprolog-test--has-solution-p '((append (1 2) (3 4) (1 2 3 4)))))
-  (should (eprolog-test--has-solution-p '((append () (1 2 3) (1 2 3)))))
-  (should (eprolog-test--has-solution-p '((append (1 2 3) () (1 2 3)))))
+  (let ((solutions (eprolog-test--collect-solutions '((append (1 2) (3 4) (1 2 3 4))))))
+    (should (= (length solutions) 1)))
+  (let ((solutions (eprolog-test--collect-solutions '((append () (1 2 3) (1 2 3))))))
+    (should (= (length solutions) 1)))
+  (let ((solutions (eprolog-test--collect-solutions '((append (1 2 3) () (1 2 3))))))
+    (should (= (length solutions) 1)))
   
   ;; Test append/2
   (let ((solutions (eprolog-test--collect-solutions '((append ((1 2) (3 4)) _result)))))
@@ -194,12 +212,14 @@ The following test shows how to use higher-order predicates for list transformat
     (is _y (+ _x 1)))
   
   ;; Test maplist/2
-  (should (eprolog-test--has-solution-p '((maplist succ (1 2 3) (2 3 4)))))
+  (let ((solutions (eprolog-test--collect-solutions '((maplist succ (1 2 3) (2 3 4))))))
+    (should (= (length solutions) 1)))
   (should-not (eprolog-test--has-solution-p '((maplist succ (1 2 3) (2 3 5)))))
   
   ;; Test maplist/1
   (eprolog-define-predicate (positive _x) (lispp (> _x 0)))
-  (should (eprolog-test--has-solution-p '((maplist positive (1 2 3)))))
+  (let ((solutions (eprolog-test--collect-solutions '((maplist positive (1 2 3))))))
+    (should (= (length solutions) 1)))
   (should-not (eprolog-test--has-solution-p '((maplist positive (0 1 2)))))
   
   ;; Test maplist length mismatch failure cases
@@ -228,8 +248,10 @@ These tests verify that type checking predicates handle edge cases and unexpecte
   ;; atom/1 edge cases - what ε-prolog considers atomic
   (should-not (eprolog-test--has-solution-p '((atom (1 2 3)))))  ; lists are not atoms
   (should-not (eprolog-test--has-solution-p '((atom (foo bar))))) ; compound terms are not atoms
-  (should (eprolog-test--has-solution-p '((atom 123))))           ; numbers may be considered atoms in ε-prolog
-  (should (eprolog-test--has-solution-p '((atom "string"))))      ; strings may be considered atoms in ε-prolog
+  (let ((solutions (eprolog-test--collect-solutions '((atom 123)))))  ; numbers may be considered atoms in ε-prolog
+    (should (= (length solutions) 1)))
+  (let ((solutions (eprolog-test--collect-solutions '((atom "string")))))
+    (should (= (length solutions) 1)))      ; strings may be considered atoms in ε-prolog
   
   ;; === VARIABLE BINDING STATE TESTS ===
   ;; Test var/1 behavior with bound variables and different term types
@@ -256,7 +278,7 @@ These tests verify that type checking predicates handle edge cases and unexpecte
   (should-not (eprolog-test--has-solution-p '((string 123))))
   (should-not (eprolog-test--has-solution-p '((string atom))))
   (should-not (eprolog-test--has-solution-p '((string (a b)))))    ; list is not string
-  (should-not (eprolog-test--has-solution-p '((string ())))))      ; empty list is not string
+  (should-not (eprolog-test--has-solution-p '((string ()))))      ; empty list is not string
 #+END_SRC
 
 *** List Operations with Invalid Structures
@@ -334,11 +356,14 @@ This subsection thoroughly tests the ~ground/1~ predicate with complex nested st
   (should-not (eprolog-test--has-solution-p '((ground ((1 2) (3 _x) (4 5))))))
   
   ;; Test fully ground complex structures
-  (should (eprolog-test--has-solution-p '((ground (complex (nested (structure with atoms)) (and (numbers 1 2 3)))))))
+  (let ((solutions (eprolog-test--collect-solutions '((ground (complex (nested (structure with atoms)) (and (numbers 1 2 3))))))))
+    (should (= (length solutions) 1)))
   
   ;; Test empty structures
-  (should (eprolog-test--has-solution-p '((ground ()))))
-  (should (eprolog-test--has-solution-p '((ground (empty-list ()))))))
+  (let ((solutions (eprolog-test--collect-solutions '((ground ())))))
+    (should (= (length solutions) 1)))
+  (let ((solutions (eprolog-test--collect-solutions '((ground (empty-list ()))))))
+    (should (= (length solutions) 1))))
 #+END_SRC
 
 *** Empty List Handling
@@ -351,9 +376,12 @@ Empty lists represent a fundamental boundary case in list processing. These test
   (eprolog-test--restore-builtins)
   
   ;; Test append with empty lists
-  (should (eprolog-test--has-solution-p '((append () (1 2 3) (1 2 3)))))
-  (should (eprolog-test--has-solution-p '((append (1 2 3) () (1 2 3)))))
-  (should (eprolog-test--has-solution-p '((append () () ()))))
+  (let ((solutions (eprolog-test--collect-solutions '((append () (1 2 3) (1 2 3))))))
+    (should (= (length solutions) 1)))
+  (let ((solutions (eprolog-test--collect-solutions '((append (1 2 3) () (1 2 3))))))
+    (should (= (length solutions) 1)))
+  (let ((solutions (eprolog-test--collect-solutions '((append () () ())))))
+    (should (= (length solutions) 1)))
   
   ;; Test member with empty list
   (should-not (eprolog-test--has-solution-p '((member _x ()))))
@@ -361,10 +389,12 @@ Empty lists represent a fundamental boundary case in list processing. These test
   
   ;; Test maplist with empty list
   (eprolog-define-predicate (always-true _x))
-  (should (eprolog-test--has-solution-p '((maplist always-true ()))))
+  (let ((solutions (eprolog-test--collect-solutions '((maplist always-true ())))))
+    (should (= (length solutions) 1)))
   
   ;; Test append/2 with list of empty lists
-  (should (eprolog-test--has-solution-p '((append (() () ()) _result) (= _result ()))))
+  (let ((solutions (eprolog-test--collect-solutions '((append (() () ()) _result) (= _result ())))))
+    (should (= (length solutions) 1)))
   
   ;; Test decomposition of empty list
   (should-not (eprolog-test--has-solution-p '((= () (_head . _tail))))))

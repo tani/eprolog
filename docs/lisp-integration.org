@@ -49,31 +49,37 @@ The following comprehensive test demonstrates all three main ways to interface w
   ;; Test lispp/1 for boolean evaluation of Lisp expressions
   
   ;; Basic comparison tests
-  (should (eprolog-test--has-solution-p '((lispp (> 5 3)))))
+  (let ((solutions (eprolog-test--collect-solutions '((lispp (> 5 3))))))
+    (should (= (length solutions) 1)))
   (should-not (eprolog-test--has-solution-p '((lispp (< 5 3)))))
   (should-not (eprolog-test--has-solution-p '((lispp (> 3 5)))))
   
   ;; Boolean logic tests
-  (should (eprolog-test--has-solution-p '((lispp (and t t)))))
+  (let ((solutions (eprolog-test--collect-solutions '((lispp (and t t))))))
+    (should (= (length solutions) 1)))
   (should-not (eprolog-test--has-solution-p '((lispp (and t nil)))))
-  (should (eprolog-test--has-solution-p '((lispp (or t nil)))))
+  (let ((solutions (eprolog-test--collect-solutions '((lispp (or t nil))))))
+    (should (= (length solutions) 1)))
   
   ;; === LISP!/1 SIDE EFFECT TESTS ===
   ;; Test lisp!/1 for executing Lisp code for side effects
   
   ;; Variable assignment side effects
   (let ((test-var nil))
-    (should (eprolog-test--has-solution-p `((lisp! (setq test-var 'success)))))
+    (let ((solutions (eprolog-test--collect-solutions `((lisp! (setq test-var 'success))))))
+      (should (= (length solutions) 1)))
     (should (eq test-var 'success)))
   
   ;; More complex side effect operations
   (setq eprolog-test--temp-var nil)
-  (should (eprolog-test--has-solution-p `((lisp! (setq eprolog-test--temp-var 'modified)))))
+  (let ((solutions (eprolog-test--collect-solutions `((lisp! (setq eprolog-test--temp-var 'modified))))))
+    (should (= (length solutions) 1)))
   (should (eq eprolog-test--temp-var 'modified))
   
   ;; Multiple side effects in sequence
   (setq eprolog-test--counter 0)
-  (should (eprolog-test--has-solution-p `((lisp! (setq eprolog-test--counter (+ eprolog-test--counter 1))))))
+  (let ((solutions (eprolog-test--collect-solutions `((lisp! (setq eprolog-test--counter (+ eprolog-test--counter 1)))))))
+    (should (= (length solutions) 1)))
   (should (= eprolog-test--counter 1)))
 #+END_SRC
 
@@ -145,18 +151,21 @@ This mechanism is particularly useful for accumulating results, maintaining coun
   (eprolog-test--restore-builtins)
   
   ;; Test dynamic-put and dynamic-get
-  (should (eprolog-test--has-solution-p 
+  (let ((solutions (eprolog-test--collect-solutions 
            '((dynamic-put test-key 42)
              (dynamic-get test-key _value)
-             (= _value 42))))
+             (= _value 42)))))
+    (should (= (length solutions) 1))
+    (should (= (cdr (assoc '_value (car solutions))) 42)))
   
   ;; Test parameter persistence across goals
-  (should (eprolog-test--has-solution-p
+  (let ((solutions (eprolog-test--collect-solutions
            '((dynamic-put counter 0)
              (dynamic-get counter _old)
              (is _new (+ _old 1))
              (dynamic-put counter _new)
              (dynamic-get counter 1)))))
+    (should (= (length solutions) 1))))
 #+END_SRC
 
 ** Dynamic Parameters Negative Tests
@@ -173,7 +182,8 @@ Dynamic parameter predicates should fail with invalid keys or expressions:
   (should-not (eprolog-test--has-solution-p '((dynamic-get missing-key _x))))
   
   ;; Unification failures with retrieved values
-  (should (eprolog-test--has-solution-p '((dynamic-put test-key 42))))
+  (let ((solutions (eprolog-test--collect-solutions '((dynamic-put test-key 42)))))
+    (should (= (length solutions) 1)))
   (should-not (eprolog-test--has-solution-p '((dynamic-get test-key "forty-two"))))
   (should-not (eprolog-test--has-solution-p '((dynamic-get test-key (a b c))))))
 #+END_SRC
@@ -195,7 +205,8 @@ These tests verify robust error handling in complex Lisp integration scenarios.
   
   ;; Test lispp/1 with invalid boolean expressions (may fail or error)
   (should-error (eprolog-test--has-solution-p '((lispp (non-existent-predicate 1 2)))))
-  (should (eprolog-test--has-solution-p '((lispp (< 1)))))
+  (let ((solutions (eprolog-test--collect-solutions '((lispp (< 1))))))
+    (should (= (length solutions) 1)))
   
   ;; Test lisp!/1 with side-effect expressions that fail (may fail or error)
   (should-error (eprolog-test--has-solution-p '((lisp! (error "Intentional error")))))
@@ -211,17 +222,21 @@ These tests verify robust error handling in complex Lisp integration scenarios.
   
   ;; Test with moderately large list (reduced from 1000 to avoid stack overflow)
   (let ((large-list (make-list 100 'test-item)))
-    (should (eprolog-test--has-solution-p `((lisp _result (length ',large-list)))))
     (let ((solutions (eprolog-test--collect-solutions `((lisp _result (length ',large-list))))))
+      (should (= (length solutions) 1))
       (should (= (cdr (assoc '_result (car solutions))) 100))))
   
   ;; Test with large numeric computations
-  (should (eprolog-test--has-solution-p '((lisp _result (apply '+ (number-sequence 1 100))))))
+  (let ((solutions (eprolog-test--collect-solutions '((lisp _result (apply '+ (number-sequence 1 100)))))))
+    (should (= (length solutions) 1))
+    (should (= (cdr (assoc '_result (car solutions))) 5050)))
   
   ;; Test memory efficiency with repeated large operations
   (dotimes (i 10)
     (let ((test-data (make-list 100 i)))
-      (should (eprolog-test--has-solution-p `((lisp _result (length ',test-data))))))))
+      (let ((solutions (eprolog-test--collect-solutions `((lisp _result (length ',test-data))))))
+        (should (= (length solutions) 1))
+        (should (= (cdr (assoc '_result (car solutions))) 100))))))
 #+END_SRC
 
 *** Type Conversion Edge Cases
@@ -232,27 +247,43 @@ These tests verify robust error handling in complex Lisp integration scenarios.
   (eprolog-test--restore-builtins)
   
   ;; Test conversion of special Lisp values
-  (should (eprolog-test--has-solution-p '((lisp _result t))))
-  (should (eprolog-test--has-solution-p '((lisp _result nil))))
+  (let ((solutions (eprolog-test--collect-solutions '((lisp _result t)))))
+    (should (= (length solutions) 1))
+    (should (eq (cdr (assoc '_result (car solutions))) t)))
+  (let ((solutions (eprolog-test--collect-solutions '((lisp _result nil)))))
+    (should (= (length solutions) 1))
+    (should (eq (cdr (assoc '_result (car solutions))) nil)))
   
   ;; Test conversion of complex Lisp data types
-  (should (eprolog-test--has-solution-p '((lisp _result (make-hash-table)))))
+  (let ((solutions (eprolog-test--collect-solutions '((lisp _result (make-hash-table))))))
+    (should (= (length solutions) 1))
+    (should (hash-table-p (cdr (assoc '_result (car solutions))))))
   
   ;; Test conversion failures with non-serializable objects
   ;; Note: These might behave differently depending on implementation
   ;; (should-not (eprolog-test--has-solution-p '((lisp _result (lambda (x) x)))))
   
   ;; Test numeric edge cases
-  (should (eprolog-test--has-solution-p '((lisp _result 1.0e+INF))))
-  (should (eprolog-test--has-solution-p '((lisp _result -1.0e+INF))))
+  (let ((solutions (eprolog-test--collect-solutions '((lisp _result 1.0e+INF)))))
+    (should (= (length solutions) 1))
+    (should (equal (cdr (assoc '_result (car solutions))) 1.0e+INF)))
+  (let ((solutions (eprolog-test--collect-solutions '((lisp _result -1.0e+INF)))))
+    (should (= (length solutions) 1))
+    (should (equal (cdr (assoc '_result (car solutions))) -1.0e+INF)))
   
   ;; Test very large numbers
   (let ((large-num (expt 2 100)))
-    (should (eprolog-test--has-solution-p `((lisp _result ,large-num)))))
+    (let ((solutions (eprolog-test--collect-solutions `((lisp _result ,large-num)))))
+      (should (= (length solutions) 1))
+      (should (= (cdr (assoc '_result (car solutions))) large-num))))
   
   ;; Test strings with special characters
-  (should (eprolog-test--has-solution-p '((lisp _result "\n\t\"\\'"))))
-  (should (eprolog-test--has-solution-p '((lisp _result "unicode: αβγδε")))))
+  (let ((solutions (eprolog-test--collect-solutions '((lisp _result "\n\t\"\\'")))))
+    (should (= (length solutions) 1))
+    (should (equal (cdr (assoc '_result (car solutions))) "\n\t\"\'")))
+  (let ((solutions (eprolog-test--collect-solutions '((lisp _result "unicode: αβγδε")))))
+    (should (= (length solutions) 1))
+    (should (equal (cdr (assoc '_result (car solutions))) "unicode: αβγδε"))))
 #+END_SRC
 
 *** Nested Lisp Calls and Complex Integration
@@ -273,10 +304,14 @@ These tests verify robust error handling in complex Lisp integration scenarios.
     (should (= (cdr (assoc '_result (car solutions))) 25)))
   
   ;; Test Lisp side effects persisting across calls
-  (should (eprolog-test--has-solution-p '((lisp! (setq test-counter 0)))))
-  (should (eprolog-test--has-solution-p '((lisp! (setq test-counter (1+ test-counter))))))
-  (should (eprolog-test--has-solution-p '((lisp! (setq test-counter (1+ test-counter))))))
+  (let ((solutions (eprolog-test--collect-solutions '((lisp! (setq test-counter 0))))))
+    (should (= (length solutions) 1)))
+  (let ((solutions (eprolog-test--collect-solutions '((lisp! (setq test-counter (1+ test-counter)))))))
+    (should (= (length solutions) 1)))
+  (let ((solutions (eprolog-test--collect-solutions '((lisp! (setq test-counter (1+ test-counter)))))))
+    (should (= (length solutions) 1)))
   (let ((solutions (eprolog-test--collect-solutions '((lisp _result test-counter)))))
+    (should (= (length solutions) 1))
     (should (= (cdr (assoc '_result (car solutions))) 2)))
   
   ;; Test error recovery in complex scenarios

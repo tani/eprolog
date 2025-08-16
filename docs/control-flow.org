@@ -26,13 +26,15 @@ Core control predicates covered:
   (eprolog-test--restore-builtins)
   
   ;; Test true/0
-  (should (eprolog-test--has-solution-p '((true))))
+  (let ((solutions (eprolog-test--collect-solutions '((true)))))
+    (should (= (length solutions) 1)))
   
   ;; Test fail/0  
   (should-not (eprolog-test--has-solution-p '((fail))))
   
   ;; Test not/1
-  (should (eprolog-test--has-solution-p '((not fail))))
+  (let ((solutions (eprolog-test--collect-solutions '((not fail)))))
+    (should (= (length solutions) 1)))
   (should-not (eprolog-test--has-solution-p '((not true)))))
 #+END_SRC
 
@@ -45,11 +47,13 @@ This is the main control predicate test that covers all basic control flow opera
   
   ;; Test basic control predicates
   (should-not (eprolog-test--has-solution-p '((fail))))
-  (should (eprolog-test--has-solution-p '((true))))
+  (let ((solutions (eprolog-test--collect-solutions '((true)))))
+    (should (= (length solutions) 1)))
   (should-not (eprolog-test--has-solution-p '((false))))
   
   ;; Test not/1
-  (should (eprolog-test--has-solution-p '((not fail))))
+  (let ((solutions (eprolog-test--collect-solutions '((not fail)))))
+    (should (= (length solutions) 1)))
   (should-not (eprolog-test--has-solution-p '((not true)))))
 #+END_SRC
 
@@ -88,8 +92,11 @@ The call predicate enables meta-programming:
   (eprolog-test--restore-builtins)
   (eprolog-define-predicate (likes mary food))
   
-  (should (eprolog-test--has-solution-p '((call likes mary food))))
-  (should (eprolog-test--has-solution-p '((call = _x 42) (= _x 42)))))
+  (let ((solutions (eprolog-test--collect-solutions '((call likes mary food)))))
+    (should (= (length solutions) 1)))
+  (let ((solutions (eprolog-test--collect-solutions '((call = _x 42) (= _x 42)))))
+    (should (= (length solutions) 1))
+    (should (= (cdr (assoc '_x (car solutions))) 42))))
 #+END_SRC
 
 ** Logical Operators
@@ -110,22 +117,30 @@ Key logical operators and their behaviors:
   (eprolog-test--restore-builtins)
   
   ;; Test and/0-4
-  (should (eprolog-test--has-solution-p '((and))))
-  (should (eprolog-test--has-solution-p '((and true))))
-  (should (eprolog-test--has-solution-p '((and true true))))
+  (let ((solutions (eprolog-test--collect-solutions '((and)))))
+    (should (= (length solutions) 1)))
+  (let ((solutions (eprolog-test--collect-solutions '((and true)))))
+    (should (= (length solutions) 1)))
+  (let ((solutions (eprolog-test--collect-solutions '((and true true)))))
+    (should (= (length solutions) 1)))
   (should-not (eprolog-test--has-solution-p '((and true fail))))
   
   ;; Test or/0-4
   (should-not (eprolog-test--has-solution-p '((or))))
-  (should (eprolog-test--has-solution-p '((or true))))
-  (should (eprolog-test--has-solution-p '((or fail true))))
+  (let ((solutions (eprolog-test--collect-solutions '((or true)))))
+    (should (= (length solutions) 1)))
+  (let ((solutions (eprolog-test--collect-solutions '((or fail true)))))
+    (should (= (length solutions) 1)))
   (should-not (eprolog-test--has-solution-p '((or fail fail))))
   
   ;; Test if/2 and if/3
-  (should (eprolog-test--has-solution-p '((if true true))))
+  (let ((solutions (eprolog-test--collect-solutions '((if true true)))))
+    (should (= (length solutions) 1)))
   (should-not (eprolog-test--has-solution-p '((if fail true))))
-  (should (eprolog-test--has-solution-p '((if true true fail))))
-  (should (eprolog-test--has-solution-p '((if fail fail true)))))
+  (let ((solutions (eprolog-test--collect-solutions '((if true true fail)))))
+    (should (= (length solutions) 1)))
+  (let ((solutions (eprolog-test--collect-solutions '((if fail fail true)))))
+    (should (= (length solutions) 1))))
 #+END_SRC
 
 Conditional execution provides if-then-else semantics in a logical context:
@@ -138,8 +153,10 @@ Conditional execution provides if-then-else semantics in a logical context:
   (eprolog-define-predicate then-pred)
   (eprolog-define-predicate else-pred)
   
-  (should (eprolog-test--has-solution-p '((if true-pred then-pred))))
-  (should (eprolog-test--has-solution-p '((if fail then-pred else-pred)))))
+  (let ((solutions (eprolog-test--collect-solutions '((if true-pred then-pred)))))
+    (should (= (length solutions) 1)))
+  (let ((solutions (eprolog-test--collect-solutions '((if fail then-pred else-pred)))))
+    (should (= (length solutions) 1))))
 #+END_SRC
 
 ** Meta-predicates
@@ -162,9 +179,13 @@ This capability enables sophisticated programming patterns where the structure o
   (eprolog-define-predicate (test-pred success))
   
   ;; Test call/1
-  (should (eprolog-test--has-solution-p '((call test-pred success))))
-  (should (eprolog-test--has-solution-p '((call = _x 42) (= _x 42))))
-  (should (eprolog-test--has-solution-p '((call = foo foo)))))
+  (let ((solutions (eprolog-test--collect-solutions '((call test-pred success)))))
+    (should (= (length solutions) 1)))
+  (let ((solutions (eprolog-test--collect-solutions '((call = _x 42) (= _x 42)))))
+    (should (= (length solutions) 1))
+    (should (= (cdr (assoc '_x (car solutions))) 42)))
+  (let ((solutions (eprolog-test--collect-solutions '((call = foo foo)))))
+    (should (= (length solutions) 1))))
 #+END_SRC
 
 ** Call Predicate Negative Tests
@@ -184,12 +205,12 @@ The call predicate should fail with undefined predicates, invalid arguments, and
   ;; Call with malformed predicate terms
   (should-not (eprolog-test--has-solution-p '((call 42))))
   (should-not (eprolog-test--has-solution-p '((call "invalid-call"))))
-  (should-not (eprolog-test--has-solution-p '((call ())))))
+  (should-not (eprolog-test--has-solution-p '((call ()))))
   
   ;; Call with predicates that should fail
   (eprolog-define-predicate! (always-fails) (fail))
   (should-not (eprolog-test--has-solution-p '((call always-fails))))
-  (should-not (eprolog-test--has-solution-p '((call = foo bar))))
+  (should-not (eprolog-test--has-solution-p '((call = foo bar)))))
 #+END_SRC
 
 ** Cut and Backtracking Control
@@ -243,7 +264,8 @@ The repeat predicate creates infinite choice points, useful for implementing loo
       (lisp! (setq counter (1+ counter)))
       (lispp (>= counter 3))
       !)
-    (should (eprolog-test--has-solution-p '((test-repeat-usage))))
+    (let ((solutions (eprolog-test--collect-solutions '((test-repeat-usage)))))
+      (should (= (length solutions) 1)))
     (should (= counter 3))))
 #+END_SRC
 
@@ -299,7 +321,7 @@ These tests explore the behavior of deeply nested control structures, verifying 
   (eprolog-test--restore-builtins)
   
   ;; Test deeply nested if-then-else (5 levels)
-  (should (eprolog-test--has-solution-p 
+  (let ((solutions (eprolog-test--collect-solutions 
     '((if true 
           (if true 
               (if true 
@@ -307,19 +329,21 @@ These tests explore the behavior of deeply nested control structures, verifying 
                       (if true true fail))
                   fail)
               fail)
-          fail))))
+          fail)))))
+    (should (= (length solutions) 1)))
   
   ;; Test deeply nested and/or combinations  
-  (should (eprolog-test--has-solution-p
+  (let ((solutions (eprolog-test--collect-solutions
     '((and (or true fail)
            (and (or fail true)
-                (and true true))))))
+                (and true true)))))))
+    (should (= (length solutions) 1)))
   
   ;; Test failure in deep nesting
   (should-not (eprolog-test--has-solution-p
     '((if true
           (if true
-              (if fail true fail))))))
+              (if fail true fail)))))))
 #+END_SRC
 
 *** Meta-predicate Error Handling
@@ -362,7 +386,8 @@ This subsection explores complex interactions between the cut operator and other
   (eprolog-define-predicate (cut-with-not)
     (not fail)
     !)
-  (should (eprolog-test--has-solution-p '((cut-with-not))))
+  (let ((solutions (eprolog-test--collect-solutions '((cut-with-not)))))
+    (should (= (length solutions) 1)))
   
   ;; Test cut scope in nested structures
   (eprolog-define-predicate (nested-cut-test _x)
@@ -378,7 +403,8 @@ This subsection explores complex interactions between the cut operator and other
   (eprolog-define-predicate (cut-in-if _result)
     (if true (and (= _result success) !) (= _result failure)))
   
-  (should (eprolog-test--has-solution-p '((cut-in-if success))))
+  (let ((solutions (eprolog-test--collect-solutions '((cut-in-if success)))))
+    (should (= (length solutions) 1)))
   (should-not (eprolog-test--has-solution-p '((cut-in-if failure)))))
 #+END_SRC
 
@@ -406,13 +432,15 @@ These tests verify the robustness of logical operators when presented with inval
   (should-not (eprolog-test--has-solution-p
     '((and fail (should-not-reach)))))
   
-  (should (eprolog-test--has-solution-p
-    '((or true (should-not-reach)))))
+  (let ((solutions (eprolog-test--collect-solutions
+    '((or true (should-not-reach))))))
+    (should (= (length solutions) 1)))
   
   ;; Test complex logical combinations
-  (should (eprolog-test--has-solution-p
+  (let ((solutions (eprolog-test--collect-solutions
     '((or (and fail true)
           (and true (or fail true)))))))
+    (should (= (length solutions) 1))))
 #+END_SRC
 
 ** Conclusion
