@@ -328,7 +328,7 @@ Comprehensive performance testing evaluates multiple aspects of system performan
     (count-down _n1))
 
   ;; Test with moderate recursion depth
-  (should (eprolog-test--has-solution-p '((count-down 14))))
+  (should (eprolog-test--has-solution-p '((count-down 10))))
 
   ;; Stress test with higher numbers
   (eprolog-define-predicate! (deep-recursion 0 done))

@@ -156,20 +156,22 @@ to prevent infinite loops.
 Returns a failure object if BINDINGS is a failure, otherwise returns
 the expression with all bound variables replaced by their values.
 Recursively processes compound expressions (lists)."
-  (cond
-   ((eprolog--failure-p bindings) (make-eprolog--failure))
-   ((null bindings) expression)
-   ((consp expression)
-    (cons (eprolog--substitute-bindings bindings (car expression) visited)
-          (eprolog--substitute-bindings bindings (cdr expression) visited)))
-   ((and (eprolog--variable-p expression)
-         (member expression visited))
-    expression)
-   ((and (eprolog--variable-p expression)
-         (assoc expression bindings))
-    (let ((value (eprolog--lookup-variable expression bindings)))
-      (eprolog--substitute-bindings bindings value (cons expression visited))))
-   (t expression)))
+  (pcase bindings
+    ((pred eprolog--failure-p) (make-eprolog--failure))
+    ('nil expression)
+    (_
+     (pcase expression
+       (`(,car . ,cdr)
+        (cons (eprolog--substitute-bindings bindings car visited)
+              (eprolog--substitute-bindings bindings cdr visited)))
+       ((and (pred eprolog--variable-p)
+             (guard (member expression visited)))
+        expression)
+       ((and (pred eprolog--variable-p)
+             (guard (assoc expression bindings)))
+        (let ((value (eprolog--lookup-variable expression bindings)))
+          (eprolog--substitute-bindings bindings value (cons expression visited))))
+       (_ expression)))))
 
 (defun eprolog--variables-in (expression)
   "Extract all named variables from EXPRESSION.
@@ -195,11 +197,12 @@ using `gensym' for each anonymous variable encountered.
 Returns a copy of EXPRESSION with all '_' variables replaced by unique symbols.
 This ensures that multiple anonymous variables in the same clause don't unify
 with each other."
-  (cond
-   ((and (symbolp expression) (eq expression '_)) (gensym "_"))
-   ((atom expression) expression)
-   (t (cons (eprolog--replace-anonymous-variables (car expression))
-            (eprolog--replace-anonymous-variables (cdr expression))))))
+  (pcase expression
+    ('_ (gensym "_"))
+    ((pred atom) expression)
+    (`(,car . ,cdr)
+     (cons (eprolog--replace-anonymous-variables car)
+           (eprolog--replace-anonymous-variables cdr)))))
 
 (defun eprolog--ground-p (term)
   "Check if TERM is fully ground (contain no unbound variables).
@@ -211,12 +214,12 @@ from `eprolog-current-bindings'.
 
 Returns non-nil if TERM is ground, nil otherwise."
   (let ((resolved-term (eprolog--substitute-bindings eprolog-current-bindings term)))
-    (cond
-     ((eprolog--variable-p resolved-term) nil)
-     ((consp resolved-term)
-      (and (eprolog--ground-p (car resolved-term))
-           (eprolog--ground-p (cdr resolved-term))))
-     (t t))))
+    (pcase resolved-term
+      ((pred eprolog--variable-p) nil)
+      (`(,car . ,cdr)
+       (and (eprolog--ground-p car)
+            (eprolog--ground-p cdr)))
+      (_ t))))
 
 ;;; Unification System
 
@@ -230,15 +233,15 @@ Prevents infinite structures during unification by detecting circular
 references.  Returns non-nil if VARIABLE is found within EXPRESSION
 \(directly or through bindings), nil otherwise.  Follows variable
 bindings recursively."
-  (cond
-   ((and (symbolp expression) (eq variable expression)) t)
-   ((and (eprolog--variable-p expression) (assoc expression bindings))
-    (let ((value (eprolog--lookup-variable expression bindings)))
-      (eprolog--occurs-check-p variable value bindings)))
-   ((consp expression)
-    (or (eprolog--occurs-check-p variable (car expression) bindings)
-        (eprolog--occurs-check-p variable (cdr expression) bindings)))
-   (t nil)))
+  (pcase expression
+    ((and (pred symbolp) (guard (eq variable expression))) t)
+    ((and (pred eprolog--variable-p) (guard (assoc expression bindings)))
+     (let ((value (eprolog--lookup-variable expression bindings)))
+       (eprolog--occurs-check-p variable value bindings)))
+    (`(,car . ,cdr)
+     (or (eprolog--occurs-check-p variable car bindings)
+         (eprolog--occurs-check-p variable cdr bindings)))
+    (_ nil)))
 
 (defun eprolog--unify-var (variable value bindings)
   "Unify VARIABLE with VALUE given current BINDINGS.
@@ -249,16 +252,15 @@ BINDINGS is the current variable binding environment.
 Handles variable-to-variable unification and performs occurs check if enabled.
 Returns updated bindings on success, or a failure object on failure.
 Used internally by the main `eprolog--unify' function."
-  (cond
-   ((assoc variable bindings)
-    (let ((bound-term (eprolog--lookup-variable variable bindings)))
-      (eprolog--unify bound-term value bindings)))
-   ((and (eprolog--variable-p value) (assoc value bindings))
-    (let ((bound-term (eprolog--lookup-variable value bindings)))
-      (eprolog--unify variable bound-term bindings)))
-   ((and eprolog-occurs-check (eprolog--occurs-check-p variable value bindings))
-    (make-eprolog--failure))
-   (t (cons (cons variable value) bindings))))
+  (pcase (cons (assoc variable bindings) value)
+    (`((,_ . ,bound-term) . ,_)
+     (eprolog--unify bound-term value bindings))
+    (`(nil . ,(and (pred eprolog--variable-p) (guard (assoc value bindings))))
+     (let ((bound-term (eprolog--lookup-variable value bindings)))
+       (eprolog--unify variable bound-term bindings)))
+    ((guard (and eprolog-occurs-check (eprolog--occurs-check-p variable value bindings)))
+     (make-eprolog--failure))
+    (_ (cons (cons variable value) bindings))))
 
 (defun eprolog--unify (term1 term2 bindings)
   "Unify TERM1 and TERM2 given current BINDINGS.
@@ -272,15 +274,17 @@ structures recursively.
 Returns updated bindings on success, or a failure object on failure.
 This is the main unification function implementing the standard Prolog
 unification algorithm."
-  (cond
-   ((eprolog--failure-p bindings) (make-eprolog--failure))
-   ((equal term1 term2) bindings)
-   ((eprolog--variable-p term1) (eprolog--unify-var term1 term2 bindings))
-   ((eprolog--variable-p term2) (eprolog--unify-var term2 term1 bindings))
-   ((and (consp term1) (consp term2))
-    (let ((car-bindings (eprolog--unify (car term1) (car term2) bindings)))
-      (eprolog--unify (cdr term1) (cdr term2) car-bindings)))
-   (t (make-eprolog--failure))))
+  (pcase bindings
+    ((pred eprolog--failure-p) (make-eprolog--failure))
+    (_
+     (pcase (list term1 term2)
+       ((guard (equal term1 term2)) bindings)
+       (`(,(pred eprolog--variable-p) ,_) (eprolog--unify-var term1 term2 bindings))
+       (`(,_ ,(pred eprolog--variable-p)) (eprolog--unify-var term2 term1 bindings))
+       (`((,car1 . ,cdr1) (,car2 . ,cdr2))
+        (let ((car-bindings (eprolog--unify car1 car2 bindings)))
+          (eprolog--unify cdr1 cdr2 car-bindings)))
+       (_ (make-eprolog--failure))))))
 
 ;;; Clause Database Management
 
@@ -395,12 +399,14 @@ CHOICE-POINT is the unique tag to associate with cuts in this clause.
 Transforms bare ! atoms and (!) lists to include the choice point tag
 for proper cut semantics.  Used to link cuts to their originating choice points."
   (cl-labels ((insert-cut-term (term)
-                (cond
-                 ((and (consp term) (eq '! (car term)) (cadr term))
-                  (error "Invalid choice-point insertion happened"))
-                 ((and (consp term) (eq '! (car term))) (list '! choice-point))
-                 ((and (atom term) (eq '! term)) (list '! choice-point))
-                 (t term))))
+                (pcase term
+                  (`(! . ,(pred consp))
+                   (error "Invalid choice-point insertion happened"))
+                  (`(!)
+                   (list '! choice-point))
+                  ('!
+                   (list '! choice-point))
+                  (_ term))))
     (mapcar #'insert-cut-term clause)))
 
 (defun eprolog--merge-continuations (continuation-a continuation-b)
@@ -755,11 +761,11 @@ PRED can be an atom or a compound term."
    (lambda (choice-point)
      (let* ((substituted-pred (eprolog--substitute-bindings eprolog-current-bindings pred))
             (substituted-args (eprolog--substitute-bindings eprolog-current-bindings args))
-            (goal (cond
-                   ((null substituted-args) substituted-pred)
-                   ((symbolp substituted-pred) (cons substituted-pred substituted-args))
-                   ((consp substituted-pred) (append substituted-pred substituted-args))
-                   (t (error "call: Invalid form %S" (cons substituted-pred substituted-args)))))
+            (goal (pcase (cons substituted-pred substituted-args)
+                    (`(,pred . nil) pred)
+                    (`(,(pred symbolp) . ,args) (cons substituted-pred args))
+                    (`(,(pred consp) . ,args) (append substituted-pred args))
+                    (_ (error "call: Invalid form %S" (cons substituted-pred substituted-args)))))
             (cut-goals (eprolog--insert-choice-point (list goal) choice-point))
             (next-goals (append cut-goals eprolog-remaining-goals)))
        (eprolog--prove-goal-sequence next-goals eprolog-current-bindings)))))
@@ -941,53 +947,50 @@ cuts (!), and epsilon (empty) productions."
     (let* ((element (car body))
            (rest (cdr body))
            (next-var (if rest (gensym "_") out-var)))
-      (cond
-       ;; Handle epsilon (empty production)
-       ((null element)
-        ;; epsilon means no consumption, so continue with same variables
-        (let ((match-goal `(= ,in-var ,next-var)))
-          (cons match-goal (eprolog--transform-dcg-body rest in-var out-var))))
+      (pcase element
+        ;; Handle epsilon (empty production)
+        ('nil
+         ;; epsilon means no consumption, so continue with same variables
+         (let ((match-goal `(= ,in-var ,next-var)))
+           (cons match-goal (eprolog--transform-dcg-body rest in-var out-var))))
 
-       ;; Handle cut (!) - pass through as-is, doesn't consume input
-       ((eq element '!)
-        (cons element (eprolog--transform-dcg-body rest in-var out-var)))
+        ;; Handle cut (!) - pass through as-is, doesn't consume input
+        ('!
+         (cons element (eprolog--transform-dcg-body rest in-var out-var)))
 
-       ;; Handle variables (pass through as-is)
-       ((eprolog--variable-p element)
-        (let ((match-goal `(= ,in-var (,element . ,next-var))))
-          (cons match-goal (eprolog--transform-dcg-body rest next-var out-var))))
+        ;; Handle variables (pass through as-is)
+        ((pred eprolog--variable-p)
+         (let ((match-goal `(= ,in-var (,element . ,next-var))))
+           (cons match-goal (eprolog--transform-dcg-body rest next-var out-var))))
 
-       ;; Handle strings - terminals
-       ((stringp element)
-        ;; Keep string as-is for terminal matching
-        (let ((match-goal `(= ,in-var (,element . ,next-var))))
-          (cons match-goal (eprolog--transform-dcg-body rest next-var out-var))))
+        ;; Handle strings - terminals
+        ((pred stringp)
+         ;; Keep string as-is for terminal matching
+         (let ((match-goal `(= ,in-var (,element . ,next-var))))
+           (cons match-goal (eprolog--transform-dcg-body rest next-var out-var))))
 
-       ;; Cut as list: (!)
-       ((and (consp element) (eq (car element) '!) (null (cdr element)))
-        (cons '! (eprolog--transform-dcg-body rest in-var out-var)))
+        ;; Cut as list: (!)
+        (`(!)
+         (cons '! (eprolog--transform-dcg-body rest in-var out-var)))
 
-       ;; Semantic actions: (@ goal...)
-       ((and (consp element) (eq (car element) '@))
-        (let ((goals (cdr element)))
-          (append `((= ,in-var ,next-var))
-                  goals
-                  (eprolog--transform-dcg-body rest in-var out-var))))
+        ;; Semantic actions: (@ goal...)
+        (`(@ . ,goals)
+         (append `((= ,in-var ,next-var))
+                 goals
+                 (eprolog--transform-dcg-body rest in-var out-var)))
 
-       ;; Non-terminals with arguments (lists)
-       ((consp element)
-        (let* ((pred-name (car element))
-               (pred-args (cdr element))
-               (dcg-call `(call ,pred-name ,@pred-args ,in-var ,next-var)))
-          (cons dcg-call (eprolog--transform-dcg-body rest next-var out-var))))
+        ;; Non-terminals with arguments (lists)
+        (`(,pred-name . ,pred-args)
+         (let ((dcg-call `(call ,pred-name ,@pred-args ,in-var ,next-var)))
+           (cons dcg-call (eprolog--transform-dcg-body rest next-var out-var))))
 
-       ;; Non-terminals (symbols)
-       ((symbolp element)
-        (let ((dcg-call `(call ,element ,in-var ,next-var)))
-          (cons dcg-call (eprolog--transform-dcg-body rest next-var out-var))))
+        ;; Non-terminals (symbols)
+        ((pred symbolp)
+         (let ((dcg-call `(call ,element ,in-var ,next-var)))
+           (cons dcg-call (eprolog--transform-dcg-body rest next-var out-var))))
 
-       ;; Default case
-       (t (error "Invalid DCG body element: %S" element))))))
+        ;; Default case
+        (_ (error "Invalid DCG body element: %S" element))))))
 
 (defun eprolog--define-grammar-impl (dcg-parts replace-p)
   "Internal implementation for DCG rule definition from DCG-PARTS.
