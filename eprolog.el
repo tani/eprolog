@@ -821,8 +821,10 @@ Retrieves the value associated with SYMBOL and unifies it with VAR."
 ;;; Built-in Prolog Predicates
 
 ;; Type checking predicates
+;; In SWI-Prolog, atom/1 succeeds only for symbols. Use `symbolp` to
+;; mirror that behavior instead of the more permissive `atom`.
 (eprolog-define-prolog-predicate! (atom _term)
-  (lispp (atom '_term)))
+  (lispp (symbolp '_term)))
 
 (eprolog-define-prolog-predicate! (atomic _term)
   (lispp (not (consp '_term))))
