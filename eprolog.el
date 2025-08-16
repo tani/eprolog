@@ -779,10 +779,10 @@ Succeeds if TERM is an unbound variable."
 
 (eprolog-define-lisp-predicate and (&rest goals)
   (eprolog--call-with-current-choice-point
-    (lambda (choice-point)
-      (let* ((cut-goals (eprolog--insert-choice-point goals choice-point))
-             (next-goals (append cut-goals eprolog-remaining-goals)))
-        (eprolog--prove-goal-sequence next-goals eprolog-current-bindings)))))
+   (lambda (choice-point)
+     (let* ((cut-goals (eprolog--insert-choice-point goals choice-point))
+            (next-goals (append cut-goals eprolog-remaining-goals)))
+       (eprolog--prove-goal-sequence next-goals eprolog-current-bindings)))))
 
 (eprolog-define-lisp-predicate or-2 (goal1 goal2)
   (let* ((goals-1 (cons `(call ,goal1) eprolog-remaining-goals))
