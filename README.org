@@ -16,8 +16,8 @@
 ** Built-in Predicates
 - Unification: ~=~, ~==~
 - Type checking: ~atom/1~, ~atomic/1~, ~var/1~, ~ground/1~, ~number/1~, ~string/1~
-- Control: ~fail/0~, ~!/0~, ~true/0~, ~false/0~, ~not/1~
-- Logical operators: ~and/1-4~, ~or/1-4~, ~if/2-3~
+- Control: ~fail/0~, ~!/0~, ~true/0~, ~false/0~, ~not/1~ (negation as failure)
+- Logical operators: ~and/0+~, ~or/0+~, ~if/2-3~
 - List operations: ~member/2~, ~append/2-3~, ~maplist/2-5~
 - Meta-call: ~call/1+~
 - Arithmetic: ~is/2~ which is an alias of ~lisp/2+~

@@ -771,6 +771,33 @@ Succeeds if TERM is an unbound variable."
       (eprolog--prove-goal-sequence eprolog-remaining-goals eprolog-current-bindings)
     (make-eprolog--failure)))
 
+(eprolog-define-lisp-predicate and-2 (goal1 goal2)
+  (let ((goals `((call ,goal1) (call ,goal2) ,@eprolog-remaining-goals)))
+    (eprolog--prove-goal-sequence goals eprolog-current-bindings)))
+
+(eprolog-define-lisp-predicate and (&rest goals)
+  (let* ((and-2-goal (cl-reduce (lambda (expr acc) `(and-2 ,expr ,acc)) goals :initial-value 'true))
+         (next-goals (cons and-2-goal eprolog-remaining-goals)))
+    (eprolog--prove-goal-sequence next-goals eprolog-current-bindings)))
+
+(eprolog-define-lisp-predicate or-2 (goal1 goal2)
+  (let* ((goals-1 (cons `(call ,goal1) eprolog-remaining-goals))
+         (try-goals-1 (lambda () (eprolog--prove-goal-sequence goals-1 eprolog-current-bindings)))
+         (goals-2 (cons `(call ,goal2) eprolog-remaining-goals))
+         (try-goals-2 (lambda () (eprolog--prove-goal-sequence goals-2 eprolog-current-bindings)))
+         (result-1 (funcall try-goals-1)))
+    (if (eprolog--failure-p result-1)
+        (funcall try-goals-2)
+      (let* ((success-bindings-1 (eprolog--success-bindings result-1))
+             (success-continuation-1 (eprolog--success-continuation result-1))
+             (new-continuation (eprolog--merge-continuations success-continuation-1 try-goals-2)))
+        (make-eprolog--success :bindings success-bindings-1 :continuation new-continuation)))))
+
+(eprolog-define-lisp-predicate or (&rest goals)
+  (let* ((or-2-goal (cl-reduce (lambda (expr acc) `(or-2 ,expr ,acc)) goals :initial-value 'false))
+         (next-goals (cons or-2-goal eprolog-remaining-goals)))
+    (eprolog--prove-goal-sequence next-goals eprolog-current-bindings)))
+
 ;; Lisp integration predicates
 (eprolog-define-lisp-predicate lisp (result-variable &rest expressions)
   "Evaluate EXPRESSIONS as Lisp and unify result with RESULT-VARIABLE."
@@ -850,27 +877,6 @@ Retrieves the value associated with SYMBOL and unifies it with VAR."
 (eprolog-define-prolog-predicate (not _goal))
 
 ;; Logical operators
-(eprolog-define-prolog-predicate! and (true))
-(eprolog-define-prolog-predicate! (and _x1)
-  (call _x1))
-(eprolog-define-prolog-predicate! (and _x1 _x2)
-  (and _x1) (and _x2))
-(eprolog-define-prolog-predicate! (and _x1 _x2 _x3)
-  (and _x1 (and _x2 _x3)))
-(eprolog-define-prolog-predicate! (and _x1 _x2 _x3 _x4)
-  (and _x1 (and _x2 _x3 _x4)))
-
-(eprolog-define-prolog-predicate! or (fail))
-(eprolog-define-prolog-predicate (or _x1)
-  (call _x1))
-(eprolog-define-prolog-predicate (or _x1 _x2)
-  (or _x1))
-(eprolog-define-prolog-predicate (or _x1 _x2)
-  (or _x2))
-(eprolog-define-prolog-predicate (or _x1 _x2 _x3)
-  (or _x1 (or _x2 _x3)))
-(eprolog-define-prolog-predicate (or _x1 _x2 _x3 _x4)
-  (or _x1 (or _x2 _x3 _x4)))
 
 (eprolog-define-prolog-predicate! (if _cond _then)
   (call _cond) (call _then))
