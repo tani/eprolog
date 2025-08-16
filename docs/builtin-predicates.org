@@ -15,9 +15,9 @@ In the dynamic world of Prolog, where variables can be bound to any type of data
 Type checking predicates serve as your guardians against unexpected data, enabling you to write predicates that gracefully handle different types of input. They're particularly valuable when building predicates that need to behave differently based on the nature of their arguments—a common pattern in sophisticated Prolog programs.
 
 The type checking arsenal in ε-prolog includes:
-- ~atom/1~: Identifies atomic values (symbols, constants)
+- ~atom/1~: Identifies atoms (symbols)
 - ~var/1~: Detects unbound variables (useful for checking instantiation)
-- ~number/1~: Verifies numeric data (integers, floats)  
+- ~number/1~: Verifies numeric data (integers, floats)
 - ~string/1~: Recognizes string literals
 - ~ground/1~: Ensures terms are fully instantiated (contain no variables)
 
@@ -31,7 +31,7 @@ The following test demonstrates the basic type checking predicates available in 
   ;; === POSITIVE TYPE IDENTIFICATION TESTS ===
   ;; These tests verify that type predicates correctly identify their respective types
   
-  ;; Test atom/1 - should succeed for atomic values
+  ;; Test atom/1 - should succeed for atoms (symbols)
   (let ((solutions (eprolog-test--collect-solutions '((atom foo)))))
     (should (= (length solutions) 1)))
   (let ((solutions (eprolog-test--collect-solutions '((atom quoted-atom)))))
@@ -60,7 +60,7 @@ The following test demonstrates the basic type checking predicates available in 
   ;; === BASIC NEGATIVE CASES ===
   ;; These verify type predicates fail appropriately for wrong types
   
-  ;; atom/1 should fail for non-atomic structures
+  ;; atom/1 should fail for non-symbol values
   (should-not (eprolog-test--has-solution-p '((atom (a b)))))
   (should-not (eprolog-test--has-solution-p '((atom (compound term)))))
   
@@ -245,13 +245,11 @@ These tests verify that type checking predicates handle edge cases and unexpecte
   ;; === EDGE CASES FOR TYPE INTERPRETATION ===
   ;; These test boundary cases where type classification might be ambiguous
   
-  ;; atom/1 edge cases - what ε-prolog considers atomic
+  ;; atom/1 edge cases - ensures only symbols are atoms
   (should-not (eprolog-test--has-solution-p '((atom (1 2 3)))))  ; lists are not atoms
   (should-not (eprolog-test--has-solution-p '((atom (foo bar))))) ; compound terms are not atoms
-  (let ((solutions (eprolog-test--collect-solutions '((atom 123)))))  ; numbers may be considered atoms in ε-prolog
-    (should (= (length solutions) 1)))
-  (let ((solutions (eprolog-test--collect-solutions '((atom "string")))))
-    (should (= (length solutions) 1)))      ; strings may be considered atoms in ε-prolog
+  (should-not (eprolog-test--has-solution-p '((atom 123))))      ; numbers are not atoms in SWI-Prolog
+  (should-not (eprolog-test--has-solution-p '((atom "string")))) ; strings are not atoms in SWI-Prolog
   
   ;; === VARIABLE BINDING STATE TESTS ===
   ;; Test var/1 behavior with bound variables and different term types
