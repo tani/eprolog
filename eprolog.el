@@ -771,14 +771,12 @@ Succeeds if TERM is an unbound variable."
       (eprolog--prove-goal-sequence eprolog-remaining-goals eprolog-current-bindings)
     (make-eprolog--failure)))
 
-(eprolog-define-lisp-predicate and-2 (goal1 goal2)
-  (let ((goals `((call ,goal1) (call ,goal2) ,@eprolog-remaining-goals)))
-    (eprolog--prove-goal-sequence goals eprolog-current-bindings)))
-
 (eprolog-define-lisp-predicate and (&rest goals)
-  (let* ((and-2-goal (cl-reduce (lambda (expr acc) `(and-2 ,expr ,acc)) goals :initial-value 'true))
-         (next-goals (cons and-2-goal eprolog-remaining-goals)))
-    (eprolog--prove-goal-sequence next-goals eprolog-current-bindings)))
+  (eprolog--call-with-current-choice-point
+    (lambda (choice-point)
+      (let* ((cut-goals (eprolog--insert-choice-point goals choice-point))
+             (next-goals (append cut-goals eprolog-remaining-goals)))
+        (eprolog--prove-goal-sequence next-goals eprolog-current-bindings)))))
 
 (eprolog-define-lisp-predicate or-2 (goal1 goal2)
   (let* ((goals-1 (cons `(call ,goal1) eprolog-remaining-goals))
@@ -992,7 +990,7 @@ cuts (!), and epsilon (empty) productions."
        (t (error "Invalid DCG body element: %S" element))))))
 
 (defun eprolog--define-grammar-impl (dcg-parts replace-p)
-  "Internal implementation for DCG rule definition.
+  "Internal implementation for DCG rule definition from DCG-PARTS.
 If REPLACE-P is non-nil, replaces existing rules; otherwise adds to them."
   (let* ((head (car dcg-parts))
          (body (cdr dcg-parts))
@@ -1006,49 +1004,11 @@ If REPLACE-P is non-nil, replaces existing rules; otherwise adds to them."
     `(,define-fn (,head-name ,@transformed-args) ,@transformed-body)))
 
 (defmacro eprolog-define-grammar! (&rest dcg-parts)
-  "Define a DCG rule (DCG-PARTS), replacing existing rules with the same arity.
-Syntax: (eprolog-define-grammar head body1 body2 ...)
-     or (eprolog-define-grammar (head args...) body1 body2 ...)
-
-Transforms DCG notation into standard Prolog clauses with difference lists.
-
-DCG Conventions:
-- Strings (\"word\") are terminals
-- Symbols (word) are non-terminals
-- Lists ((word args...)) are non-terminals with arguments
-- nil represents empty production (epsilon)
-- (@ goal...) are semantic actions (constraints that don\='t consume input)
-- ! is cut (prevents backtracking)
-
-Examples:
-  (eprolog-define-grammar s np vp)
-  (eprolog-define-grammar (s _x) (np _x) (vp _x))
-  (eprolog-define-grammar noun \"cat\")
-  (eprolog-define-grammar optional nil)
-  (eprolog-define-grammar (s _num) (@ (= _num 3)) (np _num) (vp _num))
-  ; With constraint"
+  "Define a DCG rule from DCG-PARTS, replacing existing rules with the same arity."
   (eprolog--define-grammar-impl dcg-parts t))
 
 (defmacro eprolog-define-grammar (&rest dcg-parts)
-  "Define a DCG rule (DCG-PARTS), adding to existing rules with the same arity.
-Syntax: (eprolog-add-grammar head body1 body2 ...)
-     or (eprolog-add-grammar (head args...) body1 body2 ...)
-
-Similar to `eprolog-define-grammar!\=' but adds clauses without replacing
-existing ones.  This allows multiple DCG rules for the same non-terminal.
-
-DCG Conventions:
-- Strings (\"word\") are terminals
-- Symbols (word) are non-terminals
-- Lists ((word args...)) are non-terminals with arguments
-- nil represents empty production (epsilon)
-- (@ goal...) are semantic actions (constraints that don\='t consume input)
-- ! is cut (prevents backtracking)
-
-Examples:
-  (eprolog-define-grammar noun \"cat\")
-  (eprolog-define-grammar noun \"dog\")
-  (eprolog-define-grammar (det _num) \"the\")"
+  "Define a DCG rule from DCG-PARTS, adding to existing rules with the same arity."
   (eprolog--define-grammar-impl dcg-parts nil))
 
 ;; DCG parsing predicates
