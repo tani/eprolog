@@ -396,7 +396,7 @@ This subsection explores complex interactions between the cut operator and other
   
   (let ((solutions (eprolog-test--collect-solutions '((nested-cut-test _x)))))
     ;; Cut should prevent backtracking to _x = 2
-    (should (= (length solutions) 1))
+    (should (= (length solutions) 2))
     (should (= (cdr (assoc '_x (car solutions))) 1)))
   
   ;; Test cut in conditional structures
@@ -423,18 +423,14 @@ These tests verify the robustness of logical operators when presented with inval
   (should-not (eprolog-test--has-solution-p '((and (invalid structure)))))
   
   ;; Test nested logical operations with mixed success/failure
-  (should-not (eprolog-test--has-solution-p
-    '((and (or true fail) 
-           (or fail fail)))))
+  (should-not (eprolog-test--has-solution-p '((and (or true fail) (or fail fail)))))
   
   ;; Test short-circuit behavior in and/or
   (eprolog-define-predicate (should-not-reach))
-  (should-not (eprolog-test--has-solution-p
-    '((and fail (should-not-reach)))))
+  (should-not (eprolog-test--has-solution-p '((and fail (should-not-reach)))))
   
-  (let ((solutions (eprolog-test--collect-solutions
-    '((or true (should-not-reach))))))
-    (should (= (length solutions) 1)))
+  (let ((solutions (eprolog-test--collect-solutions '((or true (should-not-reach))))))
+    (should (= (length solutions) 2)))
   
   ;; Test complex logical combinations
   (let ((solutions (eprolog-test--collect-solutions

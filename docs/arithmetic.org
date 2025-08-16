@@ -401,8 +401,7 @@ These tests examine how ε-prolog handles malformed or unusual arithmetic expres
   ;; Test division with insufficient arguments (may error at different levels)
   (condition-case nil
       (should-error (eprolog-test--has-solution-p '((is _result (* (/ 5) 3)))))
-    (error t)))  ;; Accept any error type
-#+END_SRC
+    (error t))))  ;; Accept any error type
 
 *** Floating Point Edge Cases
 

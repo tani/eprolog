@@ -34,7 +34,7 @@ The following test demonstrates the basic type checking predicates available in 
   ;; Test atom/1 - should succeed for atomic values
   (let ((solutions (eprolog-test--collect-solutions '((atom foo)))))
     (should (= (length solutions) 1)))
-  (let ((solutions (eprolog-test--collect-solutions '((atom 'quoted-atom)))))
+  (let ((solutions (eprolog-test--collect-solutions '((atom quoted-atom)))))
     (should (= (length solutions) 1)))
   
   ;; Test var/1 - should succeed for unbound variables

@@ -280,7 +280,7 @@ These tests verify robust error handling in complex Lisp integration scenarios.
   ;; Test strings with special characters
   (let ((solutions (eprolog-test--collect-solutions '((lisp _result "\n\t\"\\'")))))
     (should (= (length solutions) 1))
-    (should (equal (cdr (assoc '_result (car solutions))) "\n\t\"\'")))
+    (should (equal (cdr (assoc '_result (car solutions))) "\n\11\"\\'")))
   (let ((solutions (eprolog-test--collect-solutions '((lisp _result "unicode: αβγδε")))))
     (should (= (length solutions) 1))
     (should (equal (cdr (assoc '_result (car solutions))) "unicode: αβγδε"))))

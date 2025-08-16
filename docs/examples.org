@@ -129,8 +129,10 @@ The following test establishes a comprehensive family tree covering all relation
   
   ;; Test finding all grandchildren of fune
   (let ((solutions (eprolog-test--collect-solutions '((grandparent fune _grandchild)))))
-    (should (= (length solutions) 1))
-    (should (member '((_grandchild . tarao)) solutions)))
+    (should (= (length solutions) 3))
+    (should (member '((_grandchild . tarao)) solutions))
+    (should (member '((_grandchild . child1)) solutions))
+    (should (member '((_grandchild . child2)) solutions)))
   
   ;; Test finding all siblings of katsuo
   (let ((solutions (eprolog-test--collect-solutions '((sibling katsuo _sibling)))))
@@ -335,7 +337,7 @@ Comprehensive performance testing evaluates multiple aspects of system performan
     (is _n1 (- _n 1))
     (deep-recursion _n1 _result))
 
-  (let ((solutions (eprolog-test--collect-solutions '((deep-recursion 10 done)))))
+  (let ((solutions (eprolog-test--collect-solutions '((deep-recursion 10 _result)))))
     (should (= (length solutions) 1))
     (should (equal (cdr (assoc '_result (car solutions))) 'done))))
   
@@ -376,7 +378,7 @@ Stress testing pushes the system to its limits:
     (is _n1 (- _n 1))
     (deep-recursion _n1 _result))
   
-  (let ((solutions (eprolog-test--collect-solutions '((deep-recursion 10 done)))))
+  (let ((solutions (eprolog-test--collect-solutions '((deep-recursion 10 _result)))))
     (should (= (length solutions) 1))
     (should (equal (cdr (assoc '_result (car solutions))) 'done))))
 #+END_SRC
