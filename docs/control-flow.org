@@ -106,8 +106,8 @@ This section explores the logical operators that enable sophisticated boolean re
 Logical operators in Prolog are more than simple boolean combinators—they interact with the backtracking mechanism to provide powerful control over solution search. Understanding their semantics is crucial for writing predicates that behave predictably and efficiently, especially when dealing with multiple solution paths.
 
 Key logical operators and their behaviors:
-- ~and/2-4~: Logical conjunction—all arguments must succeed for the operator to succeed
-- ~or/2-4~: Logical disjunction—at least one argument must succeed, exploring alternatives via backtracking  
+- ~and/0+~: Logical conjunction—all arguments must succeed for the operator to succeed
+- ~or/0+~: Logical disjunction—at least one argument must succeed, exploring alternatives via backtracking  
 - ~if/2-3~: Conditional execution—implements if-then and if-then-else patterns with commitment semantics
 - Interaction with backtracking: How these operators manage choice points and solution exploration
 
@@ -116,7 +116,7 @@ Key logical operators and their behaviors:
   "Test logical conjunction and disjunction predicates."
   (eprolog-test--restore-builtins)
   
-  ;; Test and/0-4
+  ;; Test and/0+
   (let ((solutions (eprolog-test--collect-solutions '((and)))))
     (should (= (length solutions) 1)))
   (let ((solutions (eprolog-test--collect-solutions '((and true)))))
@@ -125,7 +125,7 @@ Key logical operators and their behaviors:
     (should (= (length solutions) 1)))
   (should-not (eprolog-test--has-solution-p '((and true fail))))
   
-  ;; Test or/0-4
+  ;; Test or/0+
   (should-not (eprolog-test--has-solution-p '((or))))
   (let ((solutions (eprolog-test--collect-solutions '((or true)))))
     (should (= (length solutions) 1)))
