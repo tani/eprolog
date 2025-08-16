@@ -991,6 +991,20 @@ cuts (!), and epsilon (empty) productions."
        ;; Default case
        (t (error "Invalid DCG body element: %S" element))))))
 
+(defun eprolog--define-grammar-impl (dcg-parts replace-p)
+  "Internal implementation for DCG rule definition.
+If REPLACE-P is non-nil, replaces existing rules; otherwise adds to them."
+  (let* ((head (car dcg-parts))
+         (body (cdr dcg-parts))
+         (head-name (if (consp head) (car head) head))
+         (head-args (if (consp head) (cdr head) '()))
+         (in-var (gensym "_"))
+         (out-var (gensym "_"))
+         (transformed-args `(,@head-args ,in-var ,out-var))
+         (transformed-body (eprolog--transform-dcg-body body in-var out-var))
+         (define-fn (if replace-p 'eprolog-define-prolog-predicate! 'eprolog-define-prolog-predicate)))
+    `(,define-fn (,head-name ,@transformed-args) ,@transformed-body)))
+
 (defmacro eprolog-define-grammar! (&rest dcg-parts)
   "Define a DCG rule (DCG-PARTS), replacing existing rules with the same arity.
 Syntax: (eprolog-define-grammar head body1 body2 ...)
@@ -1013,15 +1027,7 @@ Examples:
   (eprolog-define-grammar optional nil)
   (eprolog-define-grammar (s _num) (@ (= _num 3)) (np _num) (vp _num))
   ; With constraint"
-  (let* ((head (car dcg-parts))
-         (body (cdr dcg-parts))
-         (head-name (if (consp head) (car head) head))
-         (head-args (if (consp head) (cdr head) '()))
-         (in-var (gensym "_"))
-         (out-var (gensym "_"))
-         (transformed-args `(,@head-args ,in-var ,out-var))
-         (transformed-body (eprolog--transform-dcg-body body in-var out-var)))
-    `(eprolog-define-prolog-predicate! (,head-name ,@transformed-args) ,@transformed-body)))
+  (eprolog--define-grammar-impl dcg-parts t))
 
 (defmacro eprolog-define-grammar (&rest dcg-parts)
   "Define a DCG rule (DCG-PARTS), adding to existing rules with the same arity.
@@ -1043,15 +1049,7 @@ Examples:
   (eprolog-define-grammar noun \"cat\")
   (eprolog-define-grammar noun \"dog\")
   (eprolog-define-grammar (det _num) \"the\")"
-  (let* ((head (car dcg-parts))
-         (body (cdr dcg-parts))
-         (head-name (if (consp head) (car head) head))
-         (head-args (if (consp head) (cdr head) '()))
-         (in-var (gensym "_"))
-         (out-var (gensym "_"))
-         (transformed-args `(,@head-args ,in-var ,out-var))
-         (transformed-body (eprolog--transform-dcg-body body in-var out-var)))
-    `(eprolog-define-prolog-predicate (,head-name ,@transformed-args) ,@transformed-body)))
+  (eprolog--define-grammar-impl dcg-parts nil))
 
 ;; DCG parsing predicates
 (eprolog-define-prolog-predicate! (phrase _NonTerminal _List)
