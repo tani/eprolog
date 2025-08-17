@@ -868,10 +868,10 @@ Retrieves the value associated with SYMBOL and unifies it with VAR."
   (lispp (stringp '_term)))
 
 (eprolog-define-prolog-predicate! (ground _term)
-  (lisp! (list '_term)))
+  (lisp! '_term))
 
 (eprolog-define-prolog-predicate! (fail)
-  (lisp! (list '_)))
+  (lisp! '_))
 
 ;; Basic logical predicates
 (eprolog-define-prolog-predicate! true)
