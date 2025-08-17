@@ -439,6 +439,47 @@ These tests verify the robustness of logical operators when presented with inval
     (should (= (length solutions) 1))))
 #+END_SRC
 
+*** Or Predicate Variable Binding Tests
+
+These tests verify that the ~or~ predicate correctly handles variable bindings across disjunctive branches, ensuring that each branch can contribute variable bindings independently without interference.
+
+#+BEGIN_SRC emacs-lisp
+(ert-deftest eprolog-feature-control-or-variable-binding ()
+  "Test or predicate variable binding behavior across disjunctive branches."
+  (eprolog-test--restore-builtins)
+  
+  ;; Define test predicates
+  (eprolog-define-predicate! (p a))
+  (eprolog-define-predicate (p b))
+  (eprolog-define-predicate (p c))
+  
+  (eprolog-define-predicate! (q 1))
+  (eprolog-define-predicate (q 2))
+  
+  ;; Define rule with or predicate
+  (eprolog-define-predicate! (s _x _y)
+    (or (p _x) (q _y)))
+  
+  ;; Collect all solutions
+  (let ((solutions (eprolog-test--collect-solutions '((s _x _y)))))
+    ;; Should have 5 solutions: 3 from p(_x) + 2 from q(_y)
+    (should (= (length solutions) 5))
+    
+    ;; Extract x and y bindings
+    (let ((x-bindings (mapcar (lambda (sol) (cdr (assoc '_x sol))) solutions))
+          (y-bindings (mapcar (lambda (sol) (cdr (assoc '_y sol))) solutions)))
+      
+      ;; Check that we get solutions from both branches
+      ;; From p(_x): x should be bound to a, b, c and y should be unbound (equal to the variable)
+      (should (member 'a x-bindings))
+      (should (member 'b x-bindings))  
+      (should (member 'c x-bindings))
+      
+      ;; From q(_y): y should be bound to 1, 2 and x should be unbound (equal to the variable)
+      (should (member 1 y-bindings))
+      (should (member 2 y-bindings)))))
+#+END_SRC
+
 ** Conclusion
 
 This comprehensive collection of control flow tests demonstrates ε-prolog's sophisticated handling of logical program flow. From basic success and failure predicates to complex cut semantics and meta-programming capabilities, these tests verify that the control mechanisms work reliably across a wide range of scenarios.
