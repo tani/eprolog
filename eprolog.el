@@ -621,7 +621,6 @@ RESULT-HANDLER processes the evaluation result if provided."
 
 ;;; Public API
 
-;;;###autoload
 (defun eprolog-solve (goals &rest args)
   "Solve GOALS and call callbacks for each solution.
 GOALS is the list of goals to solve.
@@ -662,7 +661,6 @@ Examples:
           ((not (eprolog--success-p result)) (funcall on-failure))
         (funcall on-success (retrieve-success-bindings result))))))
 
-;;;###autoload
 (defmacro eprolog-define-lisp-predicate (name args &rest body)
   "Define a predicate implemented as an Emacs Lisp function.
 NAME is the predicate symbol.
@@ -676,7 +674,6 @@ Built-in predicates use this macro."
   (declare (indent defun))
   `(eprolog--set-clauses ',name (lambda ,args ,@body)))
 
-;;;###autoload
 (defmacro eprolog-define-prolog-predicate (head &rest body)
   "Define a Prolog clause (fact or rule) and add it to the clause database.
 HEAD is the predicate head, a list of (NAME . ARGS), or a symbol for
@@ -695,7 +692,6 @@ Example: (eprolog-define-prolog-predicate true)"
          (clause (cons head-list body)))
     `(eprolog--add-clause (eprolog--replace-anonymous-variables ',clause))))
 
-;;;###autoload
 (defmacro eprolog-define-prolog-predicate! (head &rest body)
   "Define a Prolog clause, replacing existing clauses with the same arity.
 HEAD is the predicate head, a list of (NAME . ARGS), or a symbol for
@@ -719,7 +715,6 @@ Example: (eprolog-define-prolog-predicate! true)
        (eprolog--remove-clauses-with-arity! ',name ,arity)
        (eprolog--add-clause (eprolog--replace-anonymous-variables ',clause)))))
 
-;;;###autoload
 (defmacro eprolog-query (&rest goals)
   "Execute a Prolog query interactively.
 GOALS is a list of goals to prove.
@@ -1016,12 +1011,10 @@ If REPLACE-P is non-nil, replaces existing rules; otherwise adds to them."
          (define-fn (if replace-p 'eprolog-define-prolog-predicate! 'eprolog-define-prolog-predicate)))
     `(,define-fn (,head-name ,@transformed-args) ,@transformed-body)))
 
-;;;###autoload
 (defmacro eprolog-define-grammar! (&rest dcg-parts)
   "Define a DCG rule from DCG-PARTS, replacing existing rules with the same arity."
   (eprolog--define-grammar-impl dcg-parts t))
 
-;;;###autoload
 (defmacro eprolog-define-grammar (&rest dcg-parts)
   "Define a DCG rule from DCG-PARTS, adding to existing rules with the same arity."
   (eprolog--define-grammar-impl dcg-parts nil))
