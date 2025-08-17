@@ -727,8 +727,8 @@ Example: (eprolog-query (parent _x _y)) finds all parent relationships."
   `(eprolog--run (eprolog--replace-anonymous-variables ',goals)))
 
 ;; Aliases for convenience
-(defalias 'eprolog-define-predicate 'eprolog-define-prolog-predicate)
-(defalias 'eprolog-define-predicate! 'eprolog-define-prolog-predicate!)
+(defalias 'eprolog-define-predicate #'eprolog-define-prolog-predicate)
+(defalias 'eprolog-define-predicate! #'eprolog-define-prolog-predicate!)
 
 ;;; Built-in Lisp Predicates
 
