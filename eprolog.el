@@ -400,14 +400,20 @@ Transforms bare ! atoms and (!) lists to include the choice point tag
 for proper cut semantics.  Used to link cuts to their originating choice points."
   (cl-labels ((insert-cut-term (term)
                 (pcase term
-                  (`(! . ,(pred consp))
-                   (error "Invalid choice-point insertion happened"))
-                  (`(!)
-                   (list '! choice-point))
                   ('!
-                   (list '! choice-point))
+                   `(! ,choice-point))
+                  (`(!)
+                   `(! ,choice-point))
+                  (`(! ,old-check-point)
+                   `(! ,old-check-point))
+                  ;; Then handle proper lists
+                  ((pred proper-list-p)
+                   (mapcar #'insert-cut-term term))
+                  (`(,car . ,cdr)
+                   (cons (insert-cut-term car) (insert-cut-term cdr)))
                   (_ term))))
     (mapcar #'insert-cut-term clause)))
+
 
 (defun eprolog--merge-continuations (continuation-a continuation-b)
   "Merge two backtracking continuations into a single continuation.
@@ -640,9 +646,10 @@ Examples:
          (on-failure (or (plist-get args :failure) (lambda ()))))
     (cl-labels ((initial-continuation ()
                   (eprolog--call-with-current-choice-point
-                   (lambda (_choice-point)
-                     (let* ((prepared-goals (eprolog--replace-anonymous-variables goals)))
-                       (eprolog--prove-goal-sequence prepared-goals '())))))
+                   (lambda (choice-point)
+                     (let* ((prepared-goals (eprolog--replace-anonymous-variables goals))
+                            (cut-goals (eprolog--insert-choice-point prepared-goals choice-point)))
+                       (eprolog--prove-goal-sequence cut-goals '())))))
                 (retrieve-success-bindings (result)
                   (let* ((bindings (eprolog--success-bindings result))
                          (query-variables (eprolog--variables-in goals))
@@ -778,11 +785,8 @@ Succeeds if TERM is an unbound variable."
     (make-eprolog--failure)))
 
 (eprolog-define-lisp-predicate and (&rest goals)
-  (eprolog--call-with-current-choice-point
-   (lambda (choice-point)
-     (let* ((cut-goals (eprolog--insert-choice-point goals choice-point))
-            (next-goals (append cut-goals eprolog-remaining-goals)))
-       (eprolog--prove-goal-sequence next-goals eprolog-current-bindings)))))
+  (let* ((next-goals (append goals eprolog-remaining-goals)))
+    (eprolog--prove-goal-sequence next-goals eprolog-current-bindings)))
 
 (eprolog-define-lisp-predicate or-2 (goal1 goal2)
   (let* ((original-bindings eprolog-current-bindings)

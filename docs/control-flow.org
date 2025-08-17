@@ -396,7 +396,7 @@ This subsection explores complex interactions between the cut operator and other
   
   (let ((solutions (eprolog-test--collect-solutions '((nested-cut-test _x)))))
     ;; Cut should prevent backtracking to _x = 2
-    (should (= (length solutions) 2))
+    (should (= (length solutions) 1))
     (should (= (cdr (assoc '_x (car solutions))) 1)))
   
   ;; Test cut in conditional structures
@@ -479,6 +479,46 @@ These tests verify that the ~or~ predicate correctly handles variable bindings a
       (should (member 1 y-bindings))
       (should (member 2 y-bindings)))))
 #+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(ert-deftest eprolog-feature-control-or-variable-binding-nested ()
+  "Test or predicate variable binding behavior across disjunctive branches."
+  (eprolog-test--restore-builtins)
+  
+  ;; Define test predicates
+  (eprolog-define-predicate! (p a))
+  (eprolog-define-predicate (p b))
+  (eprolog-define-predicate (p c))
+  
+  (eprolog-define-predicate! (q 1))
+  (eprolog-define-predicate (q 2))
+  
+  ;; Define rule with or predicate
+  (eprolog-define-predicate! (s _x _y)
+    (p _x)
+    (or (and (q _y) (== _x b) !)
+        (q _y)))
+  
+  ;; Collect all solutions
+  (let ((solutions (eprolog-test--collect-solutions '((s _x _y)))))
+    ;; Should have 3 solutions: cut prevents backtracking after X=b
+    (should (= (length solutions) 3))
+    
+    ;; Extract x and y bindings
+    (let ((x-bindings (mapcar (lambda (sol) (cdr (assoc '_x sol))) solutions))
+          (y-bindings (mapcar (lambda (sol) (cdr (assoc '_y sol))) solutions)))
+      
+      ;; Check that we get expected solutions
+      ;; Cut prevents solutions after X=b
+      (should (member 'a x-bindings))
+      (should (member 'b x-bindings))
+      (should-not (member 'c x-bindings))
+      
+      ;; From q(_y): y should be bound to 1, 2 and x should be unbound (equal to the variable)
+      (should (member 1 y-bindings))
+      (should (member 2 y-bindings)))))
+#+END_SRC
+
 
 ** Conclusion
 
