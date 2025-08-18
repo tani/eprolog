@@ -593,18 +593,23 @@ GOALS is the list of goals to execute.
 Displays each solution and prompts whether to continue searching for more.
 Shows \='No\=' if no solutions exist.  This is the main entry point for
 interactive queries initiated by `eprolog-query\='."
-  (cl-block query-exit
-    (eprolog-solve
-     goals
-     :success
-     (lambda (solution)
-       (eprolog--display-solution solution)
-       (unless (y-or-n-p "Continue?")
-         (cl-return-from query-exit)))
-     :failure
-     (lambda ()
-       (eprolog--printf "\nNo")
-       (cl-return-from query-exit)))))
+  (let ((solutions))
+    (cl-block query-exit
+      (eprolog-solve
+       goals
+       :success
+       (lambda (solution)
+         (let* ((formatted-solution
+                 (with-output-to-string
+                   (eprolog--display-solution solution)))
+                (prompt (concat formatted-solution "\n\nContinue?")))
+           (push solution solutions)
+           (unless (y-or-n-p prompt)
+             (cl-return-from query-exit solutions))))
+       :failure
+       (lambda ()
+         (message "\nNo")
+         (cl-return-from query-exit solutions))))))
 
 ;;; Lisp Integration Helper
 
