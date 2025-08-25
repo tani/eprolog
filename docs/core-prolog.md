@@ -1,14 +1,11 @@
-#+TITLE: Core Prolog Functionality
-#+AUTHOR: Masaya Taniguchi  
-#+PROPERTY: header-args:emacs-lisp :tangle yes
 
-* Core Prolog Functionality
+# Core Prolog Functionality
 
 Prolog operates on a beautifully simple yet powerful principle: you describe what you know (facts) and what can be inferred (rules), then ask questions about this knowledge. This section explores the fundamental architecture of logical programming, showing how ε-prolog transforms declarative statements into a queryable knowledge base.
 
-Understanding these core concepts is essential because they form the conceptual foundation for everything else in Prolog. Unlike imperative programming where you tell the computer *how* to solve problems, Prolog lets you describe *what* the problem is and lets the system figure out the solution through logical inference.
+Understanding these core concepts is essential because they form the conceptual foundation for everything else in Prolog. Unlike imperative programming where you tell the computer **how** to solve problems, Prolog lets you describe **what** the problem is and lets the system figure out the solution through logical inference.
 
-** Facts and Rules
+## Facts and Rules
 
 This section introduces the fundamental building blocks of logical programming: facts and rules. These constitute the knowledge representation layer that transforms ε-prolog from a programming language into a reasoning system capable of drawing logical conclusions from stated premises.
 
@@ -17,104 +14,105 @@ Facts represent unconditional truths—basic assertions about your problem domai
 The power of this approach lies in its declarative nature: instead of writing algorithms that specify how to compute answers, you describe the logical relationships that exist in your domain. The Prolog engine becomes your reasoning partner, automatically exploring the logical consequences of your statements to find solutions.
 
 Core concepts in this section:
-- **Fact Definition**: Establishing unconditional truths as the foundation of your knowledge base
-- **Rule Creation**: Defining conditional relationships that derive new knowledge from existing facts
-- **Knowledge Base Querying**: Formulating questions and retrieving answers through logical inference
-- **Solution Enumeration**: Systematically discovering all possible answers to logical queries
-- **Deductive Reasoning**: How the engine combines facts and rules to reach conclusions
+
+-   ****Fact Definition****: Establishing unconditional truths as the foundation of your knowledge base
+-   ****Rule Creation****: Defining conditional relationships that derive new knowledge from existing facts
+-   ****Knowledge Base Querying****: Formulating questions and retrieving answers through logical inference
+-   ****Solution Enumeration****: Systematically discovering all possible answers to logical queries
+-   ****Deductive Reasoning****: How the engine combines facts and rules to reach conclusions
 
 This test demonstrates the fundamental pattern of Prolog programming: starting with basic facts and building complex relationships through rules. We create a family tree and then derive grandparent relationships from parent facts:
 
-#+begin_SRC emacs-lisp
+```emacs-lisp
 (ert-deftest eprolog-core-basic-facts-and-rules ()
   "Test basic fact and rule definition from README.org examples."
   (eprolog-test--restore-builtins)
-  
+
   ;; Define facts using convenient alias
   (eprolog-define-predicate (parent tom bob))
   (eprolog-define-predicate (parent tom liz))
   (eprolog-define-predicate (parent bob ann))
   (eprolog-define-predicate (parent bob pat))
   (eprolog-define-predicate (parent pat jim))
-  
+
   ;; Define rule
   (eprolog-define-predicate (grandparent _x _z)
     (parent _x _y)
     (parent _y _z))
-  
+
   ;; Test basic facts
   (should (eprolog-test--has-solution-p '((parent tom bob))))
   (should (eprolog-test--has-solution-p '((parent pat jim))))
   (should-not (eprolog-test--has-solution-p '((parent jim tom))))
-  
+
   ;; Test rule - grandparent relationships
   (should (eprolog-test--has-solution-p '((grandparent tom ann))))
   (should (eprolog-test--has-solution-p '((grandparent tom pat))))
   (should (eprolog-test--has-solution-p '((grandparent bob jim))))
   (should-not (eprolog-test--has-solution-p '((grandparent pat tom))))
-  
+
   ;; Test query with variable
   (let ((solutions (eprolog-test--collect-solutions '((grandparent tom _x)))))
     (should (= (length solutions) 2))
     (should (member '((_x . ann)) solutions))
     (should (member '((_x . pat)) solutions)))
-  
+
   ;; More tests for verification
   (should-not (eprolog-test--has-solution-p '((parent alice bob)))))
-#+end_SRC
+```
 
 This test shows how to dynamically define predicates with various arities:
 
-#+begin_SRC emacs-lisp
+```emacs-lisp
 (ert-deftest eprolog-core-predicate-definition-tests ()
   "Test different ways of defining predicates."
   (eprolog-test--restore-builtins)
-  
+
   ;; Facts with different arities
   (eprolog-define-predicate (zero-arity))
   (eprolog-define-predicate (one-arity foo))
   (eprolog-define-predicate (two-arity foo bar))
-  
+
   ;; Test they can be queried
   (should (eprolog-test--has-solution-p '((zero-arity))))
   (should (eprolog-test--has-solution-p '((one-arity foo))))
   (should (eprolog-test--has-solution-p '((two-arity foo bar))))
-  
+
   ;; Test failure cases
   (should-not (eprolog-test--has-solution-p '((one-arity bar))))
   (should-not (eprolog-test--has-solution-p '((two-arity bar foo)))))
-#+end_SRC
+```
 
 This test demonstrates predicate replacement:
 
-#+begin_SRC emacs-lisp
+```emacs-lisp
 (ert-deftest eprolog-core-predicate-replacement ()
   "Test predicate replacement with same arity."
   (eprolog-test--restore-builtins)
-  
+
   ;; Define initial predicates
   (eprolog-define-predicate (replaceable-pred old-value))
   (should (eprolog-test--has-solution-p '((replaceable-pred old-value))))
-  
+
   ;; Add more clauses without replacement
   (eprolog-define-predicate (replaceable-pred another-value))
   (should (= (length (eprolog-test--collect-solutions '((replaceable-pred _x)))) 2))
-  
+
   ;; Replace with new definition using !
   (eprolog-define-predicate! (replaceable-pred new-value))
   (should (eprolog-test--has-solution-p '((replaceable-pred new-value))))
   (should-not (eprolog-test--has-solution-p '((replaceable-pred old-value))))
   (should-not (eprolog-test--has-solution-p '((replaceable-pred another-value))))
   (should (= (length (eprolog-test--collect-solutions '((replaceable-pred _x)))) 1)))
-#+end_SRC
+```
 
 This test demonstrates a family tree from the Sazae-san manga/anime:
 
-#+begin_SRC emacs-lisp
+```emacs-lisp
 (ert-deftest eprolog-core-family-tree-sazae-san ()
   "Test family tree with Sazae-san family."
   (eprolog-test--restore-builtins)
-  
+
   ;; Define the Isono/Fuguta family tree
   (eprolog-define-predicate (parent namihei sazae))
   (eprolog-define-predicate (parent namihei katsuo))
@@ -124,27 +122,27 @@ This test demonstrates a family tree from the Sazae-san manga/anime:
   (eprolog-define-predicate (parent fune wakame))
   (eprolog-define-predicate (parent sazae tarao))
   (eprolog-define-predicate (parent masuo tarao))
-  
+
   ;; Test direct relationships
   (should (eprolog-test--has-solution-p '((parent namihei sazae))))
   (should (eprolog-test--has-solution-p '((parent sazae tarao))))
-  
+
   ;; Define grandparent rule
   (eprolog-define-predicate (grandparent _x _z)
     (parent _x _y)
     (parent _y _z))
-  
+
   ;; Test grandparent relationships
   (should (eprolog-test--has-solution-p '((grandparent namihei tarao))))
   (should (eprolog-test--has-solution-p '((grandparent fune tarao))))
-  
+
   ;; Test finding all grandchildren of namihei
   (let ((grandchildren (eprolog-test--collect-solutions '((grandparent namihei _x)))))
     (should (= (length grandchildren) 1))
     (should (member '((_x . tarao)) grandchildren))))
-#+end_SRC
+```
 
-** Unification and Equality
+## Unification and Equality
 
 This section explores unification, the sophisticated pattern matching mechanism that serves as the computational engine of Prolog. Unification goes beyond simple equality checking—it's a bidirectional constraint satisfaction process that determines whether terms can be made identical through variable instantiation.
 
@@ -153,27 +151,29 @@ Unification is what makes Prolog queries so powerful: when you ask a question, t
 Understanding unification mechanics is crucial because it affects every aspect of Prolog execution: how goals match against clauses, how variables propagate their bindings across subgoals, and how the system explores alternative solution paths.
 
 Key unification concepts covered:
-- **Term Matching**: How structured terms unify through recursive pattern matching
-- **Variable Binding**: The process of instantiating variables to make terms identical
-- **Bidirectional Constraint Propagation**: How bindings flow through complex term structures
-- **Occurs Check**: Preventing infinite structures in unification
-- **Unification vs. Equality**: The distinction between pattern matching and value comparison
+
+-   ****Term Matching****: How structured terms unify through recursive pattern matching
+-   ****Variable Binding****: The process of instantiating variables to make terms identical
+-   ****Bidirectional Constraint Propagation****: How bindings flow through complex term structures
+-   ****Occurs Check****: Preventing infinite structures in unification
+-   ****Unification vs. Equality****: The distinction between pattern matching and value comparison
 
 The equals predicate (=) performs unification between two terms. If the terms can be unified (made identical through variable bindings), the predicate succeeds; otherwise, it fails. This isn't the same as testing for existing equality—it actively creates bindings to make the terms equal if possible.
 
 Key unification concepts:
-- *Variable Binding*: Unbound variables can be unified with any term
-- *Structural Matching*: Complex terms unify if their structure and components match
-- *Bidirectional Nature*: Unification works symmetrically (X=Y is the same as Y=X)
-- *Occurs Check*: Prevents creating infinite structures (optional in ε-prolog)
 
-Understanding the difference between unification (=) and strict equality (==) is crucial for effective Prolog programming. While unification creates bindings, strict equality only tests existing values without creating new bindings.
+-   **Variable Binding**: Unbound variables can be unified with any term
+-   **Structural Matching**: Complex terms unify if their structure and components match
+-   **Bidirectional Nature**: Unification works symmetrically (X=Y is the same as Y=X)
+-   **Occurs Check**: Prevents creating infinite structures (optional in ε-prolog)
 
-#+begin_SRC emacs-lisp
+Understanding the difference between unification (`) and strict equality (=`) is crucial for effective Prolog programming. While unification creates bindings, strict equality only tests existing values without creating new bindings.
+
+```emacs-lisp
 (ert-deftest eprolog-core-unification-and-equality ()
   "Test unification and strict equality from README.org."
   (eprolog-test--restore-builtins)
-  
+
   ;; Test unification (=)
   (should (eprolog-test--has-solution-p '((= 3 3))))
   (should (eprolog-test--has-solution-p '((= _x 3))))
@@ -181,125 +181,125 @@ Understanding the difference between unification (=) and strict equality (==) is
   (should (eprolog-test--has-solution-p '((= (f _x) (f 3)))))
   (should-not (eprolog-test--has-solution-p '((= 3 4))))
   (should-not (eprolog-test--has-solution-p '((= (f _x) (g _x)))))
-  
+
   ;; Test strict equality (==)  
   (should (eprolog-test--has-solution-p '((== 3 3))))
   (should-not (eprolog-test--has-solution-p '((== _x 3))))
   (should-not (eprolog-test--has-solution-p '((== _x _y))))
   (should (eprolog-test--has-solution-p '((= _x 3) (== _x 3))))
-  
+
   ;; Unification with structures
   (should (eprolog-test--has-solution-p '((= (person john 30) (person john 30)))))
   (should (eprolog-test--has-solution-p '((= (person _name 30) (person john 30)))))
   (should-not (eprolog-test--has-solution-p '((= (person john 30) (person jane 30))))))
-#+end_SRC
+```
 
-** Unification (=) Negative Tests
+## Unification (=) Negative Tests
 
 These tests verify that unification properly fails in cases where terms cannot be made equal:
 
-#+begin_SRC emacs-lisp
+```emacs-lisp
 (ert-deftest eprolog-core-unification-negative-tests ()
   "Test cases where unification should fail."
   (eprolog-test--restore-builtins)
-  
+
   ;; Atoms that don't match
   (should-not (eprolog-test--has-solution-p '((= foo bar))))
   (should-not (eprolog-test--has-solution-p '((= atom1 atom2))))
-  
+
   ;; Numbers that don't match
   (should-not (eprolog-test--has-solution-p '((= 42 43))))
   (should-not (eprolog-test--has-solution-p '((= 0 1))))
-  
+
   ;; Structures with different functors
   (should-not (eprolog-test--has-solution-p '((= (f _x) (g _x)))))
   (should-not (eprolog-test--has-solution-p '((= (foo _a _b) (bar _a _b)))))
-  
+
   ;; Structures with different arities
   (should-not (eprolog-test--has-solution-p '((= (f _x) (f _x _y)))))
   (should-not (eprolog-test--has-solution-p '((= (pred _a) (pred _a _b _c)))))
-  
+
   ;; Lists of different lengths
   (should-not (eprolog-test--has-solution-p '((= (1 2) (1 2 3)))))
   (should-not (eprolog-test--has-solution-p '((= () (a)))))
-  
+
   ;; Conflicting variable bindings
   (should-not (eprolog-test--has-solution-p '((= _x 1) (= _x 2))))
   (should-not (eprolog-test--has-solution-p '((= (f _x _x) (f 1 2))))))
-#+end_SRC
+```
 
-** Strict Equality (==) Negative Tests
+## Strict Equality (==) Negative Tests
 
 These tests verify that strict equality properly fails when terms are not already identical:
 
-#+begin_SRC emacs-lisp
+```emacs-lisp
 (ert-deftest eprolog-core-strict-equality-negative-tests ()
   "Test cases where strict equality should fail."
   (eprolog-test--restore-builtins)
-  
+
   ;; Unbound variables
   (should-not (eprolog-test--has-solution-p '((== _x _y))))
   (should-not (eprolog-test--has-solution-p '((== _x 42))))
   (should-not (eprolog-test--has-solution-p '((== _unbound atom))))
-  
+
   ;; Different atoms
   (should-not (eprolog-test--has-solution-p '((== foo bar))))
   (should-not (eprolog-test--has-solution-p '((== yes no))))
-  
+
   ;; Different numbers
   (should-not (eprolog-test--has-solution-p '((== 1 2))))
   ;; Note: 0 and -0 might be considered equal in some implementations
   (should-not (eprolog-test--has-solution-p '((== 1 0))))
-  
+
   ;; Different structures
   (should-not (eprolog-test--has-solution-p '((== (f a) (f b)))))
   (should-not (eprolog-test--has-solution-p '((== (point 1 2) (point 2 1)))))
-  
+
   ;; Variables bound to different values
   (should-not (eprolog-test--has-solution-p '((= _x 1) (= _y 2) (== _x _y))))
   (should-not (eprolog-test--has-solution-p '((= _x foo) (= _y bar) (== _x _y)))))
-#+end_SRC
+```
 
-** Variable Unification Edge Cases
+## Variable Unification Edge Cases
 
 This section delves into the sophisticated aspects of variable unification, exploring edge cases, anonymous variables, and complex binding scenarios that test the limits and nuances of the unification algorithm.
 
 Variable unification in Prolog involves subtle behaviors that distinguish it from simple assignment or equality checking. Understanding these edge cases is crucial for writing robust logic programs and avoiding common pitfalls in variable handling.
 
-#+begin_SRC emacs-lisp
+```emacs-lisp
 (ert-deftest eprolog-core-anonymous-variables ()
   "Test anonymous variable behavior."
   (eprolog-test--restore-builtins)
-  
+
   ;; Anonymous variables don't unify with each other
   (eprolog-define-predicate (has-parts _ _))
   (should (eprolog-test--has-solution-p '((has-parts a b))))
   (should (eprolog-test--has-solution-p '((has-parts x y))))
-  
+
   ;; Each _ is a separate variable
   (eprolog-define-predicate (test-anon _x _y) (= _x 1) (= _y 2))
   (should (eprolog-test--has-solution-p '((test-anon _ _))))
-  
+
   ;; Anonymous variables in queries
   (eprolog-define-predicate (triple a b c))
   (eprolog-define-predicate (triple x y z))
   (should (= (length (eprolog-test--collect-solutions '((triple _ _ _)))) 2)))
-#+end_SRC
+```
 
 This test demonstrates more complex unification scenarios:
 
-#+begin_SRC emacs-lisp
+```emacs-lisp
 (ert-deftest eprolog-core-variable-unification-advanced ()
   "Test advanced variable unification patterns."
   (eprolog-test--restore-builtins)
-  
+
   ;; Unification creates bindings that persist through the query
   (let ((solutions (eprolog-test--collect-solutions '((= _x 42) (= _y _x)))))
     (should (= (length solutions) 1))
     (let ((bindings (car solutions)))
       (should (equal (assoc '_x bindings) '(_x . 42)))
       (should (equal (assoc '_y bindings) '(_y . 42)))))
-  
+
   ;; Unification with complex structures
   (let ((solutions (eprolog-test--collect-solutions 
                     '((= (person _name _age) (person john 30))))))
@@ -307,7 +307,7 @@ This test demonstrates more complex unification scenarios:
     (let ((bindings (car solutions)))
       (should (equal (assoc '_name bindings) '(_name . john)))
       (should (equal (assoc '_age bindings) '(_age . 30)))))
-  
+
   ;; Circular bindings through unification
   (let ((solutions (eprolog-test--collect-solutions 
                     '((= _x _y) (= _y _z) (= _z 100)))))
@@ -317,7 +317,7 @@ This test demonstrates more complex unification scenarios:
       (should (equal (cdr (assoc '_x bindings)) 100))
       (should (equal (cdr (assoc '_y bindings)) 100))
       (should (equal (cdr (assoc '_z bindings)) 100))))
-  
+
   ;; Partial structure unification
   (let ((solutions (eprolog-test--collect-solutions 
                     '((= (f _x (g _y)) (f a (g b)))))))
@@ -325,18 +325,18 @@ This test demonstrates more complex unification scenarios:
     (let ((bindings (car solutions)))
       (should (equal (assoc '_x bindings) '(_x . a)))
       (should (equal (assoc '_y bindings) '(_y . b)))))
-  
+
   ;; Failed unification doesn't create partial bindings
   (should-not (eprolog-test--has-solution-p 
                '((= (pair _x _x) (pair 1 2)))))
-  
+
   ;; Unification order test (variable names may differ)
   (let ((sol1 (eprolog-test--collect-solutions '((= _x _y) (= _y 5))))
         (sol2 (eprolog-test--collect-solutions '((= _y 5) (= _x _y)))))
     ;; Both should have solutions with the same values
     (should (= (length sol1) 1))
     (should (= (length sol2) 1)))
-  
+
   ;; List unification
   (let ((solutions (eprolog-test--collect-solutions 
                     '((= (_head . _tail) (1 2 3))))))
@@ -344,45 +344,45 @@ This test demonstrates more complex unification scenarios:
     (let ((bindings (car solutions)))
       (should (equal (assoc '_head bindings) '(_head . 1)))
       (should (equal (assoc '_tail bindings) '(_tail 2 3)))))
-  
+
   ;; Verify proper variable scoping in nested structures
   (eprolog-define-predicate (nested-test _person)
     (= _person (person _name _age))
     (= _name john))
-  
+
   (let ((solutions (eprolog-test--collect-solutions '((nested-test _person)))))
     (should (= (length solutions) 1))
     ;; Should have a solution with john as the name
     (let ((person-binding (cdr (assoc '_person (car solutions)))))
       (should (member 'john person-binding)))))
-#+end_SRC
+```
 
-** Occurs Check
+## Occurs Check
 
 The occurs check prevents the creation of infinite structures during unification:
 
-#+begin_SRC emacs-lisp
+```emacs-lisp
 (ert-deftest eprolog-core-occurs-check ()
   "Test occurs check in unification."
   (eprolog-test--restore-builtins)
-  
+
   ;; Test occurs check prevents infinite structures
   (let ((eprolog-occurs-check t))
     (should-not (eprolog-test--has-solution-p '((= _x (_x)))))
     (should-not (eprolog-test--has-solution-p '((= _x (f _x)))))))
-#+end_SRC
+```
 
-** Core Engine Internal Tests
+## Core Engine Internal Tests
 
 These tests verify the internal engine functions that power ε-prolog. While these test private APIs, they provide valuable regression testing for the core functionality.
 
-*** Variable Handling Functions
+### Variable Handling Functions
 
-#+begin_SRC emacs-lisp
+```emacs-lisp
 (ert-deftest eprolog-core-variable-handling ()
   "Test core variable handling functions."
   (eprolog-test--restore-builtins)
-  
+
   ;; Test variable detection
   (should (eprolog--variable-p '_x))
   (should (eprolog--variable-p '_foo))
@@ -390,13 +390,13 @@ These tests verify the internal engine functions that power ε-prolog. While the
   (should-not (eprolog--variable-p 123))
   (should-not (eprolog--variable-p "string"))
   (should-not (eprolog--variable-p '(list)))
-  
+
   ;; Test named variable detection
   (should (eprolog--named-variable-p '_x))
   (should (eprolog--named-variable-p '_foo))
   (should-not (eprolog--named-variable-p '_))
   (should-not (eprolog--named-variable-p 'atom))
-  
+
   ;; Test anonymous variable replacement
   (let ((term '(foo _ bar _)))
     (let ((result (eprolog--replace-anonymous-variables term)))
@@ -412,17 +412,17 @@ These tests verify the internal engine functions that power ε-prolog. While the
 (ert-deftest eprolog-core-variables-in ()
   "Test extraction of variables from terms."
   (eprolog-test--restore-builtins)
-  
+
   ;; Test simple cases
   (should (equal (eprolog--variables-in 'atom) nil))
   (should (equal (eprolog--variables-in '_x) '(_x)))
-  
+
   ;; Test compound terms
   (let ((vars (eprolog--variables-in '(foo _x _y _x))))
     (should (= (length vars) 2))
     (should (member '_x vars))
     (should (member '_y vars)))
-  
+
   ;; Test nested structures
   (let ((vars (eprolog--variables-in '(foo (_x bar) (baz _y _x)))))
     (should (= (length vars) 2))
@@ -432,41 +432,41 @@ These tests verify the internal engine functions that power ε-prolog. While the
 (ert-deftest eprolog-core-ground-predicate ()
   "Test ground term detection."
   (eprolog-test--restore-builtins)
-  
+
   ;; Ground terms
   (should (eprolog--ground-p 'atom))
   (should (eprolog--ground-p 123))
   (should (eprolog--ground-p "string"))
   (should (eprolog--ground-p '(foo bar baz)))
   (should (eprolog--ground-p '(nested (structure (with atoms)))))
-  
+
   ;; Non-ground terms
   (should-not (eprolog--ground-p '_x))
   (should-not (eprolog--ground-p '(foo _x)))
   (should-not (eprolog--ground-p '(nested (structure _var)))))
-#+end_SRC
+```
 
-*** Substitution and Binding Functions
+### Substitution and Binding Functions
 
 This subsection tests the internal functions responsible for variable substitution and binding management—the low-level mechanisms that implement unification and maintain variable consistency throughout query execution.
 
-#+begin_SRC emacs-lisp
+```emacs-lisp
 (ert-deftest eprolog-core-substitution ()
   "Test substitution of bindings in terms."
   (eprolog-test--restore-builtins)
-  
+
   ;; Test simple substitution (note: function signature is (bindings expression))
   (let ((bindings '((_x . atom) (_y . 123))))
     (should (equal (eprolog--substitute-bindings bindings '_x) 'atom))
     (should (equal (eprolog--substitute-bindings bindings '_y) 123))
     (should (equal (eprolog--substitute-bindings bindings '_z) '_z))
     (should (equal (eprolog--substitute-bindings bindings 'atom) 'atom)))
-  
+
   ;; Test compound substitution
   (let ((bindings '((_x . foo) (_y . bar))))
     (should (equal (eprolog--substitute-bindings bindings '(pair _x _y))
                    '(pair foo bar))))
-  
+
   ;; Test nested substitution
   (let ((bindings '((_x . _y) (_y . value))))
     (should (equal (eprolog--substitute-bindings bindings '_x) 'value))
@@ -476,27 +476,27 @@ This subsection tests the internal functions responsible for variable substituti
 (ert-deftest eprolog-core-variable-lookup ()
   "Test variable lookup in bindings."
   (eprolog-test--restore-builtins)
-  
+
   ;; Test direct lookup
   (let ((bindings '((_x . atom) (_y . 123))))
     (should (equal (eprolog--lookup-variable '_x bindings) 'atom))
     (should (equal (eprolog--lookup-variable '_y bindings) 123))
     (should (equal (eprolog--lookup-variable '_z bindings) nil)))
-  
+
   ;; Test chained lookup (lookup only does direct lookup, not transitive)
   (let ((bindings '((_x . _y) (_y . _z) (_z . final))))
     (should (equal (eprolog--lookup-variable '_x bindings) '_y))
     (should (equal (eprolog--lookup-variable '_y bindings) '_z))
     (should (equal (eprolog--lookup-variable '_z bindings) 'final))))
-#+end_SRC
+```
 
-*** Variable Renaming Functions
+### Variable Renaming Functions
 
-#+begin_SRC emacs-lisp
+```emacs-lisp
 (ert-deftest eprolog-core-rename-vars ()
   "Test variable renaming functionality."
   (eprolog-test--restore-builtins)
-  
+
   ;; Test simple renaming
   (let ((term '(foo _x _y)))
     (let ((renamed (eprolog--rename-vars term)))
@@ -508,7 +508,7 @@ This subsection tests the internal functions responsible for variable substituti
       ;; Renamed variables should be different from originals
       (should-not (equal (cadr renamed) '_x))
       (should-not (equal (caddr renamed) '_y))))
-  
+
   ;; Test consistent renaming
   (let ((term '(foo _x _x _y)))
     (let ((renamed (eprolog--rename-vars term)))
@@ -516,23 +516,23 @@ This subsection tests the internal functions responsible for variable substituti
       (should (equal (cadr renamed) (caddr renamed)))
       ;; Different variables should get different names
       (should-not (equal (cadr renamed) (cadddr renamed))))))
-#+end_SRC
+```
 
-** Resource Exhaustion and Performance Tests
+## Resource Exhaustion and Performance Tests
 
 This section rigorously tests ε-prolog's behavior under extreme conditions, including resource exhaustion, performance boundaries, and stress scenarios. These tests ensure that the system degrades gracefully under pressure rather than failing catastrophically.
 
 Understanding how a Prolog system behaves under stress is crucial for building reliable applications. These tests verify that ε-prolog maintains logical consistency and provides predictable failure modes when faced with resource constraints or computationally intensive queries.
 
-*** Deep Recursion Tests
+### Deep Recursion Tests
 
 These tests explore the system's behavior with deeply recursive predicates, testing stack limits and the graceful handling of potential stack overflow conditions.
 
-#+begin_SRC emacs-lisp
+```emacs-lisp
 (ert-deftest eprolog-core-deep-recursion-limits ()
   "Test deep recursion and stack overflow protection."
   (eprolog-test--restore-builtins)
-  
+
   ;; Define deeply recursive predicate
   (eprolog-define-predicate (countdown _n _result)
     (= _n 0)
@@ -541,25 +541,25 @@ These tests explore the system's behavior with deeply recursive predicates, test
     (lispp (> _n 0))
     (is _n1 (- _n 1))
     (countdown _n1 _result))
-  
+
   ;; Test reasonable recursion depth (reduced to 10 for safety)
   (should (eprolog-test--has-solution-p '((countdown 10 _result))))
-  
+
   ;; Test very deep recursion - should either succeed or fail gracefully
   (condition-case nil
       (eprolog-test--has-solution-p '((countdown 10000 _result)))
     (error t))) ;; Accept either success or controlled failure
-#+end_SRC
+```
 
-*** Very Large Data Structure Tests
+### Very Large Data Structure Tests
 
 These tests verify the system's handling of large terms, deeply nested structures, and complex data that may push memory and processing limits.
 
-#+begin_SRC emacs-lisp
+```emacs-lisp
 (ert-deftest eprolog-core-large-data-structures ()
   "Test handling of very large terms and lists."
   (eprolog-test--restore-builtins)
-  
+
   ;; Create moderately large list (100 elements) - may hit limits
   (let ((large-list (make-list 100 'a)))
     (condition-case nil
@@ -567,105 +567,105 @@ These tests verify the system's handling of large terms, deeply nested structure
           (eval `(eprolog-define-predicate (large-fact ,large-list)))
           (eprolog-test--has-solution-p `((large-fact ,large-list))))
       (error t))) ;; Accept either success or failure due to resource limits
-  
+
   ;; Create moderately nested structure (10 levels)
   (let ((nested-struct 'base))
     (dotimes (i 10)
       (setq nested-struct (list 'level nested-struct)))
     (eval `(eprolog-define-predicate (nested-fact ,nested-struct)))
     (should (eprolog-test--has-solution-p `((nested-fact ,nested-struct)))))
-  
+
   ;; Test unification with moderately large structures
   (let ((big-term (make-list 10 '(complex (nested (structure a b c))))))
     (should (eprolog-test--has-solution-p `((= _x ,big-term))))))
-#+end_SRC
+```
 
-*** Memory Stress Tests
+### Memory Stress Tests
 
 These tests stress the memory management systems by creating many facts, complex variable binding chains, and large knowledge bases to verify stable operation under memory pressure.
 
-#+begin_SRC emacs-lisp
+```emacs-lisp
 (ert-deftest eprolog-core-memory-stress ()
   "Test memory usage under stress conditions."
   (eprolog-test--restore-builtins)
-  
+
   ;; Create many facts to test knowledge base memory usage (reduced count)
   (dotimes (i 100)
     (eval `(eprolog-define-predicate (stress-fact ,i ,i ,i))))
-  
+
   ;; Verify facts are stored correctly
   (should (eprolog-test--has-solution-p '((stress-fact 50 50 50))))
   (should (eprolog-test--has-solution-p '((stress-fact 99 99 99))))
-  
+
   ;; Test variable binding memory with many variables (reduced for stability)
   (let ((query '((= _x0 0))))
     (dotimes (i 9)  ;; Reduced from 99 to 9 for stability
       (let ((var (intern (format "_x%d" (1+ i))))
             (prev-var (intern (format "_x%d" i))))
         (push `(= ,var ,prev-var) query)))
-    
+
     ;; This creates a chain of 10 variable bindings
     (should (eprolog-test--has-solution-p (reverse query)))))
-#+end_SRC
+```
 
-** Edge Cases and Special Character Handling
+## Edge Cases and Special Character Handling
 
 This section explores the robustness of ε-prolog's term handling across diverse character sets, boundary conditions, and edge cases that test the limits of the parser and unification system.
 
 Comprehensive edge case testing ensures that ε-prolog handles unusual but valid inputs gracefully, maintaining consistency across different character encodings, atom naming conventions, and boundary values that might cause issues in less robust systems.
 
-*** Special Character Tests
+### Special Character Tests
 
 These tests verify that ε-prolog correctly handles atoms with special characters and practical naming conventions commonly encountered in real-world usage.
 
-#+begin_SRC emacs-lisp
+```emacs-lisp
 (ert-deftest eprolog-core-special-characters ()
   "Test handling of practical special characters in atom names."
   (eprolog-test--restore-builtins)
-  
+
   ;; Test atoms with spaces (practical for quoted atoms)
   (eprolog-define-predicate (special-chars |atom with spaces|))
   (should (eprolog-test--has-solution-p '((special-chars |atom with spaces|))))
-  
+
   ;; Test atoms with common punctuation
   (eprolog-define-predicate (punct-test +plus+ -minus- *star*))
   (should (eprolog-test--has-solution-p '((punct-test +plus+ -minus- *star*))))
-  
+
   ;; Test atoms with numbers and mixed alphanumeric characters
   (eprolog-define-predicate (mixed-123 a1b2c3))
   (should (eprolog-test--has-solution-p '((mixed-123 a1b2c3))))
-  
+
   ;; Test underscore and dash in atom names (common in practice)
   (eprolog-define-predicate (underscore-test my_atom another-atom))
   (should (eprolog-test--has-solution-p '((underscore-test my_atom another-atom)))))
-#+end_SRC
+```
 
-*** Empty and Boundary Value Tests
+### Empty and Boundary Value Tests
 
 This subsection tests the system's handling of empty structures, boundary numeric values, and minimal valid inputs to ensure robust behavior at the edges of the valid input space.
 
-#+begin_SRC emacs-lisp
+```emacs-lisp
 (ert-deftest eprolog-core-empty-and-boundary-values ()
   "Test handling of empty inputs and boundary values."
   (eprolog-test--restore-builtins)
-  
+
   ;; Test empty goal lists (should succeed trivially)
   ;; Note: This might not be valid syntax in all Prolog implementations
   ;; (should (eprolog-test--has-solution-p '(())))
-  
+
   ;; Test single atom facts
   (eprolog-define-predicate atom-fact)
   (should (eprolog-test--has-solution-p '((atom-fact))))
-  
+
   ;; Test facts with empty lists
   (eprolog-define-predicate (empty-list-fact ()))
   (should (eprolog-test--has-solution-p '((empty-list-fact ()))))
-  
+
   ;; Test unification with empty structures
   (should (eprolog-test--has-solution-p '((= _x ()))))
   (should (eprolog-test--has-solution-p '((= () _x))))
   (should (eprolog-test--has-solution-p '((= () ()))))
-  
+
   ;; Test boundary numeric values
   (should (eprolog-test--has-solution-p '((= _x 0))))
   (should (eprolog-test--has-solution-p '((= _x -1))))
@@ -673,36 +673,37 @@ This subsection tests the system's handling of empty structures, boundary numeri
         (min-int most-negative-fixnum))
     (should (eprolog-test--has-solution-p `((= _x ,max-int))))
     (should (eprolog-test--has-solution-p `((= _x ,min-int))))))
-#+end_SRC
+```
 
-*** Zero and Null Value Handling
+### Zero and Null Value Handling
 
 This subsection explores the distinct treatment of various "empty" or "null" values in ε-prolog, testing how the system distinguishes between zero, nil, null atoms, and empty lists.
 
-#+begin_SRC emacs-lisp
+```emacs-lisp
 (ert-deftest eprolog-core-zero-null-handling ()
   "Test handling of zero, null, and nil values."
   (eprolog-test--restore-builtins)
-  
+
   ;; Test various representations of "empty" or "null"
   (eprolog-define-predicate (zero-test 0))
   (eprolog-define-predicate (nil-test nil))
   (eprolog-define-predicate (null-test null))
   (eprolog-define-predicate (empty-test ()))
-  
+
   (should (eprolog-test--has-solution-p '((zero-test 0))))
   (should (eprolog-test--has-solution-p '((nil-test nil))))
   (should (eprolog-test--has-solution-p '((null-test null))))
   (should (eprolog-test--has-solution-p '((empty-test ()))))
-  
+
   ;; Test unification between different "empty" representations
   (should-not (eprolog-test--has-solution-p '((= 0 nil))))
   (should (eprolog-test--has-solution-p '((= nil ()))))
   (should-not (eprolog-test--has-solution-p '((= null nil))))
-  
+
   ;; Test arithmetic with zero
   (should (eprolog-test--has-solution-p '((= _x 0))))
-  
+
   ;; Test list operations with nil/empty lists
   (should (eprolog-test--has-solution-p '((= _empty ())))))
-#+end_SRC
+```
+

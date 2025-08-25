@@ -1,36 +1,34 @@
-#+TITLE: Complex Examples and Applications
-#+AUTHOR: Masaya Taniguchi
-#+PROPERTY: header-args:emacs-lisp :tangle yes
 
-* Complex Examples and Applications
+# Complex Examples and Applications
 
 This section explores sophisticated applications of ε-prolog, demonstrating how fundamental concepts combine to solve real-world problems. These examples showcase Prolog's unique strengths in relational reasoning, recursive problem solving, and elegant expression of complex logical relationships.
 
-** Family Tree Relationships
+## Family Tree Relationships
 
 Few domains illustrate Prolog's expressive power as clearly as family relationships. What begins as a simple collection of parent-child facts blossoms into a rich knowledge base capable of answering complex genealogical questions. This classic application demonstrates how Prolog's declarative approach naturally mirrors human reasoning about kinship.
 
 The elegance of family tree modeling in Prolog lies in how closely the logical representation matches our intuitive understanding of relationships. When we define that "X is a grandparent of Z if X is a parent of Y and Y is a parent of Z," we're expressing exactly the kind of logical reasoning humans use naturally. Prolog simply makes this reasoning computational.
 
-*** Comprehensive Family Tree Tests
+### Comprehensive Family Tree Tests
 
 Building a family tree in Prolog involves layering increasingly complex relationships on top of basic facts. This approach mirrors how we think about family relationships in the real world.
 
 Family trees provide an excellent example of how basic facts can be combined with rules to derive complex relationships. We start with basic parent relationships and build up to sophisticated kinship queries.
 
 This subsection covers:
-- Basic parent and marriage relationships
-- Gender distinctions for more precise relationship modeling
-- How facts and rules work together to build knowledge bases
-- The foundation for more complex relationship derivations
+
+-   Basic parent and marriage relationships
+-   Gender distinctions for more precise relationship modeling
+-   How facts and rules work together to build knowledge bases
+-   The foundation for more complex relationship derivations
 
 The following test establishes a comprehensive family tree covering all relationship types and complex queries:
 
-#+begin_SRC emacs-lisp
+```emacs-lisp
 (ert-deftest eprolog-example-family-tree-comprehensive ()
   "Test comprehensive family tree with all relationship types and complex queries."
   (eprolog-test--restore-builtins)
-  
+
   ;; === BASIC RELATIONSHIPS SETUP ===
   ;; Define parent relationships (parent Parent Child)
   (eprolog-define-prolog-predicate! (parent fune katsuo))
@@ -40,27 +38,27 @@ The following test establishes a comprehensive family tree covering all relation
   (eprolog-define-prolog-predicate (parent taiko ikura))
   (eprolog-define-prolog-predicate (parent katsuo child1))
   (eprolog-define-prolog-predicate (parent wakame child2))
-  
+
   ;; Define marriage relationships
   (eprolog-define-prolog-predicate! (married _x _y) (married-fact _x _y))
   (eprolog-define-prolog-predicate (married _x _y) (married-fact _y _x))
-  
+
   (eprolog-define-prolog-predicate! (married-fact fune namihei))
   (eprolog-define-prolog-predicate (married-fact sazae masuo))
   (eprolog-define-prolog-predicate (married-fact taiko norisuke))
-  
+
   ;; Define gender
   (eprolog-define-prolog-predicate! (male namihei))
   (eprolog-define-prolog-predicate (male katsuo))
   (eprolog-define-prolog-predicate (male masuo))
   (eprolog-define-prolog-predicate (male tarao))
   (eprolog-define-prolog-predicate (male norisuke))
-  
+
   (eprolog-define-prolog-predicate! (female fune))
   (eprolog-define-prolog-predicate (female sazae))
   (eprolog-define-prolog-predicate (female taiko))
   (eprolog-define-prolog-predicate (female wakame))
-  
+
   ;; === DERIVED RELATIONSHIPS ===
   ;; Define all derived relationship rules
   (eprolog-define-prolog-predicate! (child _x _y) (parent _y _x))
@@ -72,12 +70,12 @@ The following test establishes a comprehensive family tree covering all relation
   (eprolog-define-prolog-predicate! (brother _x _y) (sibling _x _y) (male _x))
   (eprolog-define-prolog-predicate! (ancestor _x _y) (parent _x _y))
   (eprolog-define-prolog-predicate (ancestor _x _y) (parent _x _z) (ancestor _z _y))
-  
+
   ;; Extended relationships
   (eprolog-define-prolog-predicate! (uncle _x _y) (parent _z _y) (sibling _x _z) (male _x))
   (eprolog-define-prolog-predicate! (aunt _x _y) (parent _z _y) (sibling _x _z) (female _x))
   (eprolog-define-prolog-predicate! (cousin _x _y) (parent _a _x) (parent _b _y) (sibling _a _b))
-  
+
   ;; Utility for unique sibling pairs
   (eprolog-define-prolog-predicate! (unique-sibling _x _y)
     (sibling _x _y)
@@ -92,7 +90,7 @@ The following test establishes a comprehensive family tree covering all relation
     (should (= (length solutions) 1)))
   (let ((solutions (eprolog-test--collect-solutions '((female wakame)))))
     (should (= (length solutions) 1)))
-  
+
   ;; === DERIVED RELATIONSHIP TESTS ===
   (let ((solutions (eprolog-test--collect-solutions '((child katsuo fune)))))
     (should (= (length solutions) 1)))
@@ -108,7 +106,7 @@ The following test establishes a comprehensive family tree covering all relation
     (should (= (length solutions) 1)))
   (let ((solutions (eprolog-test--collect-solutions '((ancestor fune tarao)))))
     (should (= (length solutions) 1)))
-  
+
   ;; === EXTENDED RELATIONSHIP TESTS ===
   (let ((solutions (eprolog-test--collect-solutions '((uncle katsuo tarao)))))
     (should (= (length solutions) 1)))
@@ -118,7 +116,7 @@ The following test establishes a comprehensive family tree covering all relation
     (should (= (length solutions) 1)))
   (let ((solutions (eprolog-test--collect-solutions '((cousin child1 child2)))))
     (should (= (length solutions) 1)))
-  
+
   ;; === COMPLEX MULTI-SOLUTION QUERIES ===
   ;; Test finding all children of fune
   (let ((solutions (eprolog-test--collect-solutions '((parent fune _child)))))
@@ -126,73 +124,73 @@ The following test establishes a comprehensive family tree covering all relation
     (should (member '((_child . katsuo)) solutions))
     (should (member '((_child . wakame)) solutions))
     (should (member '((_child . sazae)) solutions)))
-  
+
   ;; Test finding all grandchildren of fune
   (let ((solutions (eprolog-test--collect-solutions '((grandparent fune _grandchild)))))
     (should (= (length solutions) 3))
     (should (member '((_grandchild . tarao)) solutions))
     (should (member '((_grandchild . child1)) solutions))
     (should (member '((_grandchild . child2)) solutions)))
-  
+
   ;; Test finding all siblings of katsuo
   (let ((solutions (eprolog-test--collect-solutions '((sibling katsuo _sibling)))))
     (should (= (length solutions) 2))
     (should (member '((_sibling . wakame)) solutions))
     (should (member '((_sibling . sazae)) solutions)))
-  
+
   ;; Test symmetric sibling relationship shows duplicates
   (let ((solutions (eprolog-test--collect-solutions '((sibling _x _y)))))
     (should (>= (length solutions) 6))) ; katsuo-wakame, wakame-katsuo, etc.
-  
+
   ;; Test duplicate suppression technique using string ordering
   (let ((solutions (eprolog-test--collect-solutions '((unique-sibling _x _y)))))
     (should (= (length solutions) 3)) ; Only one direction of each pair
     (should (member '((_x . katsuo) (_y . sazae)) solutions))
     (should (member '((_x . katsuo) (_y . wakame)) solutions))
     (should (member '((_x . sazae) (_y . wakame)) solutions))))
-#+end_SRC
+```
 
 The family tree test demonstrates how basic facts can be combined with rules to derive complex relationships, showcasing the power of logical inference in Prolog.
 
-** Complex Backtracking and Control Flow
+## Complex Backtracking and Control Flow
 
 Understanding backtracking is essential for mastering Prolog. This section explores advanced scenarios where careful control of backtracking behavior is crucial for correct and efficient programs.
 
-*** Complex Backtracking Scenarios
+### Complex Backtracking Scenarios
 
 The cut operator provides fine-grained control over Prolog's backtracking mechanism:
 
-#+begin_SRC emacs-lisp
+```emacs-lisp
 (ert-deftest eprolog-example-complex-backtracking-with-cut ()
   "Test complex backtracking scenarios with cut."
   (eprolog-test--restore-builtins)
-  
+
   ;; Define choice predicates
   (eprolog-define-prolog-predicate! (color red))
   (eprolog-define-prolog-predicate (color green))
   (eprolog-define-prolog-predicate (color blue))
-  
+
   ;; Define predicate that uses cut
   (eprolog-define-prolog-predicate! (first-color _x)
     (color _x) !)
-  
+
   ;; Test without cut - should get all solutions
   (let ((solutions (eprolog-test--collect-solutions '((color _x)))))
     (should (= (length solutions) 3)))
-  
+
   ;; Test with cut - should get only first solution
   (let ((solutions (eprolog-test--collect-solutions '((first-color _x)))))
     (should (= (length solutions) 1))
     (should (equal (cdr (assoc '_x (car solutions))) 'red))))
-#+end_SRC
+```
 
 The repeat predicate combined with cut creates controlled loops:
 
-#+begin_SRC emacs-lisp
+```emacs-lisp
 (ert-deftest eprolog-example-repeat-with-complex-conditions ()
   "Test repeat predicate with complex termination conditions."
   (eprolog-test--restore-builtins)
-  
+
   ;; Test repeat with counter and cut
   (let ((counter 0))
     (eprolog-define-predicate (test-repeat-complex)
@@ -200,24 +198,24 @@ The repeat predicate combined with cut creates controlled loops:
       (lisp! (setq counter (1+ counter)))
       (lispp (>= counter 5))
       !)
-    
+
     (should (eprolog-test--has-solution-p '((test-repeat-complex))))
     (should (= counter 5))))
-#+end_SRC
+```
 
-** Advanced Applications
+## Advanced Applications
 
 The true test of any programming paradigm lies in its ability to express complex algorithms elegantly and naturally. This section ventures beyond basic Prolog concepts to explore how classical computational problems can be reimagined through the lens of logical relationships. These examples demonstrate that Prolog isn't just suitable for AI and symbolic reasoning—it's a versatile tool for algorithmic thinking.
 
-*** Recursive Algorithms
+### Recursive Algorithms
 
 Factorial calculation demonstrates basic recursion in Prolog:
 
-#+begin_SRC emacs-lisp
+```emacs-lisp
 (ert-deftest eprolog-example-factorial ()
   "Test recursive factorial implementation."
   (eprolog-test--restore-builtins)
-  
+
   ;; Define factorial predicate
   (eprolog-define-predicate! (factorial 0 1))
   (eprolog-define-predicate (factorial _n _f)
@@ -225,28 +223,28 @@ Factorial calculation demonstrates basic recursion in Prolog:
     (is _n1 (- _n 1))
     (factorial _n1 _f1)
     (is _f (* _n _f1)))
-  
+
   ;; Test factorial calculations
   (let ((solutions (eprolog-test--collect-solutions '((factorial 0 _f)))))
     (should (= (length solutions) 1))
     (should (= (cdr (assoc '_f (car solutions))) 1)))
-  
+
   (let ((solutions (eprolog-test--collect-solutions '((factorial 3 _f)))))
     (should (= (length solutions) 1))
     (should (= (cdr (assoc '_f (car solutions))) 6)))
-  
+
   (let ((solutions (eprolog-test--collect-solutions '((factorial 5 _f)))))
     (should (= (length solutions) 1))
     (should (= (cdr (assoc '_f (car solutions))) 120))))
-#+end_SRC
+```
 
 The Fibonacci sequence shows more complex recursive patterns:
 
-#+begin_SRC emacs-lisp
+```emacs-lisp
 (ert-deftest eprolog-example-fibonacci ()
   "Test Fibonacci sequence implementation."
   (eprolog-test--restore-builtins)
-  
+
   ;; Define Fibonacci predicate
   (eprolog-define-predicate! (fib 0 0))
   (eprolog-define-predicate (fib 1 1))
@@ -257,58 +255,59 @@ The Fibonacci sequence shows more complex recursive patterns:
     (fib _n1 _f1)
     (fib _n2 _f2)
     (is _f (+ _f1 _f2)))
- 
+
   ;; Test Fibonacci calculations
   (let ((solutions (eprolog-test--collect-solutions '((fib 0 _f)))))
     (should (= (cdr (assoc '_f (car solutions))) 0)))
-  
+
   (let ((solutions (eprolog-test--collect-solutions '((fib 1 _f)))))
     (should (= (cdr (assoc '_f (car solutions))) 1)))
-  
+
   (let ((solutions (eprolog-test--collect-solutions '((fib 3 _f)))))
     (should (= (cdr (assoc '_f (car solutions))) 2)))
-  
+
   (let ((solutions (eprolog-test--collect-solutions '((fib 4 _f)))))
     (should (= (cdr (assoc '_f (car solutions))) 3))))
-#+end_SRC
+```
 
 The Greatest Common Divisor algorithm demonstrates iterative computation in Prolog:
 
-#+begin_SRC emacs-lisp
+```emacs-lisp
 (ert-deftest eprolog-example-gcd-algorithm ()
   "Test Greatest Common Divisor algorithm."
   (eprolog-test--restore-builtins)
-  
+
   ;; Define GCD predicate
   (eprolog-define-predicate! (gcd _a 0 _a))
   (eprolog-define-predicate (gcd _a _b _g)
     (lispp (> _b 0))
     (is _r (mod _a _b))
     (gcd _b _r _g))
-  
+
   ;; Test GCD calculations
   (let ((solutions (eprolog-test--collect-solutions '((gcd 48 18 _g)))))
     (should (= (cdr (assoc '_g (car solutions))) 6)))
-  
+
   (let ((solutions (eprolog-test--collect-solutions '((gcd 15 25 _g)))))
     (should (= (cdr (assoc '_g (car solutions))) 5))))
-#+end_SRC
+```
 
-** Performance Testing
+## Performance Testing
 
 No programming system is complete without understanding its performance characteristics and limitations. While Prolog's declarative nature provides tremendous expressive power, it's essential to understand how that power scales with problem size and complexity. This section explores ε-prolog's performance envelope through systematic testing.
 
 Performance testing in logic programming differs from traditional benchmarking because the focus isn't just on raw execution speed—it's on understanding how logical inference scales with database size, recursion depth, and problem complexity. These tests help establish confidence that ε-prolog can handle real-world applications effectively.
 
 Key performance dimensions evaluated:
-- *Database Scaling*: How performance varies with the number of facts and rules
-- *Recursion Depth*: The system's ability to handle deep logical reasoning chains  
-- *Memory Management*: Behavior under high predicate density and complex structures
-- *Inference Complexity*: Performance with multiple choice points and backtracking scenarios
+
+-   **Database Scaling**: How performance varies with the number of facts and rules
+-   **Recursion Depth**: The system's ability to handle deep logical reasoning chains
+-   **Memory Management**: Behavior under high predicate density and complex structures
+-   **Inference Complexity**: Performance with multiple choice points and backtracking scenarios
 
 Comprehensive performance testing evaluates multiple aspects of system performance:
 
-#+begin_SRC emacs-lisp
+```emacs-lisp
 (ert-deftest eprolog-example-performance-tests ()
   "Test performance with larger databases and deep recursion."
   (eprolog-test--restore-builtins)
@@ -340,71 +339,70 @@ Comprehensive performance testing evaluates multiple aspects of system performan
   (let ((solutions (eprolog-test--collect-solutions '((deep-recursion 10 _result)))))
     (should (= (length solutions) 1))
     (should (equal (cdr (assoc '_result (car solutions))) 'done))))
-  
-#+end_SRC
+```
 
 Additional performance tests focus on specific aspects of system behavior:
 
-#+begin_SRC emacs-lisp
+```emacs-lisp
 (ert-deftest eprolog-example-large-database ()
   "Test performance with larger clause database."
   (eprolog-test--restore-builtins)
   (dotimes (i 100)
     (eval `(eprolog-define-predicate (test-num ,i))))
-  
+
   (let ((solutions (eprolog-test--collect-solutions '((test-num _x)))))
     (should (= (length solutions) 100))))
-#+end_SRC
+```
 
 Stress testing pushes the system to its limits:
 
-#+begin_SRC emacs-lisp
+```emacs-lisp
 (ert-deftest eprolog-example-stress-testing ()
   "Test system behavior under stress conditions."
   (eprolog-test--restore-builtins)
-  
+
   ;; Test many predicate clauses
   (dotimes (i 50)
     (eval `(eprolog-define-predicate (many-choices ,i))))
-  
+
   ;; Test that all solutions are found
   (let ((solutions (eprolog-test--collect-solutions '((many-choices _x)))))
     (should (= (length solutions) 50)))
-  
+
   ;; Test complex recursive predicate
   (eprolog-define-predicate! (deep-recursion 0 done))
   (eprolog-define-predicate (deep-recursion _n _result)
     (lispp (> _n 0))
     (is _n1 (- _n 1))
     (deep-recursion _n1 _result))
-  
+
   (let ((solutions (eprolog-test--collect-solutions '((deep-recursion 10 _result)))))
     (should (= (length solutions) 1))
     (should (equal (cdr (assoc '_result (car solutions))) 'done))))
-#+end_SRC
+```
 
-** Integration and End-to-End Tests
+## Integration and End-to-End Tests
 
 These tests verify complete workflows and interactions between different ε-prolog components.
 
-*** Multi-Module Integration Tests
+### Multi-Module Integration Tests
 
-#+begin_SRC emacs-lisp
+```emacs-lisp
 (ert-deftest eprolog-example-multi-feature-integration ()
   "Test integration of multiple ε-prolog features in a single workflow."
   (eprolog-test--restore-builtins)
-  
+
   ;; Define facts using core functionality
   (eprolog-define-predicate (person alice 25))
   (eprolog-define-predicate (person bob 30))
   (eprolog-define-predicate (person charlie 35))
-  
+
   ;; Use arithmetic to calculate age-related predicates
   (eprolog-define-predicate (adult _person)
     (person _person _age)
     (is _adult_age 18)
     (lispp (>= _age _adult_age)))
-  
+
   ;; Use control flow for complex logic
   (eprolog-define-predicate (age-group _person _group)
     (person _person _age)
@@ -413,10 +411,10 @@ These tests verify complete workflows and interactions between different ε-prol
         (if (lispp (< _age 40))
             (= _group middle)
             (= _group old))))
-  
+
   ;; Use list operations to collect results
   (eprolog-define-predicate (all-adults _adults))
-  
+
   ;; Test the integrated workflow
   (let ((solutions (eprolog-test--collect-solutions '((adult alice)))))
     (should (= (length solutions) 1)))
@@ -424,97 +422,97 @@ These tests verify complete workflows and interactions between different ε-prol
     (should (= (length solutions) 1)))
   (let ((solutions (eprolog-test--collect-solutions '((adult charlie)))))
     (should (= (length solutions) 1)))
-  
+
   (let ((solutions (eprolog-test--collect-solutions '((age-group alice young)))))
     (should (= (length solutions) 1)))
   (let ((solutions (eprolog-test--collect-solutions '((age-group bob middle)))))
     (should (= (length solutions) 1)))
   (let ((solutions (eprolog-test--collect-solutions '((age-group charlie middle)))))
     (should (= (length solutions) 1))))
-#+end_SRC
+```
 
-*** Real-World Database Simulation
+### Real-World Database Simulation
 
-#+begin_SRC emacs-lisp
+```emacs-lisp
 (ert-deftest eprolog-example-database-simulation ()
   "Test a complete database-like application with multiple tables and relationships."
   (eprolog-test--restore-builtins)
-  
+
   ;; Define "database tables" as predicates
   (eprolog-define-predicate (employee 1 "Alice" engineering 75000))
   (eprolog-define-predicate (employee 2 "Bob" sales 65000))
   (eprolog-define-predicate (employee 3 "Charlie" engineering 80000))
   (eprolog-define-predicate (employee 4 "Diana" marketing 70000))
-  
+
   (eprolog-define-predicate (department engineering "Engineering Floor"))
   (eprolog-define-predicate (department sales "Sales Office"))
   (eprolog-define-predicate (department marketing "Marketing Suite"))
-  
+
   ;; Define "views" and computed predicates
   (eprolog-define-predicate (high-earner _id _name)
     (employee _id _name _dept _salary)
     (lispp (> _salary 70000)))
-  
+
   (eprolog-define-predicate (department-info _name _dept _location)
     (employee _id _name _dept _salary)
     (department _dept _location))
-  
+
   ;; Define aggregation predicates
   (eprolog-define-predicate (department-count _dept _count)
     ;; This is a simplified version - real aggregation would be more complex
     (department _dept _location)
     (= _count 0)) ;; Placeholder implementation
-  
+
   ;; Test database operations
   (let ((solutions (eprolog-test--collect-solutions '((high-earner 1 "Alice")))))
     (should (= (length solutions) 1)))
   (let ((solutions (eprolog-test--collect-solutions '((high-earner 3 "Charlie")))))
     (should (= (length solutions) 1)))
   (should-not (eprolog-test--has-solution-p '((high-earner 2 "Bob"))))
-  
+
   (let ((solutions (eprolog-test--collect-solutions '((department-info "Alice" engineering "Engineering Floor")))))
     (should (= (length solutions) 1)))
   (let ((solutions (eprolog-test--collect-solutions '((department-info "Diana" marketing "Marketing Suite")))))
     (should (= (length solutions) 1)))
-  
+
   ;; Test complex queries with multiple constraints
   (let ((solutions (eprolog-test--collect-solutions 
     '((employee _id _name engineering _salary) (lispp (> _salary 70000))))))
     (should (>= (length solutions) 1)))
     ;; Should find Alice and Charlie who are in engineering with salary > 70000)
-#+end_SRC
+```
 
-*** Graph Algorithm Integration
+### Graph Algorithm Integration
 
-#+begin_SRC emacs-lisp
+```emacs-lisp
 (ert-deftest eprolog-example-graph-algorithms ()
   "Test graph algorithms using ε-prolog predicates."
   (eprolog-test--restore-builtins)
-  
+
   ;; Define graph edges
   (eprolog-define-predicate (edge a b))
   (eprolog-define-predicate (edge b c))
   (eprolog-define-predicate (edge c d))
   (eprolog-define-predicate (edge a c))
   (eprolog-define-predicate (edge b d))
-  
+
   ;; Define path finding predicate
   (eprolog-define-predicate (path _from _to)
     (edge _from _to))
   (eprolog-define-predicate (path _from _to)
     (edge _from _intermediate)
     (path _intermediate _to))
-  
+
   ;; Define reachability predicate  
   (eprolog-define-predicate (reachable _from _to)
     (path _from _to))
-  
+
   ;; Test direct connections
   (let ((solutions (eprolog-test--collect-solutions '((edge a b)))))
     (should (= (length solutions) 1)))
   (let ((solutions (eprolog-test--collect-solutions '((edge b c)))))
     (should (= (length solutions) 1)))
-  
+
   ;; Test path finding
   (let ((solutions (eprolog-test--collect-solutions '((path a b)))))
     (should (>= (length solutions) 1)))
@@ -522,31 +520,31 @@ These tests verify complete workflows and interactions between different ε-prol
     (should (>= (length solutions) 1)))
   (let ((solutions (eprolog-test--collect-solutions '((path a c)))))
     (should (>= (length solutions) 1)))
-  
+
   ;; Test reachability
   (let ((solutions (eprolog-test--collect-solutions '((reachable a d)))))
     (should (>= (length solutions) 1)))
   (should-not (eprolog-test--has-solution-p '((reachable d a)))))
-#+end_SRC
+```
 
-** Performance Regression Tests
+## Performance Regression Tests
 
 These tests establish performance baselines and detect regression in critical operations.
 
-*** Basic Operation Performance Tests
+### Basic Operation Performance Tests
 
-#+begin_SRC emacs-lisp
+```emacs-lisp
 (ert-deftest eprolog-example-basic-performance-regression ()
   "Test basic operation performance to detect regressions."
   (eprolog-test--restore-builtins)
-  
+
   ;; Test fact storage and retrieval performance (simplified)
   (let ((start-time (current-time)))
     ;; Define a few test facts manually
     (eprolog-define-predicate (perf-fact 1 1))
     (eprolog-define-predicate (perf-fact 2 2))
     (eprolog-define-predicate (perf-fact 3 3))
-    
+
     ;; Query the facts
     (let ((solutions (eprolog-test--collect-solutions '((perf-fact 1 1)))))
       (should (= (length solutions) 1)))
@@ -554,31 +552,31 @@ These tests establish performance baselines and detect regression in critical op
       (should (= (length solutions) 1)))
     (let ((solutions (eprolog-test--collect-solutions '((perf-fact 3 3)))))
       (should (= (length solutions) 1)))
-    
+
     (let ((elapsed (float-time (time-subtract (current-time) start-time))))
       ;; Should complete within reasonable time (very relaxed threshold)
       (should (< elapsed 10.0)))) ;; 10 seconds threshold
-  
+
   ;; Test unification performance with complex structures
   (let ((complex-term (make-list 50 '(nested (structure (with (deep (nesting)))))))
         (start-time (current-time)))
-    
+
     (dotimes (i 10)
       (let ((solutions (eprolog-test--collect-solutions `((= _x ,complex-term)))))
         (should (= (length solutions) 1))
         (should (equal (cdr (assoc '_x (car solutions))) complex-term))))
-    
+
     (let ((elapsed (float-time (time-subtract (current-time) start-time))))
       (should (< elapsed 2.0))))) ;; 2 seconds threshold
-#+end_SRC
+```
 
-*** Arithmetic Performance Tests
+### Arithmetic Performance Tests
 
-#+begin_SRC emacs-lisp
+```emacs-lisp
 (ert-deftest eprolog-example-arithmetic-performance-regression ()
   "Test arithmetic performance to detect regressions."
   (eprolog-test--restore-builtins)
-  
+
   (let ((start-time (current-time)))
     ;; Test a few arithmetic operations (simplified)
     (let ((solutions (eprolog-test--collect-solutions '((is _result (+ 1 1))))))
@@ -590,10 +588,10 @@ These tests establish performance baselines and detect regression in critical op
     (let ((solutions (eprolog-test--collect-solutions '((is _result (+ 3 1))))))
       (should (= (length solutions) 1))
       (should (= (cdr (assoc '_result (car solutions))) 4)))
-    
+
     (let ((elapsed (float-time (time-subtract (current-time) start-time))))
       (should (< elapsed 5.0)))) ;; 5 seconds threshold
-  
+
   ;; Test complex arithmetic expressions (simplified)
   (let ((start-time (current-time)))
     (let ((solutions (eprolog-test--collect-solutions '((is _result (+ (* 2 2) (- 5 1) (/ 8 2)))))))
@@ -602,40 +600,41 @@ These tests establish performance baselines and detect regression in critical op
     (let ((solutions (eprolog-test--collect-solutions '((is _result (+ (* 3 2) (- 6 1) (/ 9 3)))))))
       (should (= (length solutions) 1))
       (should (= (cdr (assoc '_result (car solutions))) 14)))
-    
+
     (let ((elapsed (float-time (time-subtract (current-time) start-time))))
       (should (< elapsed 5.0))))) ;; 5 seconds threshold
-#+end_SRC
+```
 
-*** Backtracking Performance Tests
+### Backtracking Performance Tests
 
-#+begin_SRC emacs-lisp
+```emacs-lisp
 (ert-deftest eprolog-example-backtracking-performance-regression ()
   "Test backtracking performance to detect regressions."
   (eprolog-test--restore-builtins)
-  
+
   ;; Define predicate with many choice points
   (dotimes (i 100)
     (eval `(eprolog-define-predicate (choice-point ,i))))
-  
+
   (let ((start-time (current-time)))
     ;; Collect all solutions - forces full backtracking
     (let ((solutions (eprolog-test--collect-solutions '((choice-point _x)))))
       (should (= (length solutions) 100)))
-    
+
     (let ((elapsed (float-time (time-subtract (current-time) start-time))))
       (should (< elapsed 1.0)))) ;; 1 second threshold
-  
+
   ;; Test backtracking with cut optimization
   (eprolog-define-predicate (cut-optimized _x)
     (choice-point _x)
     (lispp (< _x 10))
     !)
-  
+
   (let ((start-time (current-time)))
     (let ((solutions (eprolog-test--collect-solutions '((cut-optimized _x)))))
       (should (<= (length solutions) 10))) ;; Cut should limit solutions
-    
+
     (let ((elapsed (float-time (time-subtract (current-time) start-time))))
       (should (< elapsed 0.5)))))) ;; Should be faster with cut
-#+end_SRC
+```
+

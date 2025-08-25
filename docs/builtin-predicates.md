@@ -1,48 +1,46 @@
-#+TITLE: Built-in Predicates
-#+AUTHOR: Masaya Taniguchi
-#+PROPERTY: header-args:emacs-lisp :tangle yes
 
-* Built-in Predicates
+# Built-in Predicates
 
 Just as every programming language provides a standard library of essential functions, ε-prolog comes equipped with a comprehensive collection of built-in predicates that handle common programming tasks. These predicates are the workhorses of Prolog programming, providing battle-tested solutions for frequent operations like type checking, list processing, and higher-order transformations.
 
-What makes these predicates particularly valuable is their logical nature—they don't just perform operations, they establish relationships. A predicate like ~member/2~ doesn't just check membership; it can generate all members of a list, verify membership, or even work backwards to find lists containing specific elements. This multi-directional functionality is a hallmark of logical programming.
+What makes these predicates particularly valuable is their logical nature—they don't just perform operations, they establish relationships. A predicate like `member/2` doesn't just check membership; it can generate all members of a list, verify membership, or even work backwards to find lists containing specific elements. This multi-directional functionality is a hallmark of logical programming.
 
-** Type Checking
+## Type Checking
 
 In the dynamic world of Prolog, where variables can be bound to any type of data during execution, type checking becomes both an art and a necessity. Unlike statically typed languages that catch type errors at compile time, Prolog's flexible nature requires runtime type inspection to write robust, defensive code.
 
 Type checking predicates serve as your guardians against unexpected data, enabling you to write predicates that gracefully handle different types of input. They're particularly valuable when building predicates that need to behave differently based on the nature of their arguments—a common pattern in sophisticated Prolog programs.
 
 The type checking arsenal in ε-prolog includes:
-- ~atom/1~: Identifies atoms (symbols)
-- ~var/1~: Detects unbound variables (useful for checking instantiation)
-- ~number/1~: Verifies numeric data (integers, floats)
-- ~string/1~: Recognizes string literals
-- ~ground/1~: Ensures terms are fully instantiated (contain no variables)
+
+-   `atom/1`: Identifies atoms (symbols)
+-   `var/1`: Detects unbound variables (useful for checking instantiation)
+-   `number/1`: Verifies numeric data (integers, floats)
+-   `string/1`: Recognizes string literals
+-   `ground/1`: Ensures terms are fully instantiated (contain no variables)
 
 The following test demonstrates the basic type checking predicates available in ε-prolog:
 
-#+begin_SRC emacs-lisp
+```emacs-lisp
 (ert-deftest eprolog-feature-builtin-type-checking ()
   "Test type checking predicates - positive cases demonstrating correct type identification."
   (eprolog-test--restore-builtins)
-  
+
   ;; === POSITIVE TYPE IDENTIFICATION TESTS ===
   ;; These tests verify that type predicates correctly identify their respective types
-  
+
   ;; Test atom/1 - should succeed for atoms (symbols)
   (let ((solutions (eprolog-test--collect-solutions '((atom foo)))))
     (should (= (length solutions) 1)))
   (let ((solutions (eprolog-test--collect-solutions '((atom quoted-atom)))))
     (should (= (length solutions) 1)))
-  
+
   ;; Test var/1 - should succeed for unbound variables
   (let ((solutions (eprolog-test--collect-solutions '((var _x)))))
     (should (= (length solutions) 1)))
   (let ((solutions (eprolog-test--collect-solutions '((var _unbound)))))
     (should (= (length solutions) 1)))
-  
+
   ;; Test number/1 - should succeed for numeric values
   (let ((solutions (eprolog-test--collect-solutions '((number 42)))))
     (should (= (length solutions) 1)))
@@ -50,42 +48,42 @@ The following test demonstrates the basic type checking predicates available in 
     (should (= (length solutions) 1)))
   (let ((solutions (eprolog-test--collect-solutions '((number -17)))))
     (should (= (length solutions) 1)))
-  
+
   ;; Test string/1 - should succeed for string literals
   (let ((solutions (eprolog-test--collect-solutions '((string "hello")))))
     (should (= (length solutions) 1)))
   (let ((solutions (eprolog-test--collect-solutions '((string "")))))
     (should (= (length solutions) 1))))  ; empty string
-  
+
   ;; === BASIC NEGATIVE CASES ===
   ;; These verify type predicates fail appropriately for wrong types
-  
+
   ;; atom/1 should fail for non-symbol values
   (should-not (eprolog-test--has-solution-p '((atom (a b)))))
   (should-not (eprolog-test--has-solution-p '((atom (compound term)))))
-  
+
   ;; var/1 should fail for bound terms
   (should-not (eprolog-test--has-solution-p '((var foo))))
   (should-not (eprolog-test--has-solution-p '((var 42))))
-  
+
   ;; number/1 should fail for non-numeric types
   (should-not (eprolog-test--has-solution-p '((number foo))))
   (should-not (eprolog-test--has-solution-p '((number "123"))))
-  
+
   ;; string/1 should fail for non-string types
   (should-not (eprolog-test--has-solution-p '((string foo))))
   (should-not (eprolog-test--has-solution-p '((string 123))))
-#+end_SRC
+```
 
 This test shows how to use the basic type checking predicates. These are fundamental for writing predicates that need to behave differently depending on the type of their arguments.
 
 The ground predicate is particularly useful for checking whether a term is fully instantiated:
 
-#+begin_SRC emacs-lisp
+```emacs-lisp
 (ert-deftest eprolog-feature-builtin-ground-predicate ()
   "Test ground term checking."
   (eprolog-test--restore-builtins)
-  
+
   ;; Test ground terms
   (let ((solutions (eprolog-test--collect-solutions '((ground 42)))))
     (should (= (length solutions) 1)))
@@ -93,65 +91,66 @@ The ground predicate is particularly useful for checking whether a term is fully
     (should (= (length solutions) 1)))
   (let ((solutions (eprolog-test--collect-solutions '((ground foo)))))
     (should (= (length solutions) 1)))
-  
+
   ;; Test non-ground terms
   (should-not (eprolog-test--has-solution-p '((ground _x))))
   (should-not (eprolog-test--has-solution-p '((ground (a _x c))))))
-#+end_SRC
+```
 
-** Variable Test (var) Negative Tests
+## Variable Test (var) Negative Tests
 
-This section provides comprehensive negative testing for the ~var/1~ predicate, ensuring it correctly identifies non-variable terms and fails appropriately for bound variables.
+This section provides comprehensive negative testing for the `var/1` predicate, ensuring it correctly identifies non-variable terms and fails appropriately for bound variables.
 
-The ~var/1~ predicate is fundamental for checking the instantiation state of terms. These negative tests verify that it properly fails for all categories of non-variable terms, including bound variables, ground terms, and complex structures. This defensive testing ensures robust behavior across different data types.
+The `var/1` predicate is fundamental for checking the instantiation state of terms. These negative tests verify that it properly fails for all categories of non-variable terms, including bound variables, ground terms, and complex structures. This defensive testing ensures robust behavior across different data types.
 
-#+begin_SRC emacs-lisp
+```emacs-lisp
 (ert-deftest eprolog-feature-builtin-var-negative-tests ()
   "Test negative cases for var predicate."
   (eprolog-test--restore-builtins)
-  
+
   ;; Bound variables after unification should fail var test
   (should-not (eprolog-test--has-solution-p '((= _x bound) (var _x))))
   (should-not (eprolog-test--has-solution-p '((= _x 42) (var _x))))
   (should-not (eprolog-test--has-solution-p '((= _x (a b)) (var _x))))
-  
+
   ;; Non-variable types should fail
   (should-not (eprolog-test--has-solution-p '((var 42))))
   (should-not (eprolog-test--has-solution-p '((var "string"))))
   (should-not (eprolog-test--has-solution-p '((var (a b c)))))
   (should-not (eprolog-test--has-solution-p '((var 3.14))))
-  
+
   ;; Complex structures containing variables should fail
   (should-not (eprolog-test--has-solution-p '((var (a _x b)))))
   (should-not (eprolog-test--has-solution-p '((var (f _y))))))
-#+end_SRC
+```
 
-** List Operations
+## List Operations
 
 Lists are the Swiss Army knife of Prolog data structures—versatile, ubiquitous, and surprisingly powerful. In Prolog, lists aren't just containers; they're logical structures that can be deconstructed, analyzed, and manipulated through pattern matching and unification. This makes list processing in Prolog fundamentally different from imperative languages.
 
-The true magic of Prolog list operations lies in their *relational* nature. A predicate like ~append/3~ doesn't just concatenate lists—it defines a three-way relationship between lists. You can use it to join lists, split them, or even generate all possible ways to partition a list. This multi-directional capability transforms simple operations into powerful problem-solving tools.
+The true magic of Prolog list operations lies in their **relational** nature. A predicate like `append/3` doesn't just concatenate lists—it defines a three-way relationship between lists. You can use it to join lists, split them, or even generate all possible ways to partition a list. This multi-directional capability transforms simple operations into powerful problem-solving tools.
 
 Core list manipulation predicates:
-- ~member/2~: The membership oracle—tests, generates, and validates list elements
-- ~append/3~: The list relationship specialist—concatenates, decomposes, and partitions
-- ~append/2~: Flattens a list of lists into a single list
-- *Bidirectional Operations*: Using the same predicate for testing, generation, and decomposition
+
+-   `member/2`: The membership oracle—tests, generates, and validates list elements
+-   `append/3`: The list relationship specialist—concatenates, decomposes, and partitions
+-   `append/2`: Flattens a list of lists into a single list
+-   **Bidirectional Operations**: Using the same predicate for testing, generation, and decomposition
 
 The following test demonstrates the versatility of list operations in Prolog:
 
-#+begin_SRC emacs-lisp
+```emacs-lisp
 (ert-deftest eprolog-feature-builtin-list-operations ()
   "Test list operation predicates from README.org examples."
   (eprolog-test--restore-builtins)
-  
+
   ;; Test member/2 as shown in README
   (let ((solutions (eprolog-test--collect-solutions '((member _x (a b c))))))
     (should (= (length solutions) 3))
     (should (member 'a (mapcar (lambda (s) (cdr (assoc '_x s))) solutions)))
     (should (member 'b (mapcar (lambda (s) (cdr (assoc '_x s))) solutions)))
     (should (member 'c (mapcar (lambda (s) (cdr (assoc '_x s))) solutions))))
-  
+
   ;; Test specific membership
   (let ((solutions (eprolog-test--collect-solutions '((member a (a b c))))))
     (should (= (length solutions) 1)))
@@ -160,12 +159,12 @@ The following test demonstrates the versatility of list operations in Prolog:
   (let ((solutions (eprolog-test--collect-solutions '((member c (a b c))))))
     (should (= (length solutions) 1)))
   (should-not (eprolog-test--has-solution-p '((member d (a b c)))))
-  
+
   ;; Test append/3 as shown in README
   (let ((solutions (eprolog-test--collect-solutions '((append (1 2) (3 4) _result)))))
     (should (= (length solutions) 1))
     (should (equal (cdr (assoc '_result (car solutions))) '(1 2 3 4))))
-  
+
   ;; Test append/3 variations
   (let ((solutions (eprolog-test--collect-solutions '((append (1 2) (3 4) (1 2 3 4))))))
     (should (= (length solutions) 1)))
@@ -173,12 +172,12 @@ The following test demonstrates the versatility of list operations in Prolog:
     (should (= (length solutions) 1)))
   (let ((solutions (eprolog-test--collect-solutions '((append (1 2 3) () (1 2 3))))))
     (should (= (length solutions) 1)))
-  
+
   ;; Test append/2
   (let ((solutions (eprolog-test--collect-solutions '((append ((1 2) (3 4)) _result)))))
     (should (= (length solutions) 1))
     (should (equal (cdr (assoc '_result (car solutions))) '(1 2 3 4))))
-  
+
   ;; Test append/3 reverse generation - decomposition into all possible splits
   (let ((solutions (eprolog-test--collect-solutions '((append _A _B (1 2 3))))))
     (should (= (length solutions) 4)) ; All possible splits
@@ -186,193 +185,194 @@ The following test demonstrates the versatility of list operations in Prolog:
     (should (member '((_A . (1)) (_B . (2 3))) solutions))
     (should (member '((_A . (1 2)) (_B . (3))) solutions))
     (should (member '((_A . (1 2 3)) (_B . ())) solutions))))
-#+end_SRC
+```
 
-** Higher-order Predicates
+## Higher-order Predicates
 
 Higher-order predicates represent one of the most sophisticated features of ε-prolog, bringing functional programming concepts into the logical programming paradigm. These predicates treat other predicates as first-class objects that can be passed as arguments, enabling powerful abstraction patterns and code reuse.
 
 The beauty of higher-order predicates in Prolog lies in their ability to capture common patterns of computation over data structures. Instead of writing separate predicates for each specific transformation, you can write generic higher-order predicates that accept the specific logic as parameters. This leads to more modular, reusable, and expressive code.
 
 Key higher-order operations covered:
-- ~maplist/2~: Universal quantification over lists—applies a unary predicate to all elements
-- ~maplist/3~: Relational mapping—establishes relationships between corresponding elements of two lists  
-- Predicate parameterization: Using predicates as arguments to create flexible, reusable patterns
-- Failure semantics: How higher-order predicates handle failure propagation from their predicate arguments
+
+-   `maplist/2`: Universal quantification over lists—applies a unary predicate to all elements
+-   `maplist/3`: Relational mapping—establishes relationships between corresponding elements of two lists
+-   Predicate parameterization: Using predicates as arguments to create flexible, reusable patterns
+-   Failure semantics: How higher-order predicates handle failure propagation from their predicate arguments
 
 The following test shows how to use higher-order predicates for list transformation:
 
-#+begin_SRC emacs-lisp
+```emacs-lisp
 (ert-deftest eprolog-feature-builtin-higher-order-predicates ()
   "Test maplist higher-order predicates."
   (eprolog-test--restore-builtins)
-  
+
   ;; Define helper predicate
   (eprolog-define-predicate (succ _x _y)
     (is _y (+ _x 1)))
-  
+
   ;; Test maplist/2
   (let ((solutions (eprolog-test--collect-solutions '((maplist succ (1 2 3) (2 3 4))))))
     (should (= (length solutions) 1)))
   (should-not (eprolog-test--has-solution-p '((maplist succ (1 2 3) (2 3 5)))))
-  
+
   ;; Test maplist/1
   (eprolog-define-predicate (positive _x) (lispp (> _x 0)))
   (let ((solutions (eprolog-test--collect-solutions '((maplist positive (1 2 3))))))
     (should (= (length solutions) 1)))
   (should-not (eprolog-test--has-solution-p '((maplist positive (0 1 2)))))
-  
+
   ;; Test maplist length mismatch failure cases
   (should-not (eprolog-test--has-solution-p '((maplist succ (1 2) (2 3 4)))))
   (should-not (eprolog-test--has-solution-p '((maplist succ (1 2 3) (2 3))))))
-#+end_SRC
+```
 
-** Type Safety and Invalid Input Tests
+## Type Safety and Invalid Input Tests
 
 This section rigorously tests the robustness of ε-prolog's built-in predicates when confronted with invalid inputs, type mismatches, and edge cases. Robust error handling is essential for building reliable logical programs that gracefully handle unexpected data.
 
 These comprehensive tests ensure that built-in predicates fail appropriately rather than crashing when presented with invalid arguments. They cover various categories of type violations and boundary conditions that might occur in real-world usage, helping to verify that the system maintains logical consistency even under stress.
 
-*** Type Checking with Invalid Inputs
+### Type Checking with Invalid Inputs
 
 These tests verify that type checking predicates handle edge cases and unexpected input types correctly, ensuring they fail gracefully for inappropriate arguments while maintaining their intended semantics.
 
-#+begin_SRC emacs-lisp
+```emacs-lisp
 (ert-deftest eprolog-feature-builtin-type-checking-invalid ()
   "Test type checking predicates with invalid/unexpected inputs - negative cases and edge cases."
   (eprolog-test--restore-builtins)
-  
+
   ;; === EDGE CASES FOR TYPE INTERPRETATION ===
   ;; These test boundary cases where type classification might be ambiguous
-  
+
   ;; atom/1 edge cases - ensures only symbols are atoms
   (should-not (eprolog-test--has-solution-p '((atom (1 2 3)))))  ; lists are not atoms
   (should-not (eprolog-test--has-solution-p '((atom (foo bar))))) ; compound terms are not atoms
   (should-not (eprolog-test--has-solution-p '((atom 123))))      ; numbers are not atoms in SWI-Prolog
   (should-not (eprolog-test--has-solution-p '((atom "string")))) ; strings are not atoms in SWI-Prolog
-  
+
   ;; === VARIABLE BINDING STATE TESTS ===
   ;; Test var/1 behavior with bound variables and different term types
-  
+
   ;; var/1 should fail after variable binding
   (should-not (eprolog-test--has-solution-p '((= _x 42) (var _x))))
-  
+
   ;; var/1 should fail for all non-variable terms  
   (should-not (eprolog-test--has-solution-p '((var 42))))
   (should-not (eprolog-test--has-solution-p '((var atom))))
   (should-not (eprolog-test--has-solution-p '((var (compound term)))))
   (should-not (eprolog-test--has-solution-p '((var "string"))))
-  
+
   ;; === STRICT TYPE REJECTION TESTS ===
   ;; These verify that type predicates properly reject inappropriate types
-  
+
   ;; number/1 should strictly reject non-numeric types
   (should-not (eprolog-test--has-solution-p '((number atom))))
   (should-not (eprolog-test--has-solution-p '((number "123"))))    ; string representation of number
   (should-not (eprolog-test--has-solution-p '((number (1 2 3)))))  ; list of numbers
   (should-not (eprolog-test--has-solution-p '((number ())))))      ; empty list
-  
+
   ;; string/1 should strictly reject non-string types
   (should-not (eprolog-test--has-solution-p '((string 123))))
   (should-not (eprolog-test--has-solution-p '((string atom))))
   (should-not (eprolog-test--has-solution-p '((string (a b)))))    ; list is not string
   (should-not (eprolog-test--has-solution-p '((string ()))))      ; empty list is not string
-#+end_SRC
+```
 
-*** List Operations with Invalid Structures
+### List Operations with Invalid Structures
 
 This subsection tests how list manipulation predicates handle non-list inputs and malformed data structures, ensuring robust failure behavior when presented with inappropriate arguments.
 
-#+begin_SRC emacs-lisp
+```emacs-lisp
 (ert-deftest eprolog-feature-builtin-list-operations-invalid ()
   "Test list operations with non-list and invalid inputs."
   (eprolog-test--restore-builtins)
-  
+
   ;; Test append/3 with non-lists (may fail or error depending on implementation)
   (condition-case nil (should-not (eprolog-test--has-solution-p '((append atom (b c) _result)))) (error t))
   (condition-case nil (should-not (eprolog-test--has-solution-p '((append (a b) 123 _result)))) (error t))
   (condition-case nil (should-not (eprolog-test--has-solution-p '((append "string" (b c) _result)))) (error t))
-  
+
   ;; Test member/2 with non-lists
   (should-not (eprolog-test--has-solution-p '((member _x atom))))
   (should-not (eprolog-test--has-solution-p '((member _x 123))))
   (should-not (eprolog-test--has-solution-p '((member _x "string"))))
-  
+
   ;; Test append/2 with non-list of lists
   (should-not (eprolog-test--has-solution-p '((append (a b c) _result))))
   (should-not (eprolog-test--has-solution-p '((append ((1 2) atom (3 4)) _result))))
-  
+
   ;; Test with mixed valid/invalid structures
   (should-not (eprolog-test--has-solution-p '((append ((1 2) (3 4) not-list) _result)))))
-#+end_SRC
+```
 
-*** Maplist with Invalid Predicates
+### Maplist with Invalid Predicates
 
 These tests verify the error handling capabilities of higher-order predicates when provided with invalid predicate arguments, undefined predicates, or mismatched arities.
 
-#+begin_SRC emacs-lisp
+```emacs-lisp
 (ert-deftest eprolog-feature-builtin-maplist-invalid ()
   "Test maplist with undefined and invalid predicates."
   (eprolog-test--restore-builtins)
-  
+
   ;; Test with undefined predicate
   (should-not (eprolog-test--has-solution-p '((maplist undefined-pred (1 2 3)))))
-  
+
   ;; Test with non-atom predicate name (may fail or error)
   (condition-case nil (should-not (eprolog-test--has-solution-p '((maplist 123 (1 2 3))))) (error t))
   (condition-case nil (should-not (eprolog-test--has-solution-p '((maplist "pred" (1 2 3))))) (error t))
   (condition-case nil (should-not (eprolog-test--has-solution-p '((maplist (invalid pred) (1 2 3))))) (error t))
-  
+
   ;; Test with predicate that doesn't match arity
   (eprolog-define-predicate (wrong-arity _a _b _c))
   (should-not (eprolog-test--has-solution-p '((maplist wrong-arity (1 2 3)))))
-  
+
   ;; Test with non-list arguments
   (eprolog-define-predicate (test-pred _x))
   (should-not (eprolog-test--has-solution-p '((maplist test-pred atom))))
   (should-not (eprolog-test--has-solution-p '((maplist test-pred 123)))))
-#+end_SRC
+```
 
-*** Ground Predicate Edge Cases
+### Ground Predicate Edge Cases
 
-This subsection thoroughly tests the ~ground/1~ predicate with complex nested structures, deeply nested terms, and boundary cases to ensure it correctly identifies the instantiation status of complex data structures.
+This subsection thoroughly tests the `ground/1` predicate with complex nested structures, deeply nested terms, and boundary cases to ensure it correctly identifies the instantiation status of complex data structures.
 
-#+begin_SRC emacs-lisp
+```emacs-lisp
 (ert-deftest eprolog-feature-builtin-ground-edge-cases ()
   "Test ground predicate with complex and edge case structures."
   (eprolog-test--restore-builtins)
-  
+
   ;; Test partially ground structures
   (should-not (eprolog-test--has-solution-p '((ground (foo _x bar)))))
   (should-not (eprolog-test--has-solution-p '((ground (a (b _y) c)))))
-  
+
   ;; Test deeply nested structures with variables
   (should-not (eprolog-test--has-solution-p '((ground (level1 (level2 (level3 _var)))))))
-  
+
   ;; Test mixed ground/non-ground lists
   (should-not (eprolog-test--has-solution-p '((ground (a b _c d)))))
   (should-not (eprolog-test--has-solution-p '((ground ((1 2) (3 _x) (4 5))))))
-  
+
   ;; Test fully ground complex structures
   (let ((solutions (eprolog-test--collect-solutions '((ground (complex (nested (structure with atoms)) (and (numbers 1 2 3))))))))
     (should (= (length solutions) 1)))
-  
+
   ;; Test empty structures
   (let ((solutions (eprolog-test--collect-solutions '((ground ())))))
     (should (= (length solutions) 1)))
   (let ((solutions (eprolog-test--collect-solutions '((ground (empty-list ()))))))
     (should (= (length solutions) 1))))
-#+end_SRC
+```
 
-*** Empty List Handling
+### Empty List Handling
 
 Empty lists represent a fundamental boundary case in list processing. These tests verify that all list operations handle empty lists correctly, maintaining logical consistency and proper failure semantics when appropriate.
 
-#+begin_SRC emacs-lisp
+```emacs-lisp
 (ert-deftest eprolog-feature-builtin-empty-list-handling ()
   "Test operations with empty lists and edge cases."
   (eprolog-test--restore-builtins)
-  
+
   ;; Test append with empty lists
   (let ((solutions (eprolog-test--collect-solutions '((append () (1 2 3) (1 2 3))))))
     (should (= (length solutions) 1)))
@@ -380,20 +380,21 @@ Empty lists represent a fundamental boundary case in list processing. These test
     (should (= (length solutions) 1)))
   (let ((solutions (eprolog-test--collect-solutions '((append () () ())))))
     (should (= (length solutions) 1)))
-  
+
   ;; Test member with empty list
   (should-not (eprolog-test--has-solution-p '((member _x ()))))
   (should-not (eprolog-test--has-solution-p '((member a ()))))
-  
+
   ;; Test maplist with empty list
   (eprolog-define-predicate (always-true _x))
   (let ((solutions (eprolog-test--collect-solutions '((maplist always-true ())))))
     (should (= (length solutions) 1)))
-  
+
   ;; Test append/2 with list of empty lists
   (let ((solutions (eprolog-test--collect-solutions '((append (() () ()) _result) (= _result ())))))
     (should (= (length solutions) 1)))
-  
+
   ;; Test decomposition of empty list
   (should-not (eprolog-test--has-solution-p '((= () (_head . _tail))))))
-#+end_SRC
+```
+

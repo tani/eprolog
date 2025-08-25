@@ -1,48 +1,49 @@
-#+TITLE: Dynamic Parameters
-#+AUTHOR: Masaya Taniguchi
-#+PROPERTY: header-args:emacs-lisp :tangle yes
 
-* Dynamic Parameters
+# Dynamic Parameters
 
 Dynamic parameters provide a sophisticated stateful mechanism for maintaining and sharing data across different parts of a Prolog computation. They bridge the gap between Prolog's typically stateless nature and practical needs for accumulating results, counters, and complex data sharing.
 
-** Core Predicates
+## Core Predicates
 
-*** ~store/2~: Store a value with backtracking support
-~store(Key, Value)~ stores ~Value~ under ~Key~ in the dynamic parameter store. The value persists during forward execution and is automatically restored to its previous state when backtracking occurs above the store operation.
+### `store/2`: Store a value with backtracking support
 
-*** ~fetch/2~: Retrieve stored values  
-~fetch(Key, Variable)~ retrieves the value associated with ~Key~ and unifies it with ~Variable~. Fails if the key doesn't exist in the current parameter context.
+`store(Key, Value)` stores `Value` under `Key` in the dynamic parameter store. The value persists during forward execution and is automatically restored to its previous state when backtracking occurs above the store operation.
 
-** Key Features
+### `fetch/2`: Retrieve stored values
 
-- **Backtracking-Aware**: Parameter values are automatically restored during backtracking
-- **Scoped Storage**: Each store operation creates a new parameter scope
-- **Lisp Integration**: Values can be any Lisp data structure
-- **Query-Local**: Parameters exist only within the current query execution
-- **Deterministic Access**: fetch/2 is deterministic - succeeds once or fails
+`fetch(Key, Variable)` retrieves the value associated with `Key` and unifies it with `Variable`. Fails if the key doesn't exist in the current parameter context.
 
-** Common Use Cases
+## Key Features
 
-1. **Counters and Accumulators**: Maintaining running totals across recursive predicates
-2. **State Machines**: Tracking current state in complex logic
-3. **Caching**: Storing computed values for reuse within a query
-4. **Inter-Predicate Communication**: Sharing data between unrelated predicates
-5. **Configuration**: Passing settings through deep call stacks
+-   ****Backtracking-Aware****: Parameter values are automatically restored during backtracking
+-   ****Scoped Storage****: Each store operation creates a new parameter scope
+-   ****Lisp Integration****: Values can be any Lisp data structure
+-   ****Query-Local****: Parameters exist only within the current query execution
+-   ****Deterministic Access****: fetch/2 is deterministic - succeeds once or fails
 
-** Usage Examples
+## Common Use Cases
 
-*** Basic Storage and Retrieval
-#+begin_src emacs-lisp :eval never :tangle no
+1.  ****Counters and Accumulators****: Maintaining running totals across recursive predicates
+2.  ****State Machines****: Tracking current state in complex logic
+3.  ****Caching****: Storing computed values for reuse within a query
+4.  ****Inter-Predicate Communication****: Sharing data between unrelated predicates
+5.  ****Configuration****: Passing settings through deep call stacks
+
+## Usage Examples
+
+### Basic Storage and Retrieval
+
+```
 ;; Store a simple value
 (eprolog-query '((store user-id 12345)
                  (fetch user-id _id)
                  (lisp _result (format "User: %d" _id))))
 ;; Result: _result = "User: 12345"
-#+end_src
+```
 
-*** Counter Pattern
-#+begin_src emacs-lisp :eval never :tangle no
+### Counter Pattern
+
+```
 ;; Initialize and increment a counter
 (eprolog-define-predicate (increment-counter _new-value)
   (fetch counter _current)
@@ -53,10 +54,11 @@ Dynamic parameters provide a sophisticated stateful mechanism for maintaining an
                  (increment-counter _val1)  ; Sets counter to 1
                  (increment-counter _val2)  ; Sets counter to 2
                  (fetch counter _final)))   ; _final = 2
-#+end_src
+```
 
-*** Backtracking Behavior
-#+begin_src emacs-lisp :eval never :tangle no
+### Backtracking Behavior
+
+```
 ;; Demonstrates automatic restoration during backtracking
 (eprolog-query '((store level start)
                  (or (and (store level branch-a)
@@ -65,21 +67,23 @@ Dynamic parameters provide a sophisticated stateful mechanism for maintaining an
                           (fetch level _val))     ; _val = branch-b
                      (fetch level _val))))       ; _val = start (restored)
 ;; Produces 3 solutions: branch-a, branch-b, start
-#+end_src
+```
 
-*** Complex Data Structures
-#+begin_src emacs-lisp :eval never :tangle no
+### Complex Data Structures
+
+```
 ;; Store and manipulate complex Lisp data
 (eprolog-query '((store config (list :debug t :max-depth 10))
                  (fetch config _cfg)
                  (lisp _debug-mode (plist-get _cfg :debug))
                  (lisp _max (plist-get _cfg :max-depth))))
-#+end_src
+```
 
-** Best Practices
+## Best Practices
 
-*** Use Descriptive Keys
-#+begin_src emacs-lisp :eval never :tangle no
+### Use Descriptive Keys
+
+```
 ;; Good: Descriptive key names
 (store user-preferences (list :theme dark :font-size 12))
 (store current-search-depth 5)
@@ -87,29 +91,31 @@ Dynamic parameters provide a sophisticated stateful mechanism for maintaining an
 ;; Avoid: Generic or unclear keys  
 (store x 42)
 (store temp-var some-value)
-#+end_src
+```
 
-*** Initialize Before Use
-#+begin_src emacs-lisp :eval never :tangle no
+### Initialize Before Use
+
+```
 ;; Always initialize parameters at query start
 (eprolog-define-predicate (process-with-counter _items _result)
   (store item-count 0)           ; Initialize counter
   (process-list _items _result)) ; Then process
-#+end_src
+```
 
-*** Handle Missing Keys Gracefully
-#+begin_src emacs-lisp :eval never :tangle no
+### Handle Missing Keys Gracefully
+
+```
 ;; Use default values for optional parameters
 (eprolog-define-predicate (get-config-value _key _value)
   (or (fetch _key _value)           ; Try to fetch
       (= _value default-value)))    ; Use default if not found
-#+end_src
+```
 
-** Backtracking Semantics
+## Backtracking Semantics
 
-The store/fetch mechanism implements **scoped parameter restoration**: when backtracking occurs, parameter values are restored to their state at the time of the choice point, not completely removed. This creates a stack-like behavior where each choice point preserves its parameter context.
+The store/fetch mechanism implements ****scoped parameter restoration****: when backtracking occurs, parameter values are restored to their state at the time of the choice point, not completely removed. This creates a stack-like behavior where each choice point preserves its parameter context.
 
-#+begin_src emacs-lisp :eval never :tangle no
+```
 ;; Example demonstrating scoped restoration
 (eprolog-query 
   '((store level 0)                    ; Initial: level=0
@@ -119,13 +125,13 @@ The store/fetch mechanism implements **scoped parameter restoration**: when back
              (fetch level _inner))     ; _inner gets 2 or 3
         (fetch level _outer))))        ; _outer gets 0 (restored)
 ;; Solutions: _inner=2, _inner=3, _outer=0
-#+end_src
+```
 
-** Integration with Lisp
+## Integration with Lisp
 
 Dynamic parameters seamlessly integrate with Lisp evaluation, allowing storage and retrieval of any Lisp data structure:
 
-#+begin_src emacs-lisp :eval never :tangle no
+```
 ;; Store complex Lisp structures
 (eprolog-query '((lisp _hash (make-hash-table))
                  (store shared-data _hash)
@@ -136,13 +142,13 @@ Dynamic parameters seamlessly integrate with Lisp evaluation, allowing storage a
 (eprolog-query '((store formatter (lambda (x) (format "Value: %s" x)))
                  (fetch formatter _fn)
                  (lisp _result (funcall _fn 42))))
-#+end_src
+```
 
-** Core Functionality Tests
+## Core Functionality Tests
 
 The following tests demonstrate and validate the fundamental behavior of dynamic parameters:
 
-#+begin_src emacs-lisp
+```emacs-lisp
 (ert-deftest eprolog-feature-lisp-dynamic-parameters ()
   "Test core dynamic parameter functionality including storage, retrieval, and backtracking."
   (eprolog-test--restore-builtins)
@@ -172,13 +178,13 @@ The following tests demonstrate and validate the fundamental behavior of dynamic
     (should (= (length solutions) 2))
     (should (equal (mapcar (lambda (sol) (cdr (assoc '_v sol))) solutions)
                   '(1 0)))))
-#+end_src
+```
 
-* Advanced Store/Fetch Backtracking Tests
+# Advanced Store/Fetch Backtracking Tests
 
 The store/fetch mechanism must handle complex backtracking scenarios correctly, ensuring that parameter values are properly restored when execution backtracks above store operations.
 
-#+begin_src emacs-lisp
+```emacs-lisp
 (ert-deftest eprolog-feature-store-fetch-advanced-backtracking ()
   "Test comprehensive backtracking scenarios for store/fetch predicates."
   (eprolog-test--restore-builtins)
@@ -271,7 +277,7 @@ The store/fetch mechanism must handle complex backtracking scenarios correctly, 
     (= _x b)
     !
     (fetch cut-test-key _result))
-  
+
   (let ((solutions (eprolog-test--collect-solutions '((cut-test _val)))))
     (should (= (length solutions) 1))
     (should (= (cdr (assoc '_val (car solutions))) 1)))
@@ -292,25 +298,25 @@ The store/fetch mechanism must handle complex backtracking scenarios correctly, 
       (should (and (= (cdr (assoc '_x1 sol1)) 11) (= (cdr (assoc '_y1 sol1)) 21)))
       (should (and (= (cdr (assoc '_x2 sol2)) 12) (= (cdr (assoc '_y2 sol2)) 20)))
       (should (and (= (cdr (assoc '_x3 sol3)) 10) (= (cdr (assoc '_y3 sol3)) 20))))))
-#+end_src
+```
 
-* Dynamic Parameters Negative Tests
+# Dynamic Parameters Negative Tests
 
 Dynamic parameter predicates should fail with invalid keys or expressions:
 
-#+begin_src emacs-lisp
+```emacs-lisp
 (ert-deftest eprolog-feature-lisp-fetch-negative-tests ()
   "Test negative cases for fetch predicate."
   (eprolog-test--restore-builtins)
-  
+
   ;; Getting non-existent keys should fail
   (should-not (eprolog-test--has-solution-p '((fetch nonexistent-key _value))))
   (should-not (eprolog-test--has-solution-p '((fetch missing-key _x))))
-  
+
   ;; Unification failures with retrieved values
   (let ((solutions (eprolog-test--collect-solutions '((store test-key 42)))))
     (should (= (length solutions) 1)))
   (should-not (eprolog-test--has-solution-p '((fetch test-key "forty-two"))))
   (should-not (eprolog-test--has-solution-p '((fetch test-key (a b c))))))
-#+end_src
+```
 
