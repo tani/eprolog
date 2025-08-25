@@ -21,7 +21,6 @@ jobs:
           - '29.4'
           - '28.2'
           - '27.2'
-          - '26.3'
           - 'snapshot'
     steps:
     - name: Checkout code

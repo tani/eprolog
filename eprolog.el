@@ -3,8 +3,8 @@
 ;; Copyright (C) 2025 Masaya Taniguchi
 
 ;; Author: Masaya Taniguchi
-;; Version: 0.1.0
-;; Package-Requires: ((emacs "30.1"))
+;; Version: 0.2.0
+;; Package-Requires: ((emacs "27.2"))
 ;; Keywords: languages, prolog, logic programming
 ;; URL: https://github.com/tani/eprolog
 
@@ -849,7 +849,7 @@ restored to NEW-PARAMETERS state."
      :continuation
      (lambda ()
        (let ((eprolog-dynamic-parameters new-parameters))
-         (eprolog--with-dynamic-parameter-restoration 
+         (eprolog--with-dynamic-parameter-restoration
           new-parameters
           (funcall (eprolog--success-continuation result))))))))
 
@@ -860,17 +860,17 @@ VALUE-EXPRESSION is stored directly without evaluation.
 
 This binding persists across backtracking and is automatically
 restored when execution backtracks above this store operation."
-  (let* ((substituted-value (eprolog--substitute-bindings 
-                            eprolog-current-bindings 
-                            value-expression))
+  (let* ((substituted-value (eprolog--substitute-bindings
+                             eprolog-current-bindings
+                             value-expression))
          (updated-parameters (cons (cons variable-symbol substituted-value)
-                                  eprolog-dynamic-parameters)))
+                                   eprolog-dynamic-parameters)))
     ;; Execute remaining goals with updated parameters
     (let ((eprolog-dynamic-parameters updated-parameters))
       (eprolog--with-dynamic-parameter-restoration
        updated-parameters
        (eprolog--prove-goal-sequence eprolog-remaining-goals
-                                    eprolog-current-bindings)))))
+                                     eprolog-current-bindings)))))
 
 (eprolog-define-lisp-predicate fetch (variable-symbol prolog-variable)
   "Dynamic parameter predicate: fetch(SYMBOL, VAR).
