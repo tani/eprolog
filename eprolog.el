@@ -838,6 +838,21 @@ Succeeds if TERM is an unbound variable."
        (eprolog--prove-goal-sequence eprolog-remaining-goals eprolog-current-bindings)))))
 
 ;; Dynamic parameter predicates
+(defun eprolog--with-dynamic-parameter-restoration (new-parameters result)
+  "Helper function to wrap RESULT with dynamic parameter restoration.
+Ensures that when backtracking occurs, the dynamic parameters are
+restored to NEW-PARAMETERS state."
+  (if (eprolog--failure-p result)
+      (make-eprolog--failure)
+    (make-eprolog--success
+     :bindings (eprolog--success-bindings result)
+     :continuation
+     (lambda ()
+       (let ((eprolog-dynamic-parameters new-parameters))
+         (eprolog--with-dynamic-parameter-restoration 
+          new-parameters
+          (funcall (eprolog--success-continuation result))))))))
+
 (eprolog-define-lisp-predicate store (variable-symbol value-expression)
   "Dynamic parameter predicate: store(SYMBOL, VALUE).
 Stores VALUE under SYMBOL in the dynamic parameter store.
@@ -845,26 +860,17 @@ VALUE-EXPRESSION is stored directly without evaluation.
 
 This binding persists across backtracking and is automatically
 restored when execution backtracks above this store operation."
-  (let* ((substituted-value
-          (eprolog--substitute-bindings eprolog-current-bindings
-                                         value-expression))
-         (new-params (cons (cons variable-symbol substituted-value)
-                           eprolog-dynamic-parameters)))
-    (cl-labels ((continue-with-store (result)
-                  (if (eprolog--failure-p result)
-                      (make-eprolog--failure)
-                    (let ((bindings (eprolog--success-bindings result))
-                          (cont (eprolog--success-continuation result)))
-                      (make-eprolog--success
-                       :bindings bindings
-                       :continuation
-                       (lambda ()
-                         (let ((eprolog-dynamic-parameters new-params))
-                           (continue-with-store (funcall cont)))))))))
-      (let ((eprolog-dynamic-parameters new-params))
-        (continue-with-store
-         (eprolog--prove-goal-sequence eprolog-remaining-goals
-                                       eprolog-current-bindings))))))
+  (let* ((substituted-value (eprolog--substitute-bindings 
+                            eprolog-current-bindings 
+                            value-expression))
+         (updated-parameters (cons (cons variable-symbol substituted-value)
+                                  eprolog-dynamic-parameters)))
+    ;; Execute remaining goals with updated parameters
+    (let ((eprolog-dynamic-parameters updated-parameters))
+      (eprolog--with-dynamic-parameter-restoration
+       updated-parameters
+       (eprolog--prove-goal-sequence eprolog-remaining-goals
+                                    eprolog-current-bindings)))))
 
 (eprolog-define-lisp-predicate fetch (variable-symbol prolog-variable)
   "Dynamic parameter predicate: fetch(SYMBOL, VAR).
