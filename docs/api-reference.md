@@ -1,57 +1,59 @@
-#+TITLE: API Reference
-#+AUTHOR: Masaya Taniguchi
-#+PROPERTY: header-args:emacs-lisp :tangle yes
 
-* API Reference
+# API Reference
 
 This section provides comprehensive documentation for all ε-prolog API functions, predicates, and usage patterns.
 
-** Predicate Definition
+## Predicate Definition
 
-*** eprolog-define-prolog-predicate
+### eprolog-define-prolog-predicate
+
 Define a Prolog clause (fact or rule) and add it to the database.
 
-#+begin_SRC emacs-lisp :eval never :tangle no
+```
 (eprolog-define-prolog-predicate (name arg1 arg2 ...) goal1 goal2 ...)
-#+end_SRC
+```
 
-The first argument is a head term containing the predicate name and its arguments. For facts with no arguments, you can omit the parentheses: ~(eprolog-define-prolog-predicate name)~.
+The first argument is a head term containing the predicate name and its arguments. For facts with no arguments, you can omit the parentheses: `(eprolog-define-prolog-predicate name)`.
 
-*Alias*: ~eprolog-define-predicate~
+**Alias**: `eprolog-define-predicate`
 
-*** eprolog-define-prolog-predicate!
+### eprolog-define-prolog-predicate!
+
 Define a Prolog clause, replacing existing clauses with the same arity.
 
-#+begin_SRC emacs-lisp :eval never :tangle no
+```
 (eprolog-define-prolog-predicate! (name arg1 arg2 ...) goal1 goal2 ...)
-#+end_SRC
+```
 
-The first argument is a head term containing the predicate name and its arguments. For facts with no arguments, you can omit the parentheses: ~(eprolog-define-prolog-predicate! name)~.
+The first argument is a head term containing the predicate name and its arguments. For facts with no arguments, you can omit the parentheses: `(eprolog-define-prolog-predicate! name)`.
 
-*Alias*: ~eprolog-define-predicate!~
+**Alias**: `eprolog-define-predicate!`
 
-*** eprolog-define-lisp-predicate
+### eprolog-define-lisp-predicate
+
 Define a predicate implemented in Emacs Lisp.
 
-#+begin_SRC emacs-lisp :eval never :tangle no
+```
 (eprolog-define-lisp-predicate name (arg1 arg2 ...)
   ;; Lisp code returning success or failure object
   )
-#+end_SRC
+```
 
-** Query Execution
+## Query Execution
 
-*** eprolog-query
+### eprolog-query
+
 Execute an interactive Prolog query.
 
-#+begin_SRC emacs-lisp :eval never :tangle no
+```
 (eprolog-query goal1 goal2 ...)
-#+end_SRC
+```
 
-*** eprolog-solve
+### eprolog-solve
+
 Programmatically solve goals with optional keyword callbacks.
 
-#+begin_SRC emacs-lisp :eval never :tangle no
+```
 ;; Basic usage - just solve goals, ignore results
 (eprolog-solve goals)
 
@@ -62,33 +64,35 @@ Programmatically solve goals with optional keyword callbacks.
 (eprolog-solve goals 
   :success (lambda (bindings) ...)
   :failure (lambda () ...))
-#+end_SRC
+```
 
-** DCG Support
+## DCG Support
 
-*** eprolog-define-grammar
+### eprolog-define-grammar
+
 Define a DCG rule, adding to existing rules with the same arity.
 
-#+begin_SRC emacs-lisp :eval never :tangle no
+```
 (eprolog-define-grammar head body-element1 body-element2 ...)
-#+end_SRC
+```
 
 Adds a new DCG rule without replacing existing ones. This allows multiple alternatives for the same non-terminal.
 
-*** eprolog-define-grammar!
+### eprolog-define-grammar!
+
 Define a DCG rule, replacing existing rules with the same arity.
 
-#+begin_SRC emacs-lisp :eval never :tangle no
+```
 (eprolog-define-grammar! head body-element1 body-element2 ...)
-#+end_SRC
+```
 
-Similar to ~eprolog-define-grammar~ but removes existing rules for the same non-terminal with the same arity before adding the new rule. Used for redefinition or when you want only one rule for a non-terminal.
+Similar to `eprolog-define-grammar` but removes existing rules for the same non-terminal with the same arity before adding the new rule. Used for redefinition or when you want only one rule for a non-terminal.
 
-** Test Runner
+## Test Runner
 
 The test runner provides a convenient way to execute all tests and verify system functionality:
 
-#+begin_SRC emacs-lisp
+```emacs-lisp
 (defun eprolog-usage-run-all-tests ()
   "Run all ε-prolog tests and display summary."
   (interactive)
@@ -142,33 +146,33 @@ The test runner provides a convenient way to execute all tests and verify system
   "Run ε-prolog tests interactively with ERT."
   (interactive)
   (ert "eprolog-"))
-#+end_SRC
+```
 
-** API Tests
+## API Tests
 
 These tests verify the public API behavior including edge cases and error handling.
 
 Note: Some tests are disabled as they test APIs that don't exist or are unstable.
 
-*** Predicate Definition Tests
+### Predicate Definition Tests
 
-#+begin_SRC emacs-lisp
+```emacs-lisp
 (ert-deftest eprolog-api-define-predicate ()
   "Test public predicate definition API."
   (eprolog-test--restore-builtins)
-  
+
   ;; Test fact definition
   (eprolog-define-predicate (api-fact a))
   (should (eprolog-test--has-solution-p '((api-fact a))))
-  
+
   ;; Test rule definition
   (eprolog-define-predicate (api-rule _x) (api-fact _x))
   (should (eprolog-test--has-solution-p '((api-rule a))))
-  
+
   ;; Test fact without parentheses
   (eprolog-define-predicate api-atom)
   (should (eprolog-test--has-solution-p '((api-atom))))
-  
+
   ;; Test multiple clauses
   (eprolog-define-predicate (multi 1))
   (eprolog-define-predicate (multi 2))
@@ -178,12 +182,12 @@ Note: Some tests are disabled as they test APIs that don't exist or are unstable
 (ert-deftest eprolog-api-define-predicate! ()
   "Test predicate replacement API."
   (eprolog-test--restore-builtins)
-  
+
   ;; Define initial predicates
   (eprolog-define-predicate (replace-test a))
   (eprolog-define-predicate (replace-test b))
   (should (= (length (eprolog-test--collect-solutions '((replace-test _x)))) 2))
-  
+
   ;; Replace with single clause
   (eprolog-define-predicate! (replace-test c))
   (let ((solutions (eprolog-test--collect-solutions '((replace-test _x)))))
@@ -203,22 +207,22 @@ Note: Some tests are disabled as they test APIs that don't exist or are unstable
 ;;   
 ;;   (should (eprolog-test--has-solution-p '((test-lisp-pred success))))
 ;;   (should-not (eprolog-test--has-solution-p '((test-lisp-pred failure)))))
-#+end_SRC
+```
 
-*** Query Execution Tests
+### Query Execution Tests
 
-#+begin_SRC emacs-lisp
+```emacs-lisp
 (ert-deftest eprolog-api-query ()
   "Test interactive query API."
   (eprolog-test--restore-builtins)
-  
+
   ;; Define test facts
   (eprolog-define-predicate (query-test a))
   (eprolog-define-predicate (query-test b))
-  
+
   ;; Test that query macro expands correctly
   (should (macrop 'eprolog-query))
-  
+
   ;; Cannot test interactive behavior directly, but verify expansion
   (let ((expansion (macroexpand '(eprolog-query (query-test _x)))))
     (should expansion)))
@@ -297,28 +301,28 @@ Note: Some tests are disabled as they test APIs that don't exist or are unstable
 ;;   (let ((solutions (eprolog-solve-all (no-such-pred _x)
 ;;                      (lambda (bindings) 'should-not-happen))))
 ;;     (should (null solutions))))
-#+end_SRC
+```
 
-*** Error Handling Tests
+### Error Handling Tests
 
-#+begin_SRC emacs-lisp
+```emacs-lisp
 (ert-deftest eprolog-api-error-handling ()
   "Test API error handling."
   (eprolog-test--restore-builtins)
-  
+
   ;; Test handling of malformed goals
   (should-not (eprolog-test--has-solution-p '(())))  ;; Empty goal
-  
+
   ;; Test unbound variables in arithmetic
   (should-not (eprolog-test--has-solution-p '((is _x (+ _y 1)))))
-  
+
   ;; Test invalid predicate calls
   (should-not (eprolog-test--has-solution-p '((123 invalid))))  ;; Number as predicate
-  
+
   ;; Test cyclic unification with occurs check
   (let ((eprolog-occurs-check t))
     (should-not (eprolog-test--has-solution-p '((= _x (f _x))))))
-  
+
   ;; Test stack depth limit (if implemented)
   ;; Define infinitely recursive predicate
   (eprolog-define-predicate (infinite _x) (infinite _x))
@@ -333,27 +337,27 @@ Note: Some tests are disabled as they test APIs that don't exist or are unstable
 (ert-deftest eprolog-api-edge-cases ()
   "Test API edge cases."
   (eprolog-test--restore-builtins)
-  
+
   ;; Test empty clause body (fact)
   (eprolog-define-predicate (edge-fact))
   (should (eprolog-test--has-solution-p '((edge-fact))))
-  
+
   ;; Test predicate with many arguments
   (eprolog-define-predicate (many-args a b c d e f g h i j))
   (should (eprolog-test--has-solution-p 
            '((many-args a b c d e f g h i j))))
-  
+
   ;; Test nested structures  
   (eprolog-define-predicate (nested-struct (a (b c))))
   (should (eprolog-test--has-solution-p '((nested-struct (a (b c))))))
-  
+
   ;; Test special symbols in atoms
   (eprolog-define-predicate (special-chars |atom with spaces| +special+ /slash/))
   (should (eprolog-test--has-solution-p 
            '((special-chars |atom with spaces| +special+ /slash/)))))
-#+end_SRC
+```
 
-** Conclusion
+## Conclusion
 
 This comprehensive exploration of ε-prolog demonstrates the rich expressiveness and practical utility of logic programming within the Emacs environment. From basic facts and rules to sophisticated DCG parsing, from simple arithmetic to complex family relationship modeling, ε-prolog provides a powerful platform for declarative problem solving.
 
@@ -362,3 +366,4 @@ The modular documentation structure allows focused exploration of specific topic
 The journey through these examples illustrates a fundamental truth about Prolog: it's not just a programming language, but a different way of thinking about computation. Instead of telling the computer how to solve problems, we describe what we know and what relationships exist, then let logical inference find the solutions.
 
 This document serves multiple purposes: it's a learning resource for understanding ε-prolog's capabilities, a comprehensive test suite ensuring system reliability, and a demonstration of how logical programming can elegantly solve complex problems. Each example has been carefully crafted to be both educational and executable, ensuring that theory and practice remain tightly coupled.
+

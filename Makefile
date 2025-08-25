@@ -3,31 +3,29 @@ EMACS      ?= emacs
 MAIN_FILE   = eprolog.el
 # Legacy files removed - now using modular docs/
 
-# Documentation module sources and targets
-DOC_SOURCES = $(wildcard docs/*.org)
-DOC_TARGETS = $(DOC_SOURCES:.org=.el)
+## Documentation module sources and targets
+DOC_SOURCES   = $(wildcard docs/*.md)
+DOC_TARGETS   = $(DOC_SOURCES:.md=.el)
 
-.PHONY: all test check clean format help docs
+.PHONY: all test check clean format help docs tangle
 
 # Default target
 all: test
 
+# Generate tangled documentation modules from Markdown
+docs: $(DOC_TARGETS)
+tangle: $(DOC_TARGETS)
 
-# Generate documentation modules (index.el first, then others depend on it)
-docs/index.el: docs/index.org
-	$(EMACS) -batch -l $(MAIN_FILE) \
-		--eval '(org-babel-load-file "$<")' 2>/dev/null
-
-docs/%.el: docs/%.org docs/index.el
-	$(EMACS) -batch -l $(MAIN_FILE) -l docs/index.el \
-		--eval '(org-babel-load-file "$<")' 2>/dev/null
+# Extract Emacs Lisp blocks from Markdown using awk
+docs/%.el: docs/%.md
+	awk '/^```emacs-lisp$$/ { p = 1; next } /^```$$/ { p = 0 } p' $< > $@
 
 # Run test suite with modular documentation
 test: $(DOC_TARGETS)
 	$(EMACS) -batch -l $(MAIN_FILE) \
-		-l docs/index.el \
-		$(foreach doc,$(filter-out docs/index.el,$(DOC_TARGETS)),-l $(doc)) \
-		--eval '(ert-run-tests-batch-and-exit "eprolog-")'
+	-l docs/index.el \
+	$(foreach doc,$(filter-out docs/index.el,$(DOC_TARGETS)),-l $(doc)) \
+	--eval '(ert-run-tests-batch-and-exit "eprolog-")'
 
 
 # Lint and validate code
