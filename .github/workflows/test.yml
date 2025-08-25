@@ -19,8 +19,6 @@ jobs:
         emacs-version:
           - '30.2'
           - '29.4'
-          - '28.2'
-          - '27.2'
           - 'snapshot'
     steps:
     - name: Checkout code
