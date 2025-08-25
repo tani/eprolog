@@ -975,8 +975,8 @@ OUT-VAR is the output list variable.
 
 Returns a list of Prolog goals implementing the DCG body using difference lists.
 Handles terminals specified via vectors, non-terminals (symbols), semantic
-actions (@), cuts (!), and epsilon (empty vector []) productions.  Strings are no
-longer treated as terminals."
+actions (@), cuts (!), and epsilon (empty vector []) productions.  Strings
+are no longer treated as terminals."
   (if (null body)
       nil
     (let* ((element (car body))
