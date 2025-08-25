@@ -394,14 +394,14 @@ These tests examine how ε-prolog handles malformed or unusual arithmetic expres
   (should (eprolog-test--has-solution-p '((is _result (+ 1 2 3 4 5 6 7 8 9)))))  ;; Returns 45
   
   ;; Test nested expressions
-  (let ((solutions (eprolog-test--collect-solutions '((is _result (+ 1 (+))))))
+  (let ((solutions (eprolog-test--collect-solutions '((is _result (+ 1 (+)))))))
     (should (= (length solutions) 1))
     (should (= (cdr (assoc '_result (car solutions))) 1)))
   
   ;; Test division with insufficient arguments (may error at different levels)
   (condition-case nil
       (should-error (eprolog-test--has-solution-p '((is _result (* (/ 5) 3)))))
-    (error t))))  ;; Accept any error type
+    (error t)))  ;; Accept any error type
 #+END_SRC
 
 *** Floating Point Edge Cases
@@ -415,9 +415,9 @@ Floating-point arithmetic introduces special challenges related to precision, re
   
   ;; Test precision limits
   (let ((precise-val 0.123456789012345678901234567890))
-    (let ((solutions (eprolog-test--collect-solutions `((is _result ,precise-val))))))
+    (let ((solutions (eprolog-test--collect-solutions `((is _result ,precise-val)))))
       (should (= (length solutions) 1))
-      (should (equal (cdr (assoc '_result (car solutions))) precise-val)))
+      (should (equal (cdr (assoc '_result (car solutions))) precise-val))))
 
   ;; Test very small differences
   (let ((solutions (eprolog-test--collect-solutions '((is _x 1.0000000000001) (is _y 1.0)))))
