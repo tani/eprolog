@@ -402,6 +402,7 @@ These tests examine how ε-prolog handles malformed or unusual arithmetic expres
   (condition-case nil
       (should-error (eprolog-test--has-solution-p '((is _result (* (/ 5) 3)))))
     (error t))))  ;; Accept any error type
+#+END_SRC
 
 *** Floating Point Edge Cases
 
@@ -416,14 +417,14 @@ Floating-point arithmetic introduces special challenges related to precision, re
   (let ((precise-val 0.123456789012345678901234567890))
     (let ((solutions (eprolog-test--collect-solutions `((is _result ,precise-val))))))
       (should (= (length solutions) 1))
-      (should (equal (cdr (assoc '_result (car solutions))) precise-val))))
-  
+      (should (equal (cdr (assoc '_result (car solutions))) precise-val)))
+
   ;; Test very small differences
   (let ((solutions (eprolog-test--collect-solutions '((is _x 1.0000000000001) (is _y 1.0)))))
     (should (= (length solutions) 1))
     (should (= (cdr (assoc '_x (car solutions))) 1.0000000000001))
     (should (= (cdr (assoc '_y (car solutions))) 1.0)))
-  
+
   ;; Test infinity handling (Emacs Lisp returns 1.0e+INF)
   ;; Note: Emacs Lisp handles infinity gracefully
   (let ((solutions (eprolog-test--collect-solutions '((is _result (/ 1.0 0.0))))))
