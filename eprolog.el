@@ -974,8 +974,9 @@ IN-VAR is the input list variable.
 OUT-VAR is the output list variable.
 
 Returns a list of Prolog goals implementing the DCG body using difference lists.
-Handles terminals (strings), non-terminals (symbols), semantic actions (@),
-cuts (!), and epsilon (empty) productions."
+Handles terminals specified via vectors, non-terminals (symbols), semantic
+actions (@), cuts (!), and epsilon (empty) productions.  Strings are no
+longer treated as terminals."
   (if (null body)
       nil
     (let* ((element (car body))
@@ -997,11 +998,18 @@ cuts (!), and epsilon (empty) productions."
          (let ((match-goal `(= ,in-var (,element . ,next-var))))
            (cons match-goal (eprolog--transform-dcg-body rest next-var out-var))))
 
-        ;; Handle strings - terminals
-        ((pred stringp)
-         ;; Keep string as-is for terminal matching
-         (let ((match-goal `(= ,in-var (,element . ,next-var))))
-           (cons match-goal (eprolog--transform-dcg-body rest next-var out-var))))
+        ;; Handle vectors - sequences of terminals
+        ((pred vectorp)
+         (cl-loop
+          with len = (length element)
+          for current = in-var then next
+          for tok across element
+          for i from 0
+          for next = (if (and (= i (1- len)) (not rest)) out-var (gensym "_"))
+          collect `(= ,current (,tok . ,next)) into goals
+          finally return
+          (let ((rest-body (eprolog--transform-dcg-body rest current out-var)))
+            (append goals rest-body))))
 
         ;; Cut as list: (!)
         (`(!)
