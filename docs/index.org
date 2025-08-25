@@ -103,6 +103,9 @@ Each module combines comprehensive explanations with executable test cases, ensu
 Before exploring the specific modules, let's establish the testing environment that all examples will use:
 
 #+BEGIN_SRC emacs-lisp
+;; Increase recursion limit for complex tests
+(setq max-lisp-eval-depth 20000)
+
 ;; Helper function to test query success
 (defun eprolog-test--has-solution-p (goals)
   "Test if GOALS has at least one solution."
