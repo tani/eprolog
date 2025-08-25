@@ -1,4 +1,4 @@
-;;; eprolog.el --- Prolog engine implementation in Emacs Lisp -*- lexical-binding: t -*-
+;;; eprolog.el --- Native Prolog engine implementation -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2025 Masaya Taniguchi
 
