@@ -2,6 +2,7 @@
 #+AUTHOR: Masaya Taniguchi
 
 [[https://melpa.org/#/eprolog][file:https://melpa.org/packages/eprolog-badge.svg]]
+[[https://deepwiki.com/tani/eprolog][file:https://deepwiki.com/badge.svg]]
 
 * Overview
 
