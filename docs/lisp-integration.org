@@ -177,6 +177,126 @@ This mechanism is particularly useful for accumulating results, maintaining coun
                   '(1 0)))))
 #+END_SRC
 
+** Advanced Store/Fetch Backtracking Tests
+
+The store/fetch mechanism must handle complex backtracking scenarios correctly, ensuring that parameter values are properly restored when execution backtracks above store operations.
+
+#+BEGIN_SRC emacs-lisp
+(ert-deftest eprolog-feature-store-fetch-advanced-backtracking ()
+  "Test comprehensive backtracking scenarios for store/fetch predicates."
+  (eprolog-test--restore-builtins)
+
+  ;; === TEST 1: Nested backtracking with multiple store operations ===
+  ;; This tests that stores at different backtrack points are restored correctly
+  (let ((solutions (eprolog-test--collect-solutions
+           '((store level 0)
+             (or (and (store level 1)
+                      (or (store level 2) (store level 3))
+                      (fetch level _v))
+                 (fetch level _v))))))
+    (should (= (length solutions) 3))
+    ;; Should get: level=2, level=3, level=0
+    (let ((values (mapcar (lambda (sol) (cdr (assoc '_v sol))) solutions)))
+      (should (equal (sort values #'<) '(0 2 3)))))
+
+  ;; === TEST 2: Complex choice points with store operations ===
+  ;; Test store operations inside multiple choice alternatives
+  (let ((solutions (eprolog-test--collect-solutions
+           '((store base 100)
+             (member _x (1 2 3))
+             (lisp _offset (* _x 10))
+             (store temp _offset)
+             (fetch base _base)
+             (fetch temp _temp)
+             (is _result (+ _base _temp))))))
+    (should (= (length solutions) 3))
+    (let ((results (mapcar (lambda (sol) (cdr (assoc '_result sol))) solutions)))
+      (should (equal (sort results #'<) '(110 120 130)))))
+
+  ;; === TEST 3: Deep backtracking chains ===
+  ;; Multiple levels of nested backtracking with parameter restoration
+  (let ((solutions (eprolog-test--collect-solutions
+           '((store depth 0)
+             (or (and (store depth 1)
+                      (or (and (store depth 2)
+                               (or (store depth 3) (store depth 4)))
+                          (store depth 5)))
+                 (store depth 6))
+             (fetch depth _final)))))
+    (should (= (length solutions) 4))
+    (let ((depths (mapcar (lambda (sol) (cdr (assoc '_final sol))) solutions)))
+      (should (equal (sort depths #'<) '(3 4 5 6)))))
+
+  ;; === TEST 4: Store same key multiple times in different branches ===
+  ;; Ensure proper restoration when same key is stored multiple times
+  (let ((solutions (eprolog-test--collect-solutions
+           '((store counter 0)
+             (or (and (store counter 10)
+                      (store counter 11)
+                      (fetch counter _value))
+                 (and (store counter 20)
+                      (store counter 21) 
+                      (fetch counter _value))
+                 (fetch counter _value))))))
+    (should (= (length solutions) 3))
+    (let ((values (mapcar (lambda (sol) (cdr (assoc '_value sol))) solutions)))
+      (should (equal (sort values #'<) '(0 11 21)))))
+
+  ;; === TEST 5: Backtracking with failed fetch operations ===
+  ;; Test behavior when fetch operations fail during backtracking
+  ;; The successful branch should produce one solution, failed fetch should be unbound
+  (let ((solutions (eprolog-test--collect-solutions
+           '((or (and (store temp-key 42)
+                      (fetch temp-key _success))
+                 (fetch nonexistent-key _fail))))))
+    (should (= (length solutions) 1))
+    (should (= (cdr (assoc '_success (car solutions))) 42))
+    ;; The _fail variable should be unbound (equal to itself) since that branch failed
+    (should (eq (cdr (assoc '_fail (car solutions))) '_fail)))
+
+  ;; === TEST 6: Complex data structures in backtracking ===
+  ;; Test backtracking with complex stored values
+  (let ((solutions (eprolog-test--collect-solutions
+           '((store data (initial))
+             (member _item (a b c))
+             (lisp _new_data (list 'updated '_item))
+             (store data _new_data)
+             (fetch data _result)))))
+    (should (= (length solutions) 3))
+    (let ((results (mapcar (lambda (sol) (cdr (assoc '_result sol))) solutions)))
+      (should (equal results '((updated a) (updated b) (updated c))))))
+
+  ;; === TEST 7: Store operations followed by cuts ===
+  ;; Test that cuts don't interfere with parameter restoration
+  (eprolog-define-predicate (cut-test _result)
+    (store cut-test-key 1)
+    (member _x (a b c))
+    (= _x b)
+    !
+    (fetch cut-test-key _result))
+  
+  (let ((solutions (eprolog-test--collect-solutions '((cut-test _val)))))
+    (should (= (length solutions) 1))
+    (should (= (cdr (assoc '_val (car solutions))) 1)))
+
+  ;; === TEST 8: Multiple independent parameter stores ===
+  ;; Test multiple parameters being stored and restored independently
+  (let ((solutions (eprolog-test--collect-solutions
+           '((store x 10)
+             (store y 20)
+             (or (and (store x 11) (store y 21) (fetch x _x1) (fetch y _y1))
+                 (and (store x 12) (fetch x _x2) (fetch y _y2))
+                 (and (fetch x _x3) (fetch y _y3)))))))
+    (should (= (length solutions) 3))
+    ;; Verify each solution has the correct parameter values
+    (let* ((sol1 (nth 0 solutions))
+           (sol2 (nth 1 solutions))
+           (sol3 (nth 2 solutions)))
+      (should (and (= (cdr (assoc '_x1 sol1)) 11) (= (cdr (assoc '_y1 sol1)) 21)))
+      (should (and (= (cdr (assoc '_x2 sol2)) 12) (= (cdr (assoc '_y2 sol2)) 20)))
+      (should (and (= (cdr (assoc '_x3 sol3)) 10) (= (cdr (assoc '_y3 sol3)) 20))))))
+#+END_SRC
+
 ** Dynamic Parameters Negative Tests
 
 Dynamic parameter predicates should fail with invalid keys or expressions:
