@@ -25,11 +25,12 @@
 - Meta-call: ~call/1+~
 - Arithmetic: ~is/2~ which is an alias of ~lisp/2+~
 - Lisp integration: ~lisp/2+~, ~lisp!/1+~, ~lispp/1+~
+- Dynamic parameters: ~store/2~, ~fetch/2~ for stateful computation
 
 ** Advanced Features
 - Definite Clause Grammar (DCG) support
 - Spy/debugging functionality for tracing execution
-- Dynamic parameters for Prolog-Lisp state sharing
+- Dynamic parameters (~store/2~, ~fetch/2~) with backtracking-aware state management
 - Anonymous variable handling
 - Variable renaming for clause application
 
@@ -60,6 +61,14 @@ Basic usage involves defining facts and rules, then querying the knowledge base:
 ;; Query the database
 (eprolog-query (grandparent tom _x))
 ;; Returns: _x = ann
+
+;; Dynamic parameters for stateful computation
+(eprolog-query '((store counter 0)
+                 (fetch counter _old)
+                 (is _new (+ _old 1))
+                 (store counter _new)
+                 (fetch counter _result)))
+;; Returns: _result = 1
 #+END_SRC
 
 ε-prolog provides convenient aliases:
