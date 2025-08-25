@@ -33,18 +33,18 @@ DCG rules are defined using specialized macros that automatically handle the tra
 **** eprolog-define-grammar
 Define a DCG rule, adding to existing rules with the same arity.
 
-#+BEGIN_SRC emacs-lisp :eval never :tangle no
+#+begin_SRC emacs-lisp :eval never :tangle no
 (eprolog-define-grammar head body-element1 body-element2 ...)
-#+END_SRC
+#+end_SRC
 
 Adds a new DCG rule without replacing existing ones. This allows multiple alternatives for the same non-terminal.
 
 **** eprolog-define-grammar!
 Define a DCG rule, replacing existing rules with the same arity.
 
-#+BEGIN_SRC emacs-lisp :eval never :tangle no
+#+begin_SRC emacs-lisp :eval never :tangle no
 (eprolog-define-grammar! head body-element1 body-element2 ...)
-#+END_SRC
+#+end_SRC
 
 Similar to ~eprolog-define-grammar~ but removes existing rules for the same non-terminal with the same arity before adding the new rule. Used for redefinition or when you want only one rule for a non-terminal.
 
@@ -55,13 +55,13 @@ The phrase predicates provide the interface between DCG rules and the input/outp
 **** phrase/2 and phrase/3
 Parse or generate using DCG rules.
 
-#+BEGIN_SRC emacs-lisp :eval never :tangle no
+#+begin_SRC emacs-lisp :eval never :tangle no
 ;; Parse complete input
 (eprolog-query (phrase non-terminal input-list))
 
 ;; Parse with remainder  
 (eprolog-query (phrase non-terminal input-list remainder))
-#+END_SRC
+#+end_SRC
 
 ~phrase/2~ succeeds if the non-terminal can parse the entire input list.
 ~phrase/3~ succeeds if the non-terminal can parse a prefix, with the remainder unified with the third argument.
@@ -72,7 +72,7 @@ These examples demonstrate the practical application of DCG notation, showing ho
 
 **** Basic Grammar Definition
 
-#+BEGIN_SRC emacs-lisp :eval never :tangle no
+#+begin_SRC emacs-lisp :eval never :tangle no
 ;; Define a simple grammar for sentences
 (eprolog-define-grammar! s np vp)           ; sentence → noun phrase + verb phrase
 (eprolog-define-grammar! np det noun)       ; noun phrase → determiner + noun  
@@ -85,11 +85,11 @@ These examples demonstrate the practical application of DCG notation, showing ho
 (eprolog-define-grammar noun "dog")
 (eprolog-define-grammar! verb "chases")
 (eprolog-define-grammar verb "sees")
-#+END_SRC
+#+end_SRC
 
 **** Parsing with DCG
 
-#+BEGIN_SRC emacs-lisp :eval never :tangle no
+#+begin_SRC emacs-lisp :eval never :tangle no
 ;; Parse complete sentences
 (eprolog-query (phrase s ("the" "cat" "chases" "a" "dog")))
 ;; Succeeds - valid sentence
@@ -103,7 +103,7 @@ These examples demonstrate the practical application of DCG notation, showing ho
 ;; Parse with remaining tokens
 (eprolog-query (phrase s ("the" "cat" "chases" "a" "dog" "quickly") _rest))
 ;; _rest = ("quickly") - parses sentence, leaves remainder
-#+END_SRC
+#+end_SRC
 
 *** DCG Best Practices
 
@@ -112,33 +112,33 @@ Understanding common pitfalls and best practices is essential for writing effici
 **** Left Recursion
 Avoid left recursion in DCG rules as it can cause infinite loops:
 
-#+BEGIN_SRC emacs-lisp :eval never :tangle no
+#+begin_SRC emacs-lisp :eval never :tangle no
 ;; BAD - left recursive
 (eprolog-define-grammar expr expr "+" term)
 
 ;; GOOD - right recursive  
 (eprolog-define-grammar expr term "+" expr)
 (eprolog-define-grammar expr term)
-#+END_SRC
+#+end_SRC
 
 **** Deterministic Parsing
 Use cut (!) to make parsing deterministic when appropriate:
 
-#+BEGIN_SRC emacs-lisp :eval never :tangle no
+#+begin_SRC emacs-lisp :eval never :tangle no
 (eprolog-define-grammar! statement declarative-stmt !)
 (eprolog-define-grammar statement question-stmt)
-#+END_SRC
+#+end_SRC
 
 **** Semantic Constraints
 Use semantic actions (@ ...) for constraints that don't consume input:
 
-#+BEGIN_SRC emacs-lisp :eval never :tangle no
+#+begin_SRC emacs-lisp :eval never :tangle no
 ;; Ensure number agreement
 (eprolog-define-grammar (s _num) 
   (np _num) 
   (@ (atom _num))           ; Constraint: _num must be bound
   (vp _num))
-#+END_SRC
+#+end_SRC
 
 ** Basic Grammar Operations
 
@@ -155,7 +155,7 @@ The examples in this section progress from elementary concepts to practical pars
 
 The following test introduces basic DCG concepts with a simple grammar:
 
-#+BEGIN_SRC emacs-lisp
+#+begin_SRC emacs-lisp
 (ert-deftest eprolog-feature-dcg-basic ()
   "Test basic DCG functionality."
   (eprolog-test--restore-builtins)
@@ -167,11 +167,11 @@ The following test introduces basic DCG concepts with a simple grammar:
   (should (eprolog-test--has-solution-p '((phrase sentence ("cat" "runs")))))
   (should (eprolog-test--has-solution-p '((phrase sentence ("dog" "runs")))))
   (should-not (eprolog-test--has-solution-p '((phrase sentence ("cat" "sleeps"))))))
-#+END_SRC
+#+end_SRC
 
 A more complete grammar demonstrates how DCGs can parse natural language structures:
 
-#+BEGIN_SRC emacs-lisp
+#+begin_SRC emacs-lisp
 (ert-deftest eprolog-feature-dcg-basic-grammar ()
   "Test basic DCG grammar definition and parsing."
   (eprolog-test--restore-builtins)
@@ -193,11 +193,11 @@ A more complete grammar demonstrates how DCGs can parse natural language structu
   
   ;; Test parsing invalid sentences
   (should-not (eprolog-test--has-solution-p '((phrase s ("cat" "the" "chases"))))))
-#+END_SRC
+#+end_SRC
 
 DCGs can also parse partial input, returning the unparsed remainder:
 
-#+BEGIN_SRC emacs-lisp
+#+begin_SRC emacs-lisp
 (ert-deftest eprolog-feature-dcg-parsing-with-remainder ()
   "Test DCG parsing with remainder."
   (eprolog-test--restore-builtins)
@@ -215,7 +215,7 @@ DCGs can also parse partial input, returning the unparsed remainder:
                     '((phrase s ("the" "cat" "chases" "the" "cat" "quickly") _rest)))))
     (should (= (length solutions) 1))
     (should (equal (cdr (assoc '_rest (car solutions))) '("quickly")))))
-#+END_SRC
+#+end_SRC
 
 ** Advanced DCG Features
 
@@ -223,7 +223,7 @@ This section explores sophisticated DCG capabilities that enable complex linguis
 
 Understanding these advanced features is crucial for building real-world parsers that handle the complexity and variability of natural and formal languages. These capabilities allow DCGs to express linguistic constraints, build structured representations, and implement sophisticated parsing strategies.
 
-#+BEGIN_SRC emacs-lisp
+#+begin_SRC emacs-lisp
 (ert-deftest eprolog-feature-dcg-epsilon-productions ()
   "Test DCG epsilon (empty) productions."
   (eprolog-test--restore-builtins)
@@ -238,11 +238,11 @@ Understanding these advanced features is crucial for building real-world parsers
   
   (should (eprolog-test--has-solution-p '((phrase np ("the" "cat")))))
   (should (eprolog-test--has-solution-p '((phrase np ("the" "big" "cat"))))))
-#+END_SRC
+#+end_SRC
 
 DCGs with arguments enable grammatical agreement and semantic processing:
 
-#+BEGIN_SRC emacs-lisp
+#+begin_SRC emacs-lisp
 (ert-deftest eprolog-feature-dcg-with-args ()
   "Test DCG with arguments."
   (eprolog-test--restore-builtins)
@@ -262,11 +262,11 @@ DCGs with arguments enable grammatical agreement and semantic processing:
   ;; Test mismatched agreement
   (should-not (eprolog-test--has-solution-p '((phrase (noun singular) ("cats")))))
   (should-not (eprolog-test--has-solution-p '((phrase (noun plural) ("cat"))))))
-#+END_SRC
+#+end_SRC
 
 Semantic actions in DCGs allow you to build parse trees or perform computations during parsing:
 
-#+BEGIN_SRC emacs-lisp
+#+begin_SRC emacs-lisp
 (ert-deftest eprolog-feature-dcg-semantic-actions ()
   "Test DCG semantic actions."
   (eprolog-test--restore-builtins)
@@ -284,11 +284,11 @@ Semantic actions in DCGs allow you to build parse trees or perform computations 
   
   (should (eprolog-test--has-solution-p '((phrase (s _) ("a" "cat" "chases" "some" "cats")))))
   (should-not (eprolog-test--has-solution-p '((phrase (s _) ("a" "cat" "chase" "some" "cats"))))))
-#+END_SRC
+#+end_SRC
 
 Cut operations in DCGs provide control over parsing alternatives:
 
-#+BEGIN_SRC emacs-lisp
+#+begin_SRC emacs-lisp
 (ert-deftest eprolog-feature-dcg-cut-operations ()
   "Test DCG cut operations."
   (eprolog-test--restore-builtins)
@@ -301,13 +301,13 @@ Cut operations in DCGs provide control over parsing alternatives:
   (eprolog-define-grammar! s "test")
   
   (should (eprolog-test--has-solution-p '((phrase statement ("test" "."))))))
-#+END_SRC
+#+end_SRC
 
 ** Grammar Generation
 
 DCGs work bidirectionally - they can generate sentences as well as parse them:
 
-#+BEGIN_SRC emacs-lisp
+#+begin_SRC emacs-lisp
 (ert-deftest eprolog-feature-dcg-generation ()
   "Test DCG sentence generation."
   (eprolog-test--restore-builtins)
@@ -324,11 +324,11 @@ DCGs work bidirectionally - they can generate sentences as well as parse them:
   (let ((solutions (eprolog-test--collect-solutions '((phrase s _sentence)))))
     (should (> (length solutions) 0))
     (should (equal (cdr (assoc '_sentence (car solutions))) '("the" "cat" "runs")))))
-#+END_SRC
+#+end_SRC
 
 Length-constrained generation demonstrates how to combine DCGs with other predicates:
 
-#+BEGIN_SRC emacs-lisp
+#+begin_SRC emacs-lisp
 (ert-deftest eprolog-feature-dcg-length-constrained-generation ()
   "Test DCG generation with length constraints."
   (eprolog-test--restore-builtins)
@@ -347,7 +347,7 @@ Length-constrained generation demonstrates how to combine DCGs with other predic
   (let ((solutions (eprolog-test--collect-solutions '((phrase s2 _sentence) (length _sentence 3)))))
     (should (= (length solutions) 1))
     (should (equal (cdr (assoc '_sentence (car solutions))) '("a" "cat" "runs")))))
-#+END_SRC
+#+end_SRC
 
 ** Complex Grammar Applications
 
@@ -355,7 +355,7 @@ This section demonstrates the application of DCGs to sophisticated parsing chall
 
 The applications presented here represent common parsing scenarios that arise in language processing, compiler construction, and data processing tasks. Each example builds upon the fundamental DCG concepts to create practical, reusable parsing solutions.
 
-#+BEGIN_SRC emacs-lisp
+#+begin_SRC emacs-lisp
 (ert-deftest eprolog-feature-dcg-arithmetic-expressions ()
   "Test arithmetic expression parsing with DCG."
   (eprolog-test--restore-builtins)
@@ -378,11 +378,11 @@ The applications presented here represent common parsing scenarios that arise in
   (should (eprolog-test--has-solution-p '((phrase expr ("2")))))
   (should (eprolog-test--has-solution-p '((phrase expr ("2" "+" "3" "*" "4")))))
   (should (eprolog-test--has-solution-p '((phrase expr ("(" "2" "+" "3" ")" "*" "4"))))))
-#+END_SRC
+#+end_SRC
 
 Nested structure parsing showcases DCGs' recursive capabilities:
 
-#+BEGIN_SRC emacs-lisp
+#+begin_SRC emacs-lisp
 (ert-deftest eprolog-feature-dcg-nested-structures ()
   "Test nested structure parsing with DCG."
   (eprolog-test--restore-builtins)
@@ -396,11 +396,11 @@ Nested structure parsing showcases DCGs' recursive capabilities:
   (should (eprolog-test--has-solution-p '((phrase parens ("(" ")")))))
   (should (eprolog-test--has-solution-p '((phrase parens ("(" "(" ")" "(" ")" ")")))))
   (should-not (eprolog-test--has-solution-p '((phrase parens ("(" "(" ")"))))))
-#+END_SRC
+#+end_SRC
 
 CSV-style parsing demonstrates practical text processing:
 
-#+BEGIN_SRC emacs-lisp
+#+begin_SRC emacs-lisp
 (ert-deftest eprolog-feature-dcg-csv-parsing ()
   "Test CSV-style parsing with DCG."
   (eprolog-test--restore-builtins)
@@ -416,7 +416,7 @@ CSV-style parsing demonstrates practical text processing:
   (should (eprolog-test--has-solution-p '((phrase csv-list ("apple")))))
   (should (eprolog-test--has-solution-p '((phrase csv-list ("apple" "," "banana")))))
   (should (eprolog-test--has-solution-p '((phrase csv-list ("apple" "," "banana" "," "cherry"))))))
-#+END_SRC
+#+end_SRC
 
 ** DCG Error Handling and Edge Cases
 
@@ -428,7 +428,7 @@ Comprehensive error handling testing is crucial for building reliable parsing sy
 
 These tests explore how the DCG system handles invalid grammar definitions, undefined non-terminals, and improper argument structures, ensuring robust failure behavior.
 
-#+BEGIN_SRC emacs-lisp
+#+begin_SRC emacs-lisp
 (ert-deftest eprolog-feature-dcg-malformed-grammar ()
   "Test error handling with malformed DCG rules."
   (eprolog-test--restore-builtins)
@@ -449,13 +449,13 @@ These tests explore how the DCG system handles invalid grammar definitions, unde
   (condition-case nil
       (should-error (eprolog-test--has-solution-p '((phrase test-rule "not-list"))))
     (error t)))
-#+END_SRC
+#+end_SRC
 
 *** Empty Input and Edge Cases
 
 This subsection tests the parsing system's behavior with empty inputs, minimal valid inputs, and boundary conditions that might expose edge cases in the parsing logic.
 
-#+BEGIN_SRC emacs-lisp
+#+begin_SRC emacs-lisp
 (ert-deftest eprolog-feature-dcg-empty-input-edge-cases ()
   "Test DCG parsing with empty and edge case inputs."
   (eprolog-test--restore-builtins)
@@ -479,13 +479,13 @@ This subsection tests the parsing system's behavior with empty inputs, minimal v
   (eprolog-define-grammar! two-words word word)
   (should-not (eprolog-test--has-solution-p '((phrase two-words ("test")))))
   (should (eprolog-test--has-solution-p '((phrase two-words ("test" "test"))))))
-#+END_SRC
+#+end_SRC
 
 *** Large Input Stress Test
 
 These tests evaluate the DCG system's performance and stability when processing very large input streams, testing resource limits and graceful degradation under memory pressure.
 
-#+BEGIN_SRC emacs-lisp
+#+begin_SRC emacs-lisp
 (ert-deftest eprolog-feature-dcg-large-input-stress ()
   "Test DCG parsing with very large inputs."
   (eprolog-test--restore-builtins)
@@ -511,13 +511,13 @@ These tests evaluate the DCG system's performance and stability when processing 
     (condition-case nil
         (should-not (eprolog-test--has-solution-p `((phrase large-list ,mixed-input))))
       (error t))))
-#+END_SRC
+#+end_SRC
 
 *** Left Recursion Detection
 
 Left recursion represents one of the most challenging aspects of parsing system design. These tests verify that the DCG system handles left-recursive grammars appropriately, either through transformation techniques or controlled failure.
 
-#+BEGIN_SRC emacs-lisp
+#+begin_SRC emacs-lisp
 (ert-deftest eprolog-feature-dcg-left-recursion ()
   "Test handling of left-recursive grammars."
   (eprolog-test--restore-builtins)
@@ -542,13 +542,13 @@ Left recursion represents one of the most challenging aspects of parsing system 
   (condition-case nil
       (eprolog-test--has-solution-p '((phrase indirect-a ("x" "y"))))
     (error t))) ;; Accept controlled failure
-#+END_SRC
+#+end_SRC
 
 *** Invalid Terminal/Non-terminal Mixing
 
 This subsection tests the system's handling of malformed grammar rules that mix invalid terminal and non-terminal constructs, ensuring robust error detection and appropriate failure modes.
 
-#+BEGIN_SRC emacs-lisp
+#+begin_SRC emacs-lisp
 (ert-deftest eprolog-feature-dcg-invalid-mixing ()
   "Test error handling with invalid terminal/non-terminal combinations."
   (eprolog-test--restore-builtins)
@@ -574,4 +574,4 @@ This subsection tests the system's handling of malformed grammar rules that mix 
   
   (should-not (eprolog-test--has-solution-p 
     '((phrase invalid-semantic-action ("test" "end"))))))
-#+END_SRC
+#+end_SRC

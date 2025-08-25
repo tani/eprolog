@@ -20,7 +20,7 @@ Core control predicates covered:
 - ~!/0~ (cut): The commitment operator—prevents backtracking and commits to current choice
 - ~not/1~: Negation as failure—succeeds when its argument fails, implementing logical negation
 
-#+BEGIN_SRC emacs-lisp
+#+begin_SRC emacs-lisp
 (ert-deftest eprolog-feature-control-basic-predicates ()
   "Test basic control flow predicates."
   (eprolog-test--restore-builtins)
@@ -36,11 +36,11 @@ Core control predicates covered:
   (let ((solutions (eprolog-test--collect-solutions '((not fail)))))
     (should (= (length solutions) 1)))
   (should-not (eprolog-test--has-solution-p '((not true)))))
-#+END_SRC
+#+end_SRC
 
 This is the main control predicate test that covers all basic control flow operations. Additionally, here are more focused individual tests:
 
-#+BEGIN_SRC emacs-lisp
+#+begin_SRC emacs-lisp
 (ert-deftest eprolog-feature-control-predicates ()
   "Test control predicates."
   (eprolog-test--restore-builtins)
@@ -55,20 +55,20 @@ This is the main control predicate test that covers all basic control flow opera
   (let ((solutions (eprolog-test--collect-solutions '((not fail)))))
     (should (= (length solutions) 1)))
   (should-not (eprolog-test--has-solution-p '((not true)))))
-#+END_SRC
+#+end_SRC
 
 The fail predicate serves a specific purpose in forcing backtracking:
 
-#+BEGIN_SRC emacs-lisp
+#+begin_SRC emacs-lisp
 (ert-deftest eprolog-feature-control-fail-predicate ()
   "Test the fail predicate."
   (eprolog-test--restore-builtins)
   (should-not (eprolog-test--has-solution-p '((fail)))))
-#+END_SRC
+#+end_SRC
 
 The cut operator provides individual testing separate from the more complex cut semantics:
 
-#+BEGIN_SRC emacs-lisp
+#+begin_SRC emacs-lisp
 (ert-deftest eprolog-feature-control-cut-predicate ()
   "Test cut (!) behavior as standalone predicate."
   (eprolog-test--restore-builtins)
@@ -82,11 +82,11 @@ The cut operator provides individual testing separate from the more complex cut 
   (let ((solutions (eprolog-test--collect-solutions '((test-cut _x)))))
     (should (= (length solutions) 1))
     (should (equal (cdr (assoc '_x (car solutions))) 'a))))
-#+END_SRC
+#+end_SRC
 
 The call predicate enables meta-programming:
 
-#+BEGIN_SRC emacs-lisp
+#+begin_SRC emacs-lisp
 (ert-deftest eprolog-feature-control-call-predicate ()
   "Test the call predicate."
   (eprolog-test--restore-builtins)
@@ -97,7 +97,7 @@ The call predicate enables meta-programming:
   (let ((solutions (eprolog-test--collect-solutions '((call = _x 42) (= _x 42)))))
     (should (= (length solutions) 1))
     (should (= (cdr (assoc '_x (car solutions))) 42))))
-#+END_SRC
+#+end_SRC
 
 ** Logical Operators
 
@@ -111,7 +111,7 @@ Key logical operators and their behaviors:
 - ~if/2-3~: Conditional execution—implements if-then and if-then-else patterns with commitment semantics
 - Interaction with backtracking: How these operators manage choice points and solution exploration
 
-#+BEGIN_SRC emacs-lisp
+#+begin_SRC emacs-lisp
 (ert-deftest eprolog-feature-control-logical-predicates ()
   "Test logical conjunction and disjunction predicates."
   (eprolog-test--restore-builtins)
@@ -141,11 +141,11 @@ Key logical operators and their behaviors:
     (should (= (length solutions) 1)))
   (let ((solutions (eprolog-test--collect-solutions '((if fail fail true)))))
     (should (= (length solutions) 1))))
-#+END_SRC
+#+end_SRC
 
 Conditional execution provides if-then-else semantics in a logical context:
 
-#+BEGIN_SRC emacs-lisp
+#+begin_SRC emacs-lisp
 (ert-deftest eprolog-feature-control-if-then-else ()
   "Test conditional predicate (if) as standalone test."
   (eprolog-test--restore-builtins)
@@ -157,7 +157,7 @@ Conditional execution provides if-then-else semantics in a logical context:
     (should (= (length solutions) 1)))
   (let ((solutions (eprolog-test--collect-solutions '((if fail then-pred else-pred)))))
     (should (= (length solutions) 1))))
-#+END_SRC
+#+end_SRC
 
 ** Meta-predicates
 
@@ -170,7 +170,7 @@ Meta-predicates treat other predicates as data, enabling powerful metaprogrammin
 
 This capability enables sophisticated programming patterns where the structure of queries can be determined at runtime.
 
-#+BEGIN_SRC emacs-lisp
+#+begin_SRC emacs-lisp
 (ert-deftest eprolog-feature-control-metacall-predicates ()
   "Test meta-call predicates."
   (eprolog-test--restore-builtins)
@@ -186,13 +186,13 @@ This capability enables sophisticated programming patterns where the structure o
     (should (= (cdr (assoc '_x (car solutions))) 42)))
   (let ((solutions (eprolog-test--collect-solutions '((call = foo foo)))))
     (should (= (length solutions) 1))))
-#+END_SRC
+#+end_SRC
 
 ** Call Predicate Negative Tests
 
 The call predicate should fail with undefined predicates, invalid arguments, and malformed terms:
 
-#+BEGIN_SRC emacs-lisp
+#+begin_SRC emacs-lisp
 (ert-deftest eprolog-feature-control-call-negative-tests ()
   "Test negative cases for call predicate."
   (eprolog-test--restore-builtins)
@@ -211,7 +211,7 @@ The call predicate should fail with undefined predicates, invalid arguments, and
   (eprolog-define-predicate! (always-fails) (fail))
   (should-not (eprolog-test--has-solution-p '((call always-fails))))
   (should-not (eprolog-test--has-solution-p '((call = foo bar)))))
-#+END_SRC
+#+end_SRC
 
 ** Cut and Backtracking Control
 
@@ -226,7 +226,7 @@ Key aspects of cut and backtracking control:
 - Semantic considerations: How cut affects the logical meaning of your programs
 - Common cut patterns: Green cuts (optimizations) vs. red cuts (changing logical meaning)
 
-#+BEGIN_SRC emacs-lisp
+#+begin_SRC emacs-lisp
 (ert-deftest eprolog-feature-control-cut-semantics ()
   "Test cut (!) semantics."
   (eprolog-test--restore-builtins)
@@ -248,11 +248,11 @@ Key aspects of cut and backtracking control:
   (let ((solutions (eprolog-test--collect-solutions '((first-choice _x)))))
     (should (= (length solutions) 1))
     (should (equal (cdr (assoc '_x (car solutions))) 'a))))
-#+END_SRC
+#+end_SRC
 
 The repeat predicate creates infinite choice points, useful for implementing loops:
 
-#+BEGIN_SRC emacs-lisp
+#+begin_SRC emacs-lisp
 (ert-deftest eprolog-feature-control-repeat-predicate ()
   "Test repeat predicate for infinite choice points."
   (eprolog-test--restore-builtins)
@@ -267,13 +267,13 @@ The repeat predicate creates infinite choice points, useful for implementing loo
     (let ((solutions (eprolog-test--collect-solutions '((test-repeat-usage)))))
       (should (= (length solutions) 1)))
     (should (= counter 3))))
-#+END_SRC
+#+end_SRC
 
 ** Cut (!) Negative Tests
 
 The cut predicate controls backtracking, and these tests verify proper failure behavior in cut-controlled branches:
 
-#+BEGIN_SRC emacs-lisp
+#+begin_SRC emacs-lisp
 (ert-deftest eprolog-feature-control-cut-negative-tests ()
   "Test negative cases for cut (!) predicate."
   (eprolog-test--restore-builtins)
@@ -303,7 +303,7 @@ The cut predicate controls backtracking, and these tests verify proper failure b
     (fail))
   
   (should-not (eprolog-test--has-solution-p '((cut-branch-fail)))))
-#+END_SRC
+#+end_SRC
 
 ** Advanced Control Flow Error Cases
 
@@ -315,7 +315,7 @@ Robust error handling in control flow is crucial for building reliable logical p
 
 These tests explore the behavior of deeply nested control structures, verifying that the system can handle complex nested logical expressions without stack overflow or performance degradation.
 
-#+BEGIN_SRC emacs-lisp
+#+begin_SRC emacs-lisp
 (ert-deftest eprolog-feature-control-deep-nesting ()
   "Test deeply nested control structures."
   (eprolog-test--restore-builtins)
@@ -344,13 +344,13 @@ These tests explore the behavior of deeply nested control structures, verifying 
     '((if true
           (if true
               (if fail true fail)))))))
-#+END_SRC
+#+end_SRC
 
 *** Meta-predicate Error Handling
 
 This subsection tests the error handling capabilities of meta-predicates like ~call/1~, ensuring they properly handle malformed goals, undefined predicates, and invalid argument types.
 
-#+BEGIN_SRC emacs-lisp
+#+begin_SRC emacs-lisp
 (ert-deftest eprolog-feature-control-meta-predicate-errors ()
   "Test error handling in meta-predicates like call/1."
   (eprolog-test--restore-builtins)
@@ -371,13 +371,13 @@ This subsection tests the error handling capabilities of meta-predicates like ~c
   
   ;; Test call with unbound variables that can't be resolved
   (should-not (eprolog-test--has-solution-p '((call _undefined_goal)))))
-#+END_SRC
+#+end_SRC
 
 *** Cut Interaction Edge Cases
 
 This subsection explores complex interactions between the cut operator and other control flow constructs, testing how cuts behave within nested logical structures and conditional expressions.
 
-#+BEGIN_SRC emacs-lisp
+#+begin_SRC emacs-lisp
 (ert-deftest eprolog-feature-control-cut-interaction-edge-cases ()
   "Test cut behavior in complex interaction scenarios."
   (eprolog-test--restore-builtins)
@@ -406,13 +406,13 @@ This subsection explores complex interactions between the cut operator and other
   (let ((solutions (eprolog-test--collect-solutions '((cut-in-if success)))))
     (should (= (length solutions) 1)))
   (should-not (eprolog-test--has-solution-p '((cut-in-if failure)))))
-#+END_SRC
+#+end_SRC
 
 *** Logical Operator Edge Cases
 
 These tests verify the robustness of logical operators when presented with invalid arguments, edge cases in boolean logic, and complex nested combinations that stress the evaluation system.
 
-#+BEGIN_SRC emacs-lisp
+#+begin_SRC emacs-lisp
 (ert-deftest eprolog-feature-control-logical-operators-edge-cases ()
   "Test edge cases in logical operators."
   (eprolog-test--restore-builtins)
@@ -437,13 +437,13 @@ These tests verify the robustness of logical operators when presented with inval
     '((or (and fail true)
           (and true (or fail true)))))))
     (should (= (length solutions) 1))))
-#+END_SRC
+#+end_SRC
 
 *** Or Predicate Variable Binding Tests
 
 These tests verify that the ~or~ predicate correctly handles variable bindings across disjunctive branches, ensuring that each branch can contribute variable bindings independently without interference.
 
-#+BEGIN_SRC emacs-lisp
+#+begin_SRC emacs-lisp
 (ert-deftest eprolog-feature-control-or-variable-binding ()
   "Test or predicate variable binding behavior across disjunctive branches."
   (eprolog-test--restore-builtins)
@@ -478,9 +478,9 @@ These tests verify that the ~or~ predicate correctly handles variable bindings a
       ;; From q(_y): y should be bound to 1, 2 and x should be unbound (equal to the variable)
       (should (member 1 y-bindings))
       (should (member 2 y-bindings)))))
-#+END_SRC
+#+end_SRC
 
-#+BEGIN_SRC emacs-lisp
+#+begin_SRC emacs-lisp
 (ert-deftest eprolog-feature-control-or-variable-binding-nested ()
   "Test or predicate variable binding behavior across disjunctive branches."
   (eprolog-test--restore-builtins)
@@ -517,7 +517,7 @@ These tests verify that the ~or~ predicate correctly handles variable bindings a
       ;; From q(_y): y should be bound to 1, 2 and x should be unbound (equal to the variable)
       (should (member 1 y-bindings))
       (should (member 2 y-bindings)))))
-#+END_SRC
+#+end_SRC
 
 
 ** Conclusion
