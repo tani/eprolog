@@ -17,7 +17,8 @@ DCGs extend standard Prolog syntax with domain-specific constructs tailored for 
 
 The fundamental building blocks of DCG notation each serve specific roles in grammar specification, from matching literal text to invoking complex parsing logic.
 
--   **Strings** - Terminal symbols (literal strings to match)
+-   **[term1 term2 ...]** - Vector notation for terminal symbols (literal tokens to match)
+-   **[]** - Empty vector for epsilon productions (matches empty input)
 -   **Symbols** - Non-terminal symbols (other DCG rules)
 -   **(Symbol args&#x2026;)** - Non-terminals with arguments
 -   **!** - Cut operator (prevents backtracking)
@@ -87,7 +88,24 @@ These examples demonstrate the practical application of DCG notation, showing ho
     (eprolog-define-grammar verb [sees])
 ```
 
-2.  Parsing with DCG
+2.  Epsilon Productions (Optional Elements)
+
+```
+    ;; Define optional elements using empty vector []
+    (eprolog-define-grammar! optional-adj [])         ; epsilon - matches empty input
+    (eprolog-define-grammar optional-adj adj)         ; or matches an adjective
+    
+    (eprolog-define-grammar! adj [big])
+    (eprolog-define-grammar adj [small])
+    
+    (eprolog-define-grammar! np det optional-adj noun)  ; noun phrase with optional adjective
+    
+    ;; Both forms are valid:
+    (eprolog-query (phrase np (the cat)))           ; without adjective
+    (eprolog-query (phrase np (the big cat)))       ; with adjective
+```
+
+3.  Parsing with DCG
 
 ```
     ;; Parse complete sentences
