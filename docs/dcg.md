@@ -233,7 +233,7 @@ Understanding these advanced features is crucial for building real-world parsers
   (eprolog-test--restore-builtins)
 
   ;; Test epsilon productions
-  (eprolog-define-grammar! optional-adj nil)
+  (eprolog-define-grammar! optional-adj [])
   (eprolog-define-grammar optional-adj adj)
   (eprolog-define-grammar! np det optional-adj noun)
   (eprolog-define-grammar! det [the])
@@ -392,7 +392,7 @@ Nested structure parsing showcases DCGs' recursive capabilities:
   (eprolog-test--restore-builtins)
 
   ;; Define nested parentheses grammar
-  (eprolog-define-grammar! parens nil)
+  (eprolog-define-grammar! parens [])
   (eprolog-define-grammar parens [?\(] parens [?\)] parens)
 
   ;; Test balanced parentheses
@@ -466,7 +466,7 @@ This subsection tests the parsing system's behavior with empty inputs, minimal v
 
   ;; Define simple grammar for testing
   (eprolog-define-grammar! word [test])
-  (eprolog-define-grammar! empty-rule nil)
+  (eprolog-define-grammar! empty-rule [])
 
   ;; Test parsing empty input
   (should-not (eprolog-test--has-solution-p '((phrase word ()))))
@@ -495,7 +495,7 @@ These tests evaluate the DCG system's performance and stability when processing 
   (eprolog-test--restore-builtins)
 
   ;; Define recursive grammar for lists
-  (eprolog-define-grammar! large-list nil)
+  (eprolog-define-grammar! large-list [])
   (eprolog-define-grammar! large-list [item] large-list)
 
   ;; Test with moderately large input (100 tokens) - may hit resource limits

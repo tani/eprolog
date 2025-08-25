@@ -975,7 +975,7 @@ OUT-VAR is the output list variable.
 
 Returns a list of Prolog goals implementing the DCG body using difference lists.
 Handles terminals specified via vectors, non-terminals (symbols), semantic
-actions (@), cuts (!), and epsilon (empty) productions.  Strings are no
+actions (@), cuts (!), and epsilon (empty vector []) productions.  Strings are no
 longer treated as terminals."
   (if (null body)
       nil
@@ -983,8 +983,8 @@ longer treated as terminals."
            (rest (cdr body))
            (next-var (if rest (gensym "_") out-var)))
       (pcase element
-        ;; Handle epsilon (empty production)
-        ('nil
+        ;; Handle epsilon (empty production) - empty vector []
+        ((and (pred vectorp) (pred (lambda (v) (= (length v) 0))))
          ;; epsilon means no consumption, so continue with same variables
          (let ((match-goal `(= ,in-var ,next-var)))
            (cons match-goal (eprolog--transform-dcg-body rest in-var out-var))))
