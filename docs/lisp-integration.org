@@ -149,15 +149,15 @@ This mechanism is particularly useful for accumulating results, maintaining coun
 (ert-deftest eprolog-feature-lisp-dynamic-parameters ()
   "Test dynamic parameter predicates."
   (eprolog-test--restore-builtins)
-  
+
   ;; Test store and fetch
-  (let ((solutions (eprolog-test--collect-solutions 
+  (let ((solutions (eprolog-test--collect-solutions
            '((store test-key 42)
              (fetch test-key _value)
              (= _value 42)))))
     (should (= (length solutions) 1))
     (should (= (cdr (assoc '_value (car solutions))) 42)))
-  
+
   ;; Test parameter persistence across goals
   (let ((solutions (eprolog-test--collect-solutions
            '((store counter 0)
@@ -165,7 +165,16 @@ This mechanism is particularly useful for accumulating results, maintaining coun
              (is _new (+ _old 1))
              (store counter _new)
              (fetch counter 1)))))
-    (should (= (length solutions) 1))))
+    (should (= (length solutions) 1)))
+
+  ;; Test backtracking restores previous values
+  (let ((solutions (eprolog-test--collect-solutions
+           '((store a 0)
+             (or (store a 1) true)
+             (fetch a _v)))))
+    (should (= (length solutions) 2))
+    (should (equal (mapcar (lambda (sol) (cdr (assoc '_v sol))) solutions)
+                  '(1 0)))))
 #+END_SRC
 
 ** Dynamic Parameters Negative Tests

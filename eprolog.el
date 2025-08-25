@@ -841,11 +841,30 @@ Succeeds if TERM is an unbound variable."
 (eprolog-define-lisp-predicate store (variable-symbol value-expression)
   "Dynamic parameter predicate: store(SYMBOL, VALUE).
 Stores VALUE under SYMBOL in the dynamic parameter store.
-VALUE-EXPRESSION is stored directly without evaluation."
-  (let* ((substituted-value (eprolog--substitute-bindings eprolog-current-bindings value-expression))
-         (eprolog-dynamic-parameters
-          (cons (cons variable-symbol substituted-value) eprolog-dynamic-parameters)))
-    (eprolog--prove-goal-sequence eprolog-remaining-goals eprolog-current-bindings)))
+VALUE-EXPRESSION is stored directly without evaluation.
+
+This binding persists across backtracking and is automatically
+restored when execution backtracks above this store operation."
+  (let* ((substituted-value
+          (eprolog--substitute-bindings eprolog-current-bindings
+                                         value-expression))
+         (new-params (cons (cons variable-symbol substituted-value)
+                           eprolog-dynamic-parameters)))
+    (cl-labels ((continue-with-store (result)
+                  (if (eprolog--failure-p result)
+                      (make-eprolog--failure)
+                    (let ((bindings (eprolog--success-bindings result))
+                          (cont (eprolog--success-continuation result)))
+                      (make-eprolog--success
+                       :bindings bindings
+                       :continuation
+                       (lambda ()
+                         (let ((eprolog-dynamic-parameters new-params))
+                           (continue-with-store (funcall cont)))))))))
+      (let ((eprolog-dynamic-parameters new-params))
+        (continue-with-store
+         (eprolog--prove-goal-sequence eprolog-remaining-goals
+                                       eprolog-current-bindings))))))
 
 (eprolog-define-lisp-predicate fetch (variable-symbol prolog-variable)
   "Dynamic parameter predicate: fetch(SYMBOL, VAR).
