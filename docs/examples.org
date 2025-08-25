@@ -26,7 +26,7 @@ This subsection covers:
 
 The following test establishes a comprehensive family tree covering all relationship types and complex queries:
 
-#+BEGIN_SRC emacs-lisp
+#+begin_SRC emacs-lisp
 (ert-deftest eprolog-example-family-tree-comprehensive ()
   "Test comprehensive family tree with all relationship types and complex queries."
   (eprolog-test--restore-builtins)
@@ -150,7 +150,7 @@ The following test establishes a comprehensive family tree covering all relation
     (should (member '((_x . katsuo) (_y . sazae)) solutions))
     (should (member '((_x . katsuo) (_y . wakame)) solutions))
     (should (member '((_x . sazae) (_y . wakame)) solutions))))
-#+END_SRC
+#+end_SRC
 
 The family tree test demonstrates how basic facts can be combined with rules to derive complex relationships, showcasing the power of logical inference in Prolog.
 
@@ -162,7 +162,7 @@ Understanding backtracking is essential for mastering Prolog. This section explo
 
 The cut operator provides fine-grained control over Prolog's backtracking mechanism:
 
-#+BEGIN_SRC emacs-lisp
+#+begin_SRC emacs-lisp
 (ert-deftest eprolog-example-complex-backtracking-with-cut ()
   "Test complex backtracking scenarios with cut."
   (eprolog-test--restore-builtins)
@@ -184,11 +184,11 @@ The cut operator provides fine-grained control over Prolog's backtracking mechan
   (let ((solutions (eprolog-test--collect-solutions '((first-color _x)))))
     (should (= (length solutions) 1))
     (should (equal (cdr (assoc '_x (car solutions))) 'red))))
-#+END_SRC
+#+end_SRC
 
 The repeat predicate combined with cut creates controlled loops:
 
-#+BEGIN_SRC emacs-lisp
+#+begin_SRC emacs-lisp
 (ert-deftest eprolog-example-repeat-with-complex-conditions ()
   "Test repeat predicate with complex termination conditions."
   (eprolog-test--restore-builtins)
@@ -203,7 +203,7 @@ The repeat predicate combined with cut creates controlled loops:
     
     (should (eprolog-test--has-solution-p '((test-repeat-complex))))
     (should (= counter 5))))
-#+END_SRC
+#+end_SRC
 
 ** Advanced Applications
 
@@ -213,7 +213,7 @@ The true test of any programming paradigm lies in its ability to express complex
 
 Factorial calculation demonstrates basic recursion in Prolog:
 
-#+BEGIN_SRC emacs-lisp
+#+begin_SRC emacs-lisp
 (ert-deftest eprolog-example-factorial ()
   "Test recursive factorial implementation."
   (eprolog-test--restore-builtins)
@@ -238,11 +238,11 @@ Factorial calculation demonstrates basic recursion in Prolog:
   (let ((solutions (eprolog-test--collect-solutions '((factorial 5 _f)))))
     (should (= (length solutions) 1))
     (should (= (cdr (assoc '_f (car solutions))) 120))))
-#+END_SRC
+#+end_SRC
 
 The Fibonacci sequence shows more complex recursive patterns:
 
-#+BEGIN_SRC emacs-lisp
+#+begin_SRC emacs-lisp
 (ert-deftest eprolog-example-fibonacci ()
   "Test Fibonacci sequence implementation."
   (eprolog-test--restore-builtins)
@@ -270,11 +270,11 @@ The Fibonacci sequence shows more complex recursive patterns:
   
   (let ((solutions (eprolog-test--collect-solutions '((fib 4 _f)))))
     (should (= (cdr (assoc '_f (car solutions))) 3))))
-#+END_SRC
+#+end_SRC
 
 The Greatest Common Divisor algorithm demonstrates iterative computation in Prolog:
 
-#+BEGIN_SRC emacs-lisp
+#+begin_SRC emacs-lisp
 (ert-deftest eprolog-example-gcd-algorithm ()
   "Test Greatest Common Divisor algorithm."
   (eprolog-test--restore-builtins)
@@ -292,7 +292,7 @@ The Greatest Common Divisor algorithm demonstrates iterative computation in Prol
   
   (let ((solutions (eprolog-test--collect-solutions '((gcd 15 25 _g)))))
     (should (= (cdr (assoc '_g (car solutions))) 5))))
-#+END_SRC
+#+end_SRC
 
 ** Performance Testing
 
@@ -308,7 +308,7 @@ Key performance dimensions evaluated:
 
 Comprehensive performance testing evaluates multiple aspects of system performance:
 
-#+BEGIN_SRC emacs-lisp
+#+begin_SRC emacs-lisp
 (ert-deftest eprolog-example-performance-tests ()
   "Test performance with larger databases and deep recursion."
   (eprolog-test--restore-builtins)
@@ -341,11 +341,11 @@ Comprehensive performance testing evaluates multiple aspects of system performan
     (should (= (length solutions) 1))
     (should (equal (cdr (assoc '_result (car solutions))) 'done))))
   
-#+END_SRC
+#+end_SRC
 
 Additional performance tests focus on specific aspects of system behavior:
 
-#+BEGIN_SRC emacs-lisp
+#+begin_SRC emacs-lisp
 (ert-deftest eprolog-example-large-database ()
   "Test performance with larger clause database."
   (eprolog-test--restore-builtins)
@@ -354,11 +354,11 @@ Additional performance tests focus on specific aspects of system behavior:
   
   (let ((solutions (eprolog-test--collect-solutions '((test-num _x)))))
     (should (= (length solutions) 100))))
-#+END_SRC
+#+end_SRC
 
 Stress testing pushes the system to its limits:
 
-#+BEGIN_SRC emacs-lisp
+#+begin_SRC emacs-lisp
 (ert-deftest eprolog-example-stress-testing ()
   "Test system behavior under stress conditions."
   (eprolog-test--restore-builtins)
@@ -381,7 +381,7 @@ Stress testing pushes the system to its limits:
   (let ((solutions (eprolog-test--collect-solutions '((deep-recursion 10 _result)))))
     (should (= (length solutions) 1))
     (should (equal (cdr (assoc '_result (car solutions))) 'done))))
-#+END_SRC
+#+end_SRC
 
 ** Integration and End-to-End Tests
 
@@ -389,7 +389,7 @@ These tests verify complete workflows and interactions between different ε-prol
 
 *** Multi-Module Integration Tests
 
-#+BEGIN_SRC emacs-lisp
+#+begin_SRC emacs-lisp
 (ert-deftest eprolog-example-multi-feature-integration ()
   "Test integration of multiple ε-prolog features in a single workflow."
   (eprolog-test--restore-builtins)
@@ -431,11 +431,11 @@ These tests verify complete workflows and interactions between different ε-prol
     (should (= (length solutions) 1)))
   (let ((solutions (eprolog-test--collect-solutions '((age-group charlie middle)))))
     (should (= (length solutions) 1))))
-#+END_SRC
+#+end_SRC
 
 *** Real-World Database Simulation
 
-#+BEGIN_SRC emacs-lisp
+#+begin_SRC emacs-lisp
 (ert-deftest eprolog-example-database-simulation ()
   "Test a complete database-like application with multiple tables and relationships."
   (eprolog-test--restore-builtins)
@@ -482,11 +482,11 @@ These tests verify complete workflows and interactions between different ε-prol
     '((employee _id _name engineering _salary) (lispp (> _salary 70000))))))
     (should (>= (length solutions) 1)))
     ;; Should find Alice and Charlie who are in engineering with salary > 70000)
-#+END_SRC
+#+end_SRC
 
 *** Graph Algorithm Integration
 
-#+BEGIN_SRC emacs-lisp
+#+begin_SRC emacs-lisp
 (ert-deftest eprolog-example-graph-algorithms ()
   "Test graph algorithms using ε-prolog predicates."
   (eprolog-test--restore-builtins)
@@ -527,7 +527,7 @@ These tests verify complete workflows and interactions between different ε-prol
   (let ((solutions (eprolog-test--collect-solutions '((reachable a d)))))
     (should (>= (length solutions) 1)))
   (should-not (eprolog-test--has-solution-p '((reachable d a)))))
-#+END_SRC
+#+end_SRC
 
 ** Performance Regression Tests
 
@@ -535,7 +535,7 @@ These tests establish performance baselines and detect regression in critical op
 
 *** Basic Operation Performance Tests
 
-#+BEGIN_SRC emacs-lisp
+#+begin_SRC emacs-lisp
 (ert-deftest eprolog-example-basic-performance-regression ()
   "Test basic operation performance to detect regressions."
   (eprolog-test--restore-builtins)
@@ -570,11 +570,11 @@ These tests establish performance baselines and detect regression in critical op
     
     (let ((elapsed (float-time (time-subtract (current-time) start-time))))
       (should (< elapsed 2.0))))) ;; 2 seconds threshold
-#+END_SRC
+#+end_SRC
 
 *** Arithmetic Performance Tests
 
-#+BEGIN_SRC emacs-lisp
+#+begin_SRC emacs-lisp
 (ert-deftest eprolog-example-arithmetic-performance-regression ()
   "Test arithmetic performance to detect regressions."
   (eprolog-test--restore-builtins)
@@ -605,11 +605,11 @@ These tests establish performance baselines and detect regression in critical op
     
     (let ((elapsed (float-time (time-subtract (current-time) start-time))))
       (should (< elapsed 5.0))))) ;; 5 seconds threshold
-#+END_SRC
+#+end_SRC
 
 *** Backtracking Performance Tests
 
-#+BEGIN_SRC emacs-lisp
+#+begin_SRC emacs-lisp
 (ert-deftest eprolog-example-backtracking-performance-regression ()
   "Test backtracking performance to detect regressions."
   (eprolog-test--restore-builtins)
@@ -638,4 +638,4 @@ These tests establish performance baselines and detect regression in critical op
     
     (let ((elapsed (float-time (time-subtract (current-time) start-time))))
       (should (< elapsed 0.5)))))) ;; Should be faster with cut
-#+END_SRC
+#+end_SRC

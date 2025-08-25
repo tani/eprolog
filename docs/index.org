@@ -20,7 +20,7 @@ The document draws from practical examples in README.org and the implementation 
 
 Here are the fundamental examples that demonstrate how to define facts, rules, and query the knowledge base:
 
-#+BEGIN_SRC emacs-lisp :eval never :tangle no
+#+begin_src emacs-lisp :eval never :tangle no
 ;; Define facts (using convenient alias)
 (eprolog-define-predicate (parent tom bob))
 (eprolog-define-predicate (parent tom liz))
@@ -36,11 +36,11 @@ Here are the fundamental examples that demonstrate how to define facts, rules, a
 ;; Query the database
 (eprolog-query (grandparent tom _x))
 ;; Returns: _x = ann, _x = pat
-#+END_SRC
+#+end_src
 
 *** Built-in Predicates Examples
 
-#+BEGIN_SRC emacs-lisp :eval never :tangle no
+#+begin_src emacs-lisp :eval never :tangle no
 ;; List operations
 (eprolog-query (member _x (a b c)))
 ;; Returns: _x = a, _x = b, _x = c
@@ -53,11 +53,11 @@ Here are the fundamental examples that demonstrate how to define facts, rules, a
 (eprolog-query (atom foo))     ;; Returns: t
 (eprolog-query (number 42))    ;; Returns: t
 (eprolog-query (var _x))       ;; Returns: t
-#+END_SRC
+#+end_src
 
 *** Lisp Integration Examples
 
-#+BEGIN_SRC emacs-lisp :eval never :tangle no
+#+begin_src emacs-lisp :eval never :tangle no
 ;; Lisp expression evaluation
 (eprolog-query (lisp _result (+ 2 3)))
 ;; Returns: _result = 5
@@ -68,41 +68,47 @@ Here are the fundamental examples that demonstrate how to define facts, rules, a
 
 ;; Side effects
 (eprolog-query (lisp! (message "Hello from Prolog!")))
-#+END_SRC
+#+end_src
 
 ** Running Tests
 
 All examples in this documentation can be executed as tests using ERT (Emacs Lisp Regression Testing):
 
-#+BEGIN_SRC emacs-lisp :eval never :tangle no
+#+begin_src emacs-lisp :eval never :tangle no
 ;; Load the main file and documentation
 (load "eprolog.el")
 (org-babel-load-file "docs/index.org")
 
 ;; Run all tests
 (ert-run-tests-batch-and-exit "eprolog-usage-")
-#+END_SRC
+#+end_src
 
 ** Documentation Structure
 
-This documentation is organized into focused modules, each covering specific aspects of ε-prolog:
+The guide is organized into thematic parts:
 
-- **[[file:api-reference.org][API Reference]]** - Complete function and predicate documentation
-- **[[file:arithmetic.org][Arithmetic and Mathematics]]** - Mathematical operations and comparisons
-- **[[file:builtin-predicates.org][Built-in Predicates]]** - Type checking, list operations, and higher-order predicates  
-- **[[file:control-flow.org][Control Flow]]** - Cut, backtracking, logical operators, and meta-predicates
-- **[[file:core-prolog.org][Core Prolog Functionality]]** - Facts, rules, unification, and basic Prolog operations
-- **[[file:dcg.org][Definite Clause Grammars]]** - Grammar definition and parsing capabilities
-- **[[file:examples.org][Complex Examples]]** - Advanced applications, family trees, and recursive algorithms
-- **[[file:lisp-integration.org][Lisp Integration]]** - Seamless Prolog-Lisp interoperability and dynamic parameters
+*** Part I: Core Concepts
+- [[file:core-prolog.org][Core Prolog Functionality]] - Facts, rules, unification, and basic Prolog operations
+- [[file:builtin-predicates.org][Built-in Predicates]] - Type checking, list operations, and higher-order predicates
+- [[file:control-flow.org][Control Flow]] - Cut, backtracking, logical operators, and meta-predicates
+- [[file:arithmetic.org][Arithmetic and Mathematics]] - Mathematical operations and comparisons
 
-Each module combines comprehensive explanations with executable test cases, ensuring both educational value and system reliability.
+*** Part II: Advanced Features
+- [[file:lisp-integration.org][Lisp Integration]] - Seamless Prolog-Lisp interoperability
+- [[file:dynamic-parameters.org][Dynamic Parameters]] - Stateful data with backtracking-aware semantics
+- [[file:dcg.org][Definite Clause Grammars]] - Grammar definition and parsing capabilities
+
+*** Part III: Examples
+- [[file:examples.org][Complex Examples]] - Advanced applications, family trees, and recursive algorithms
+
+*** Part IV: Reference
+- [[file:api-reference.org][API Reference]] - Complete function and predicate documentation
 
 * Setup
 
 Before exploring the specific modules, let's establish the testing environment that all examples will use:
 
-#+BEGIN_SRC emacs-lisp
+#+begin_src emacs-lisp
 ;; Helper function to test query success
 (defun eprolog-test--has-solution-p (goals)
   "Test if GOALS has at least one solution."
@@ -130,4 +136,4 @@ Before exploring the specific modules, let's establish the testing environment t
 (defun eprolog-test--restore-builtins ()
   "Restore built-in predicates and clear user-defined ones."
   (setq eprolog-clause-database (copy-alist eprolog-usage--builtin-predicates)))
-#+END_SRC
+#+end_src

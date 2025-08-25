@@ -23,7 +23,7 @@ Key concepts covered in this section:
 
 The following test demonstrates basic and complex arithmetic operations:
 
-#+BEGIN_SRC emacs-lisp
+#+begin_SRC emacs-lisp
 (ert-deftest eprolog-feature-arithmetic-basic ()
   "Test arithmetic evaluation with is/2 and mathematical functions."
   (eprolog-test--restore-builtins)
@@ -52,22 +52,22 @@ The following test demonstrates basic and complex arithmetic operations:
   (should (not (eprolog-test--has-solution-p '((is _result (+ _unbound 3))))))
   (should (not (eprolog-test--has-solution-p '((is _result (* _x _y))))))
   )
-#+END_SRC
+#+end_SRC
 
 The ~is/2~ predicate serves as the foundation for all arithmetic operations:
 
-#+BEGIN_SRC emacs-lisp
+#+begin_SRC emacs-lisp
 (ert-deftest eprolog-feature-arithmetic-is-predicate ()
   "Test basic is/2 predicate as standalone test."
   (eprolog-test--restore-builtins)
   (let ((solutions (eprolog-test--collect-solutions '((is _x (+ 2 3))))))
     (should (= (length solutions) 1))
     (should (equal (cdr (assoc '_x (car solutions))) 5))))
-#+END_SRC
+#+end_SRC
 
 Testing various arithmetic operations demonstrates the range of mathematical capabilities:
 
-#+BEGIN_SRC emacs-lisp
+#+begin_SRC emacs-lisp
 (ert-deftest eprolog-feature-arithmetic-operations ()
   "Test basic arithmetic operations with is/2."
   (eprolog-test--restore-builtins)
@@ -82,11 +82,11 @@ Testing various arithmetic operations demonstrates the range of mathematical cap
   (let ((solutions (eprolog-test--collect-solutions '((is _x (- 100 37))))))
     (should (= (length solutions) 1))
     (should (equal (cdr (assoc '_x (car solutions))) 63))))
-#+END_SRC
+#+end_SRC
 
 Complex expressions and mathematical functions extend the computational capabilities:
 
-#+BEGIN_SRC emacs-lisp
+#+begin_SRC emacs-lisp
 (ert-deftest eprolog-feature-arithmetic-complex ()
   "Test complex arithmetic expressions."
   (eprolog-test--restore-builtins)
@@ -97,7 +97,7 @@ Complex expressions and mathematical functions extend the computational capabili
   (let ((solutions (eprolog-test--collect-solutions '((is _x (sqrt 16))))))
     (should (= (length solutions) 1))
     (should (equal (cdr (assoc '_x (car solutions))) 4.0))))
-#+END_SRC
+#+end_SRC
 
 ** Mathematical Predicates
 
@@ -111,7 +111,7 @@ The examples in this section illustrate:
 - Using cuts for deterministic mathematical computations
 - Building utility predicates for common mathematical operations
 
-#+BEGIN_SRC emacs-lisp
+#+begin_SRC emacs-lisp
 (ert-deftest eprolog-feature-arithmetic-mathematical-predicates ()
   "Test mathematical predicates."
   (eprolog-test--restore-builtins)
@@ -156,11 +156,11 @@ The examples in this section illustrate:
   (let ((solutions (eprolog-test--collect-solutions '((sum-to 5 _result)))))
     (should (= (length solutions) 1))
     (should (equal (cdr (assoc '_result (car solutions))) 15))))
-#+END_SRC
+#+end_SRC
 
 Arithmetic comparisons are essential for numerical reasoning in Prolog:
 
-#+BEGIN_SRC emacs-lisp
+#+begin_SRC emacs-lisp
 (ert-deftest eprolog-feature-arithmetic-comparisons ()
   "Test arithmetic comparisons using lispp."
   (eprolog-test--restore-builtins)
@@ -183,11 +183,11 @@ Arithmetic comparisons are essential for numerical reasoning in Prolog:
   (should-not (eprolog-test--has-solution-p '((lispp (> 3 10)))))
   (should-not (eprolog-test--has-solution-p '((lispp (< 15 8)))))
   (should-not (eprolog-test--has-solution-p '((lispp (= 5 8))))))
-#+END_SRC
+#+end_SRC
 
 Custom comparison predicates demonstrate how to build domain-specific numerical logic:
 
-#+BEGIN_SRC emacs-lisp
+#+begin_SRC emacs-lisp
 (ert-deftest eprolog-feature-arithmetic-custom-comparisons ()
   "Test custom comparison predicates using lispp."
   (eprolog-test--restore-builtins)
@@ -210,11 +210,11 @@ Custom comparison predicates demonstrate how to build domain-specific numerical 
     (should (= (length solutions) 1)))
   (should-not (eprolog-test--has-solution-p '((between 12 5 10))))
   (should-not (eprolog-test--has-solution-p '((positive -5)))))
-#+END_SRC
+#+end_SRC
 
 Mathematical utility predicates like absolute value and min/max are common requirements:
 
-#+BEGIN_SRC emacs-lisp
+#+begin_SRC emacs-lisp
 (ert-deftest eprolog-feature-arithmetic-absolute-minmax ()
   "Test absolute value and min/max predicates."
   (eprolog-test--restore-builtins)
@@ -249,7 +249,7 @@ Mathematical utility predicates like absolute value and min/max are common requi
   (let ((solutions (eprolog-test--collect-solutions '((max-of 15 23 _max)))))
     (should (= (length solutions) 1))
     (should (equal (cdr (assoc '_max (car solutions))) 23))))
-#+END_SRC
+#+end_SRC
 
 ** Geometric Calculations
 
@@ -263,7 +263,7 @@ The geometric predicates presented here demonstrate:
 - Structured data representation for geometric entities (points, shapes)
 - Precision handling in floating-point geometric computations
 
-#+BEGIN_SRC emacs-lisp
+#+begin_SRC emacs-lisp
 (ert-deftest eprolog-feature-arithmetic-geometric ()
   "Test geometric calculations."
   (eprolog-test--restore-builtins)
@@ -291,7 +291,7 @@ The geometric predicates presented here demonstrate:
   (let ((solutions (eprolog-test--collect-solutions '((circle-area 5 _area)))))
     (should (= (length solutions) 1))
     (should (< (abs (- (cdr (assoc '_area (car solutions))) 78.53975)) 0.001))))
-#+END_SRC
+#+end_SRC
 
 ** Error Handling and Edge Cases
 
@@ -310,7 +310,7 @@ The error handling coverage includes:
 
 Division by zero represents one of the most fundamental mathematical errors. These tests verify that ε-prolog properly detects and handles division by zero in various contexts, from simple direct division to complex expressions where zero divisors emerge through computation.
 
-#+BEGIN_SRC emacs-lisp
+#+begin_SRC emacs-lisp
 (ert-deftest eprolog-feature-arithmetic-division-by-zero ()
   "Test division by zero error handling."
   (eprolog-test--restore-builtins)
@@ -325,13 +325,13 @@ Division by zero represents one of the most fundamental mathematical errors. The
   ;; Complex expressions with division by zero
   (should-error (eprolog-test--has-solution-p '((is _result (/ (+ 2 3) (- 5 5))))))
   (should-error (eprolog-test--has-solution-p '((is _result (/ 1 (* 0 10)))))))
-#+END_SRC
+#+end_SRC
 
 *** Arithmetic Overflow and Underflow Tests
 
 These tests explore the behavior of ε-prolog's arithmetic system when dealing with extremely large or small numbers that may exceed the representational limits of the underlying number system. The tests verify graceful handling of numerical boundaries.
 
-#+BEGIN_SRC emacs-lisp
+#+begin_SRC emacs-lisp
 (ert-deftest eprolog-feature-arithmetic-overflow-underflow ()
   "Test arithmetic overflow and underflow conditions."
   (eprolog-test--restore-builtins)
@@ -347,13 +347,13 @@ These tests explore the behavior of ε-prolog's arithmetic system when dealing w
   ;; Test operations with very large negative numbers
   (let ((neg-large -1000000000000000000))
     (should (eprolog-test--has-solution-p `((is _result (- ,neg-large ,neg-large)))))))
-#+END_SRC
+#+end_SRC
 
 *** Type Mismatch Tests
 
 Type safety in arithmetic operations is crucial for system reliability. These tests verify that ε-prolog properly rejects arithmetic operations when non-numeric types are provided, ensuring that type errors are caught early and handled appropriately.
 
-#+BEGIN_SRC emacs-lisp
+#+begin_SRC emacs-lisp
 (ert-deftest eprolog-feature-arithmetic-type-mismatches ()
   "Test arithmetic operations with invalid types."
   (eprolog-test--restore-builtins)
@@ -373,13 +373,13 @@ Type safety in arithmetic operations is crucial for system reliability. These te
   ;; Arithmetic with complex structures (should throw errors)
   (should-error (eprolog-test--has-solution-p '((is _result (+ (foo bar) 10)))))
   (should-error (eprolog-test--has-solution-p '((is _result (/ (nested (structure)) 2))))))
-#+END_SRC
+#+end_SRC
 
 *** Invalid Expression Tests
 
 These tests examine how ε-prolog handles malformed or unusual arithmetic expressions, including edge cases in operator usage and expressions that may be syntactically valid but semantically questionable.
 
-#+BEGIN_SRC emacs-lisp
+#+begin_SRC emacs-lisp
 (ert-deftest eprolog-feature-arithmetic-invalid-expressions ()
   "Test malformed arithmetic expressions."
   (eprolog-test--restore-builtins)
@@ -402,13 +402,13 @@ These tests examine how ε-prolog handles malformed or unusual arithmetic expres
   (condition-case nil
       (should-error (eprolog-test--has-solution-p '((is _result (* (/ 5) 3)))))
     (error t)))  ;; Accept any error type
-#+END_SRC
+#+end_SRC
 
 *** Floating Point Edge Cases
 
 Floating-point arithmetic introduces special challenges related to precision, representation limits, and special values like infinity and NaN. These tests verify that ε-prolog handles floating-point edge cases consistently with the underlying Emacs Lisp numerical system.
 
-#+BEGIN_SRC emacs-lisp
+#+begin_SRC emacs-lisp
 (ert-deftest eprolog-feature-arithmetic-floating-point-edge-cases ()
   "Test floating point precision and special values."
   (eprolog-test--restore-builtins)
@@ -435,13 +435,13 @@ Floating-point arithmetic introduces special challenges related to precision, re
   (let ((solutions (eprolog-test--collect-solutions '((is _result (sqrt -1))))))
     (should (= (length solutions) 1))
     (should (isnan (cdr (assoc '_result (car solutions)))))))
-#+END_SRC
+#+end_SRC
 
 *** Advanced Mathematical Operations
 
 This subsection tests more sophisticated mathematical operations including modular arithmetic, exponentiation, and complex computational chains. These tests verify that ε-prolog correctly handles advanced mathematical functions and their edge cases.
 
-#+BEGIN_SRC emacs-lisp
+#+begin_SRC emacs-lisp
 (ert-deftest eprolog-feature-arithmetic-advanced-operations ()
   "Test advanced mathematical operations and edge cases."
   (eprolog-test--restore-builtins)
@@ -476,7 +476,7 @@ This subsection tests more sophisticated mathematical operations including modul
     '((is _a (+ 5 3))
       (is _b (* _a 2))
       (is _result (/ _b 4))))))
-#+END_SRC
+#+end_SRC
 
 ** Conclusion
 
