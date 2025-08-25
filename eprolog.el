@@ -115,7 +115,7 @@ the goal stack during resolution.")
 
 (defvar eprolog-dynamic-parameters '()
   "Dynamic parameter storage for Prolog-Lisp interaction.
-An alist of `symbol-value' pairs used by the dynamic-put and dynamic-get
+An alist of `symbol-value' pairs used by the store and fetch
 predicates to maintain state across Prolog goals.")
 
 ;;; Variable & Term Operations
@@ -838,18 +838,17 @@ Succeeds if TERM is an unbound variable."
        (eprolog--prove-goal-sequence eprolog-remaining-goals eprolog-current-bindings)))))
 
 ;; Dynamic parameter predicates
-(eprolog-define-lisp-predicate dynamic-put (variable-symbol value-expression)
-  "Dynamic parameter predicate: dynamic-put(SYMBOL, VALUE).
+(eprolog-define-lisp-predicate store (variable-symbol value-expression)
+  "Dynamic parameter predicate: store(SYMBOL, VALUE).
 Stores VALUE under SYMBOL in the dynamic parameter store.
-VALUE-EXPRESSION is evaluated as Lisp code before storing."
-  (let* ((substituted-expression (eprolog--substitute-bindings eprolog-current-bindings value-expression))
-         (evaluated-value (eval substituted-expression))
+VALUE-EXPRESSION is stored directly without evaluation."
+  (let* ((substituted-value (eprolog--substitute-bindings eprolog-current-bindings value-expression))
          (eprolog-dynamic-parameters
-          (cons (cons variable-symbol evaluated-value) eprolog-dynamic-parameters)))
+          (cons (cons variable-symbol substituted-value) eprolog-dynamic-parameters)))
     (eprolog--prove-goal-sequence eprolog-remaining-goals eprolog-current-bindings)))
 
-(eprolog-define-lisp-predicate dynamic-get (variable-symbol prolog-variable)
-  "Dynamic parameter predicate: dynamic-get(SYMBOL, VAR).
+(eprolog-define-lisp-predicate fetch (variable-symbol prolog-variable)
+  "Dynamic parameter predicate: fetch(SYMBOL, VAR).
 Retrieves the value associated with SYMBOL and unifies it with VAR."
   (let ((key-value (assoc variable-symbol eprolog-dynamic-parameters)))
     (if (null key-value)

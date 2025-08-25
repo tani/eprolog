@@ -138,8 +138,8 @@ The lispp predicate should fail when expressions return nil or false:
 Dynamic parameters provide a way to maintain state across predicate calls within a query. They enable sharing of information between different parts of a Prolog program and facilitate communication between Prolog and Lisp components.
 
 Dynamic parameters provide a sophisticated mechanism for maintaining state and sharing data across different parts of a Prolog computation:
-- ~dynamic-put/2~: Store a value associated with a key
-- ~dynamic-get/2~: Retrieve a value by its key
+- ~store/2~: Store a value associated with a key
+- ~fetch/2~: Retrieve a value by its key
 - State persistence during query execution
 - Integration with Lisp for complex data manipulation
 
@@ -150,21 +150,21 @@ This mechanism is particularly useful for accumulating results, maintaining coun
   "Test dynamic parameter predicates."
   (eprolog-test--restore-builtins)
   
-  ;; Test dynamic-put and dynamic-get
+  ;; Test store and fetch
   (let ((solutions (eprolog-test--collect-solutions 
-           '((dynamic-put test-key 42)
-             (dynamic-get test-key _value)
+           '((store test-key 42)
+             (fetch test-key _value)
              (= _value 42)))))
     (should (= (length solutions) 1))
     (should (= (cdr (assoc '_value (car solutions))) 42)))
   
   ;; Test parameter persistence across goals
   (let ((solutions (eprolog-test--collect-solutions
-           '((dynamic-put counter 0)
-             (dynamic-get counter _old)
+           '((store counter 0)
+             (fetch counter _old)
              (is _new (+ _old 1))
-             (dynamic-put counter _new)
-             (dynamic-get counter 1)))))
+             (store counter _new)
+             (fetch counter 1)))))
     (should (= (length solutions) 1))))
 #+END_SRC
 
@@ -173,19 +173,19 @@ This mechanism is particularly useful for accumulating results, maintaining coun
 Dynamic parameter predicates should fail with invalid keys or expressions:
 
 #+BEGIN_SRC emacs-lisp
-(ert-deftest eprolog-feature-lisp-dynamic-get-negative-tests ()
-  "Test negative cases for dynamic-get predicate."
+(ert-deftest eprolog-feature-lisp-fetch-negative-tests ()
+  "Test negative cases for fetch predicate."
   (eprolog-test--restore-builtins)
   
   ;; Getting non-existent keys should fail
-  (should-not (eprolog-test--has-solution-p '((dynamic-get nonexistent-key _value))))
-  (should-not (eprolog-test--has-solution-p '((dynamic-get missing-key _x))))
+  (should-not (eprolog-test--has-solution-p '((fetch nonexistent-key _value))))
+  (should-not (eprolog-test--has-solution-p '((fetch missing-key _x))))
   
   ;; Unification failures with retrieved values
-  (let ((solutions (eprolog-test--collect-solutions '((dynamic-put test-key 42)))))
+  (let ((solutions (eprolog-test--collect-solutions '((store test-key 42)))))
     (should (= (length solutions) 1)))
-  (should-not (eprolog-test--has-solution-p '((dynamic-get test-key "forty-two"))))
-  (should-not (eprolog-test--has-solution-p '((dynamic-get test-key (a b c))))))
+  (should-not (eprolog-test--has-solution-p '((fetch test-key "forty-two"))))
+  (should-not (eprolog-test--has-solution-p '((fetch test-key (a b c))))))
 #+END_SRC
 
 ** Advanced Lisp Integration Error Handling
