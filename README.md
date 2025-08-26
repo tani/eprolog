@@ -36,6 +36,10 @@
 -   Anonymous variable handling
 -   Variable renaming for clause application
 
+# Requirements
+
+ε-prolog requires Emacs 27.2 or later. While the package is functional from version 27.2, **Emacs 29+ is recommended** for optimal performance due to improved stack frame handling that enables deeper recursion.
+
 # Installation
 
 Place `eprolog.el` in your Emacs load path and add to your configuration:

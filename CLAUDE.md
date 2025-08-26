@@ -85,7 +85,7 @@ Key variables for engine behavior:
 The project employs a unique approach where all documentation examples are also executable tests using ERT (Emacs Lisp Regression Testing). This ensures documentation accuracy and provides comprehensive test coverage.
 
 ### Dependencies
-- Requires Emacs 30.1+
+- Requires Emacs 27.2 or later (Emacs 29+ recommended for optimal performance due to improved stack frame handling)
 - Only depends on built-in `cl-lib` package
 - No external dependencies
 
