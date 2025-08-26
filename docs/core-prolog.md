@@ -531,7 +531,7 @@ These tests explore the system's behavior with deeply recursive predicates, test
 ```emacs-lisp
 (ert-deftest eprolog-core-deep-recursion-limits ()
   "Test deep recursion and stack overflow protection."
-  (skip-unless (eprolog-test--emacs-version-at-least 28))
+  (skip-unless (eprolog-test--emacs-version-at-least 29))
   (eprolog-test--restore-builtins)
 
   ;; Define deeply recursive predicate

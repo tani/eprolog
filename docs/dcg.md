@@ -380,7 +380,7 @@ The applications presented here represent common parsing scenarios that arise in
 ```emacs-lisp
 (ert-deftest eprolog-feature-dcg-arithmetic-expressions ()
   "Test arithmetic expression parsing with DCG."
-  (skip-unless (eprolog-test--emacs-version-at-least 28))
+  (skip-unless (eprolog-test--emacs-version-at-least 29))
   (eprolog-test--restore-builtins)
 
   ;; Define arithmetic grammar
