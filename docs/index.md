@@ -138,5 +138,12 @@ Before exploring the specific modules, let's establish the testing environment t
 (defun eprolog-test--restore-builtins ()
   "Restore built-in predicates and clear user-defined ones."
   (setq eprolog-clause-database (copy-alist eprolog-usage--builtin-predicates)))
+
+;; Helper function to check Emacs version
+(defun eprolog-test--emacs-version-at-least (major &optional minor)
+  "Check if Emacs version is at least MAJOR.MINOR."
+  (or (> emacs-major-version major)
+      (and (= emacs-major-version major)
+           (>= emacs-minor-version (or minor 0)))))
 ```
 

@@ -214,6 +214,7 @@ Factorial calculation demonstrates basic recursion in Prolog:
 ```emacs-lisp
 (ert-deftest eprolog-example-factorial ()
   "Test recursive factorial implementation."
+  (skip-unless (eprolog-test--emacs-version-at-least 28))
   (eprolog-test--restore-builtins)
 
   ;; Define factorial predicate
@@ -243,6 +244,7 @@ The Fibonacci sequence shows more complex recursive patterns:
 ```emacs-lisp
 (ert-deftest eprolog-example-fibonacci ()
   "Test Fibonacci sequence implementation."
+  (skip-unless (eprolog-test--emacs-version-at-least 28))
   (eprolog-test--restore-builtins)
 
   ;; Define Fibonacci predicate
@@ -310,6 +312,7 @@ Comprehensive performance testing evaluates multiple aspects of system performan
 ```emacs-lisp
 (ert-deftest eprolog-example-performance-tests ()
   "Test performance with larger databases and deep recursion."
+  (skip-unless (eprolog-test--emacs-version-at-least 28))
   (eprolog-test--restore-builtins)
 
   ;; Test large database performance
@@ -359,6 +362,7 @@ Stress testing pushes the system to its limits:
 ```emacs-lisp
 (ert-deftest eprolog-example-stress-testing ()
   "Test system behavior under stress conditions."
+  (skip-unless (eprolog-test--emacs-version-at-least 28))
   (eprolog-test--restore-builtins)
 
   ;; Test many predicate clauses

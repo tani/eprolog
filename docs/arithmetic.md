@@ -113,6 +113,7 @@ The examples in this section illustrate:
 ```emacs-lisp
 (ert-deftest eprolog-feature-arithmetic-mathematical-predicates ()
   "Test mathematical predicates."
+  (skip-unless (eprolog-test--emacs-version-at-least 28))
   (eprolog-test--restore-builtins)
 
   ;; Define even and odd predicates
