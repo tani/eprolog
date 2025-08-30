@@ -69,11 +69,12 @@ Basic usage involves defining facts and rules, then querying the knowledge base:
 ;; Returns: _x = ann
 
 ;; Dynamic parameters for stateful computation
-(eprolog-query '((store counter 0)
-                 (fetch counter _old)
-                 (is _new (+ _old 1))
-                 (store counter _new)
-                 (fetch counter _result)))
+(eprolog-query 
+ (store counter 0)
+ (fetch counter _old)
+ (is _new (+ _old 1))
+ (store counter _new)
+ (fetch counter _result))
 ;; Returns: _result = 1
 ```
 
