@@ -5,6 +5,9 @@
 [![img](https://melpa.org/packages/eprolog-badge.svg)](https://melpa.org/#/eprolog)
 [![img](https://deepwiki.com/badge.svg)](https://deepwiki.com/tani/eprolog)
 
+> [!TIP]
+> For usage and API details, please check deepwiki!
+
 ε-prolog (`eprolog`) is a complete Prolog engine implementation written in pure Emacs Lisp. It provides a fully functional Prolog system integrated into the Emacs environment, offering traditional Prolog programming capabilities with seamless Lisp interoperability.
 
 # Features
