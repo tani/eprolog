@@ -1110,5 +1110,4 @@ If REPLACE-P is non-nil, replaces existing rules; otherwise adds to them."
 (eprolog-define-prolog-predicate (phrase _NonTerminal _List _Rest)
   (call _NonTerminal _List _Rest))
 
-(provide 'eprolog)
 ;;; eprolog.lisp ends here

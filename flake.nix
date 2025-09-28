@@ -73,6 +73,20 @@
     # デフォルトは 30.1（これだけが強制評価される）
     defaultPackage = forAllSystems (system: mkEmacs inputs.nixpkgs-30_1 system);
     defaultApp     = forAllSystems (system: mkApp   inputs.nixpkgs-30_1 system);
+
+    # Development shell with SBCL and Guile
+    devShells = forAllSystems (system:
+      let
+        pkgs = import inputs.nixpkgs-30_1 { inherit system; };
+      in
+      {
+        default = pkgs.mkShell {
+          buildInputs = with pkgs; [
+            sbcl
+          ];
+        };
+      }
+    );
   };
 }
 
