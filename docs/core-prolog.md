@@ -546,10 +546,9 @@ These tests explore the system's behavior with deeply recursive predicates, test
   ;; Test reasonable recursion depth (reduced to 10 for safety)
   (should (eprolog-test--has-solution-p '((countdown 10 _result))))
 
-  ;; Test very deep recursion - should either succeed or fail gracefully
-  (condition-case nil
-      (eprolog-test--has-solution-p '((countdown 10000 _result)))
-    (error t))) ;; Accept either success or controlled failure
+  ;; Test very deep recursion - should succeed with trampoline
+  ;; 5000 is deep enough to cause stack overflow without trampoline
+  (should (eprolog-test--has-solution-p '((countdown 5000 _result)))))
 ```
 
 ### Very Large Data Structure Tests
