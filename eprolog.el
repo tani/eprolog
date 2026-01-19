@@ -568,6 +568,8 @@ backtracking, or failure if no clauses match."
 
 ;;; Debugging & Output
 
+(defun eprolog--debug (msg) (message "DEBUG: %s" msg))
+
 (defun eprolog--printf (format &rest args)
   "Print formatted output using FORMAT and ARGS.
 Wrapper around `format' and `princ' for consistent output handling
@@ -897,9 +899,10 @@ restored to NEW-PARAMETERS state."
    ((eprolog--thunk-p result)
     (make-eprolog--thunk
      :function (lambda ()
-                 (eprolog--with-dynamic-parameter-restoration
-                  new-parameters
-                  (funcall (eprolog--thunk-function result))))))
+                 (let ((eprolog-dynamic-parameters new-parameters))
+                   (eprolog--with-dynamic-parameter-restoration
+                    new-parameters
+                    (funcall (eprolog--thunk-function result)))))))
    ((eprolog--failure-p result)
     (make-eprolog--failure))
    ((eprolog--success-p result)
@@ -911,6 +914,13 @@ restored to NEW-PARAMETERS state."
          (eprolog--with-dynamic-parameter-restoration
           new-parameters
           (funcall (eprolog--success-continuation result)))))))
+   ((eprolog--cut-signal-p result)
+    (make-eprolog--cut-signal
+     :tag (eprolog--cut-signal-tag result)
+     :value (let ((eprolog-dynamic-parameters new-parameters))
+              (eprolog--with-dynamic-parameter-restoration
+               new-parameters
+               (eprolog--cut-signal-value result)))))
    (t result)))
 
 (eprolog-define-lisp-predicate store (variable-symbol value-expression)

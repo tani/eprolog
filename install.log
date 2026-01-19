@@ -1,0 +1,47 @@
+Reading package lists...
+Building dependency tree...
+Reading state information...
+The following packages were automatically installed and are no longer required:
+  bridge-utils dns-root-data dnsmasq-base netcat-openbsd ubuntu-fan
+Use 'sudo apt autoremove' to remove them.
+The following additional packages will be installed:
+  cpio emacs-bin-common emacs-common emacs-el emacsen-common gsasl-common
+  guile-3.0-libs install-info libgcc-14-dev libgccjit0 libgsasl18 libgssglue1
+  libidn12 libltdl7 libmailutils9t64 libmysqlclient21 libnsl2 libntlm0 libpq5
+  libtree-sitter0 mailutils mailutils-common mysql-common postfix ssl-cert
+Suggested packages:
+  libarchive-dev emacs-common-non-dfsg mailutils-mh mailutils-doc postfix-cdb
+  postfix-doc postfix-ldap postfix-lmdb postfix-mta-sts-resolver postfix-mysql
+  postfix-pcre postfix-pgsql postfix-sqlite procmail sasl2-bin
+  | dovecot-common ufw
+The following NEW packages will be installed:
+  cpio emacs-bin-common emacs-common emacs-el emacs-nox emacsen-common
+  gsasl-common guile-3.0-libs install-info libgcc-14-dev libgccjit0 libgsasl18
+  libgssglue1 libidn12 libltdl7 libmailutils9t64 libmysqlclient21 libnsl2
+  libntlm0 libpq5 libtree-sitter0 mailutils mailutils-common mysql-common
+  postfix ssl-cert
+debconf: unable to initialize frontend: Dialog
+debconf: (No usable dialog-like program is installed, so the dialog based frontend cannot be used. at /usr/share/perl5/Debconf/FrontEnd/Dialog.pm line 79, <STDIN> line 26.)
+debconf: falling back to frontend: Readline
+Preconfiguring packages ...
+Postfix Configuration
+---------------------
+
+Please select the mail server configuration type that best meets your needs.
+
+ No configuration:
+  Should be chosen to leave the current configuration unchanged.
+ Internet site:
+  Mail is sent and received directly using SMTP.
+ Internet with smarthost:
+  Mail is received directly using SMTP or by running a utility such
+  as fetchmail. Outgoing mail is sent using a smarthost.
+ Satellite system:
+  All mail is sent to another machine, called a 'smarthost', for
+  delivery.
+ Local only:
+  The only delivered mail is the mail for local users. There is no
+  network.
+
+  1. No configuration  3. Internet with smarthost  5. Local only
+  2. Internet Site     4. Satellite system
