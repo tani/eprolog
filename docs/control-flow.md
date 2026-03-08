@@ -258,6 +258,58 @@ Key aspects of cut and backtracking control:
   (let ((solutions (eprolog-test--collect-solutions '((first-choice _x)))))
     (should (= (length solutions) 1))
     (should (equal (cdr (assoc '_x (car solutions))) 'a))))
+
+(ert-deftest eprolog-feature-control-cut-scoping-regressions ()
+  "Test cut scoping across clauses, callers, call/1, and conditionals."
+  (eprolog-test--restore-builtins)
+
+  ;; A cut inside call/1 should prune only inner alternatives, not outer ones.
+  (eprolog-define-predicate! (outer-choice left))
+  (eprolog-define-predicate (outer-choice right))
+  (eprolog-define-predicate! (inner-choice 1))
+  (eprolog-define-predicate (inner-choice 2))
+  (eprolog-define-predicate! (call-cut _outer _inner)
+    (outer-choice _outer)
+    (call (and (inner-choice _inner) !)))
+  (let ((solutions (eprolog-test--collect-solutions '((call-cut _outer _inner)))))
+    (should (equal (mapcar (lambda (solution)
+                             (list (cdr (assoc '_outer solution))
+                                   (cdr (assoc '_inner solution))))
+                           solutions)
+                   '((left 1) (right 1)))))
+
+  ;; Clause-local cut should kill fallback clauses even if later goals fail.
+  (eprolog-define-predicate! (cut-no-fallback _x)
+    (= _x a)
+    !
+    (fail))
+  (eprolog-define-predicate (cut-no-fallback _x)
+    (= _x b))
+  (should-not (eprolog-test--has-solution-p '((cut-no-fallback _x))))
+
+  ;; A cut in a called predicate should not discard caller-side alternatives.
+  (eprolog-define-predicate! (called-once _x)
+    (inner-choice _x)
+    !)
+  (eprolog-define-predicate (called-once 99))
+  (eprolog-define-predicate! (caller _outer _inner)
+    (outer-choice _outer)
+    (call called-once _inner))
+  (let ((solutions (eprolog-test--collect-solutions '((caller _outer _inner)))))
+    (should (equal (mapcar (lambda (solution)
+                             (list (cdr (assoc '_outer solution))
+                                   (cdr (assoc '_inner solution))))
+                           solutions)
+                   '((left 1) (right 1)))))
+
+  ;; if/3 should commit to the first successful condition branch.
+  (eprolog-define-predicate! (if3-cond yes))
+  (eprolog-define-predicate (if3-cond no))
+  (eprolog-define-predicate! (if3-then yes))
+  (eprolog-define-predicate! (if3-else fallback))
+  (let ((solutions (eprolog-test--collect-solutions
+                    '((if (if3-cond _x) (if3-then _x) (if3-else _x))))))
+    (should (equal solutions '(((_x . yes)))))))
 ```
 
 The repeat predicate creates infinite choice points, useful for implementing loops:
