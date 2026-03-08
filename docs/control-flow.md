@@ -155,7 +155,16 @@ Conditional execution provides if-then-else semantics in a logical context:
   (let ((solutions (eprolog-test--collect-solutions '((if true-pred then-pred)))))
     (should (= (length solutions) 1)))
   (let ((solutions (eprolog-test--collect-solutions '((if fail then-pred else-pred)))))
-    (should (= (length solutions) 1))))
+    (should (= (length solutions) 1)))
+
+  ;; if/2 commits to the first successful condition branch.
+  (eprolog-define-predicate! (if2-cond a))
+  (eprolog-define-predicate (if2-cond b))
+  (eprolog-define-predicate! (if2-then a))
+  (eprolog-define-predicate (if2-then b))
+  (let ((solutions (eprolog-test--collect-solutions
+                    '((if (if2-cond _x) (if2-then _x))))))
+    (should (equal solutions '(((_x . a)))))))
 ```
 
 ## Meta-predicates
@@ -525,4 +534,3 @@ These tests verify that the `or` predicate correctly handles variable bindings a
 This comprehensive collection of control flow tests demonstrates ε-prolog's sophisticated handling of logical program flow. From basic success and failure predicates to complex cut semantics and meta-programming capabilities, these tests verify that the control mechanisms work reliably across a wide range of scenarios.
 
 The control flow predicates form the backbone of logical programming, enabling elegant expression of complex logical relationships while maintaining the declarative nature that makes Prolog so powerful for reasoning tasks.
-

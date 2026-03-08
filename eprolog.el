@@ -1039,7 +1039,7 @@ Retrieves the value associated with SYMBOL and unifies it with VAR."
 ;; Logical operators
 
 (eprolog-define-prolog-predicate! (if _cond _then)
-  (call _cond) (call _then))
+  (call _cond) ! (call _then))
 (eprolog-define-prolog-predicate! (if _cond _then _else)
   (call _cond) ! (call _then))
 (eprolog-define-prolog-predicate (if _cond _then _else)
