@@ -1,5 +1,13 @@
 ;;; eprolog.el --- Native Prolog engine implementation -*- lexical-binding: t -*-
 
+;; We acknowledge that this code is heavily inspired by Peter Norvig's
+;; "Paradigms of Artificial Intelligence Programming" Prolog implementation,
+;; which are lisenced under MIT License.
+;; Copyright (C) 2018 Peter Norvig
+;;
+;; However, this implementation is a complete rewrite in Emacs Lisp with
+;; significant modifications and extensions to support a full Prolog system
+;; integrated into Emacs.
 ;; Copyright (C) 2025 Masaya Taniguchi
 
 ;; Author: Masaya Taniguchi
