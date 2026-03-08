@@ -1,18 +1,28 @@
 name: Tests
 
 # CI workflow for ε-prolog
-# Tests are defined in BOOK.org and executed via Makefile
-# The test suite serves as both comprehensive documentation and functional testing
+# Tests are defined in docs/*.md and executed via Makefile.
+# The documentation modules double as the executable test suite.
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main ]
+    tags:
+      - 'v*'
   pull_request:
     branches: [ main ]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -37,8 +47,8 @@ jobs:
 
     - name: Check syntax and style
       run: |
-        ls -la && make check
+        make check
 
     - name: Run tests
       run: |
-        ls -la && make test
+        make test

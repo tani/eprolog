@@ -617,7 +617,9 @@ Return non-nil when the goal is being spied."
     show-p))
 
 (defun eprolog--spy-after-goal (goal before-bindings after-bindings success-p show-p)
-  "Display spy EXIT/FAIL trace for GOAL."
+  "Display spy EXIT/FAIL trace for GOAL.
+BEFORE-BINDINGS and AFTER-BINDINGS are the binding states around GOAL.
+SUCCESS-P selects EXIT vs FAIL, and SHOW-P gates emission."
   (when show-p
     (if success-p
         (eprolog--spy-message "EXIT" goal after-bindings)
@@ -805,7 +807,11 @@ BODY is the Lisp implementation that should return :ok or :fail.
 Built-in predicate implementations may access `eprolog-current-engine\=' and
 `eprolog-current-frame\='."
   (declare (indent defun))
-  `(eprolog--set-clauses ',name (lambda (engine frame ,@args) ,@body)))
+  `(eprolog--set-clauses
+    ',name
+    (lambda (engine frame ,@args)
+      (ignore engine frame)
+      ,@body)))
 
 (defmacro eprolog-define-prolog-predicate (head &rest body)
   "Define a Prolog clause (fact or rule) and add it to the clause database.
