@@ -82,7 +82,36 @@ the next solution via backtracking."
   bindings
   continuation)
 
+(cl-defstruct eprolog--thunk
+  "Represents a suspended computation (trampoline)."
+  function)
+
+(cl-defstruct eprolog--cut-signal
+  "Represents a cut operation as a returned value."
+  tag
+  value)
+
 (define-error 'eprolog-cut-exception "Cut exception" 'error)
+
+(defun eprolog--trampoline (state)
+  "Run the trampoline loop until a final result is reached."
+  (while (eprolog--thunk-p state)
+    (setq state (funcall (eprolog--thunk-function state))))
+  state)
+
+(defun eprolog--bind (m-value func)
+  "Bind a monadic value M-VALUE with function FUNC.
+If M-VALUE is a thunk, returns a new thunk that continues with FUNC.
+If M-VALUE is a cut signal, propagates it.
+If M-VALUE is a result (success/failure), applies FUNC."
+  (cond
+   ((eprolog--thunk-p m-value)
+    (make-eprolog--thunk
+     :function (lambda () (eprolog--bind (funcall (eprolog--thunk-function m-value)) func))))
+   ((eprolog--cut-signal-p m-value)
+    m-value)
+   (t
+    (funcall func m-value))))
 
 ;; Public configuration variables
 
@@ -365,6 +394,25 @@ preserves the original variable\='s base name."
 
 ;;; Cut & Choice Point Handling
 
+(defun eprolog--catch-cut (m-value tag)
+  "Catch cut signals with TAG in M-VALUE computation."
+  (cond
+   ((eprolog--thunk-p m-value)
+    (make-eprolog--thunk
+     :function (lambda () (eprolog--catch-cut (funcall (eprolog--thunk-function m-value)) tag))))
+   ((eprolog--cut-signal-p m-value)
+    (if (eq (eprolog--cut-signal-tag m-value) tag)
+        ;; Cut caught. Resume with the value carried by the cut.
+        ;; Recursively catch cuts in the resumed value.
+        (eprolog--catch-cut (eprolog--cut-signal-value m-value) tag)
+      ;; Propagate other cuts
+      m-value))
+   ((eprolog--success-p m-value)
+    ;; Wrap the success continuation to catch cuts that happen during backtracking
+    (eprolog--wrap-success-with-cut-handler m-value tag))
+   (t ;; failure
+    m-value)))
+
 (defun eprolog--wrap-success-with-cut-handler (result tag)
   "Wrap RESULT so that any future cut with TAG is caught and handled.
 If RESULT is a success, its continuation is wrapped; wrapping is
@@ -376,28 +424,15 @@ applied recursively to all subsequent successes."
          :bindings bindings
          :continuation
          (lambda ()
-           (condition-case err
-               (let ((next (funcall cont)))
-                 (eprolog--wrap-success-with-cut-handler next tag))
-             (eprolog-cut-exception
-              (if (eq tag (plist-get (cdr err) :tag))
-                  (eprolog--wrap-success-with-cut-handler
-                   (plist-get (cdr err) :value) tag)
-                (signal (car err) (cdr err))))))))
+           ;; Execute continuation and catch cuts
+           (eprolog--catch-cut (funcall cont) tag))))
     result))
 
 (defun eprolog--call-with-current-choice-point (proc)
   "Execute PROC with a fresh choice point tag for cut handling.
 Ensures the cut handler remains active across continuations."
   (let ((tag (gensym "CHOICE-POINT-")))
-    (condition-case err
-        (let ((result (funcall proc tag)))
-          (eprolog--wrap-success-with-cut-handler result tag))
-      (eprolog-cut-exception
-       (if (eq tag (plist-get (cdr err) :tag))
-           (eprolog--wrap-success-with-cut-handler
-            (plist-get (cdr err) :value) tag)
-         (signal (car err) (cdr err)))))))
+    (eprolog--catch-cut (funcall proc tag) tag)))
 
 (defun eprolog--insert-choice-point (clause choice-point)
   "Insert CHOICE-POINT tag into cut operators (!) within CLAUSE.
@@ -432,13 +467,15 @@ Returns a continuation that first tries CONTINUATION-A, and if that fails
 or produces no more solutions, tries CONTINUATION-B.  This is the core
 backtracking mechanism that enables trying alternative solutions."
   (lambda ()
-    (let ((result-a (funcall continuation-a)))
-      (if (or (not result-a) (eprolog--failure-p result-a))
-          (funcall continuation-b)
-        (let* ((bindings (eprolog--success-bindings result-a))
-               (result-continuation (eprolog--success-continuation result-a))
-               (new-continuation (eprolog--merge-continuations result-continuation continuation-b)))
-          (make-eprolog--success :bindings bindings :continuation new-continuation))))))
+    (eprolog--bind
+     (funcall continuation-a)
+     (lambda (result-a)
+       (if (or (not result-a) (eprolog--failure-p result-a))
+           (funcall continuation-b)
+         (let* ((bindings (eprolog--success-bindings result-a))
+                (result-continuation (eprolog--success-continuation result-a))
+                (new-continuation (eprolog--merge-continuations result-continuation continuation-b)))
+           (make-eprolog--success :bindings bindings :continuation new-continuation)))))))
 
 ;;; Proof Engine Core
 
@@ -450,12 +487,15 @@ BINDINGS is the current variable binding environment.
 Returns success with terminal continuation if all goals are proven,
 otherwise delegates to `eprolog--prove-goal' for the goal sequence.
 Base case for empty goal lists returns success with a terminal continuation."
-  (cond
-   ((eprolog--failure-p bindings) (make-eprolog--failure))
-   ((null goals)
-    (let ((terminal-cont (lambda () (make-eprolog--failure))))
-      (make-eprolog--success :bindings bindings :continuation terminal-cont)))
-   (t (eprolog--prove-goal goals bindings))))
+  (make-eprolog--thunk
+   :function
+   (lambda ()
+     (cond
+      ((eprolog--failure-p bindings) (make-eprolog--failure))
+      ((null goals)
+       (let ((terminal-cont (lambda () (make-eprolog--failure))))
+         (make-eprolog--success :bindings bindings :continuation terminal-cont)))
+      (t (eprolog--prove-goal goals bindings))))))
 
 (defun eprolog--prove-goal (goals bindings)
   "Prove the first goal in GOALS with the given BINDINGS.
@@ -489,16 +529,19 @@ CLAUSE is the clause to apply (head + body).
 Attempts to unify the goal with the clause head, then proves the
 clause body plus remaining goals if unification succeeds.
 Returns success object on success, failure object on failure."
-  (let* ((goal (car goals))
-         (remaining-goals (cdr goals))
-         (goal-for-unify (if (consp goal) goal (list goal)))
-         (renamed-clause (eprolog--rename-vars clause))
-         (clause-head (car renamed-clause))
-         (clause-body (cdr renamed-clause))
-         (new-bindings (eprolog--unify goal-for-unify clause-head bindings)))
-    (if (eprolog--failure-p new-bindings)
-        (make-eprolog--failure)
-      (eprolog--prove-goal-sequence (append clause-body remaining-goals) new-bindings))))
+  (make-eprolog--thunk
+   :function
+   (lambda ()
+     (let* ((goal (car goals))
+            (remaining-goals (cdr goals))
+            (goal-for-unify (if (consp goal) goal (list goal)))
+            (renamed-clause (eprolog--rename-vars clause))
+            (clause-head (car renamed-clause))
+            (clause-body (cdr renamed-clause))
+            (new-bindings (eprolog--unify goal-for-unify clause-head bindings)))
+       (if (eprolog--failure-p new-bindings)
+           (make-eprolog--failure)
+         (eprolog--prove-goal-sequence (append clause-body remaining-goals) new-bindings))))))
 
 (defun eprolog--search-matching-clauses (goals bindings all-clauses)
   "Search through ALL-CLAUSES to find matches for the first goal in GOALS.
@@ -514,19 +557,26 @@ backtracking, or failure if no clauses match."
      (cl-labels ((try-one-by-one (clauses-to-try)
                    (if (null clauses-to-try)
                        (make-eprolog--failure)
-                     (let* ((current-clause (eprolog--insert-choice-point (car clauses-to-try) choice-point))
-                            (remaining-clauses (cdr clauses-to-try))
-                            (try-next-clause (lambda () (try-one-by-one remaining-clauses)))
-                            (result (eprolog--apply-clause-to-goal goals bindings current-clause)))
-                       (if (eprolog--failure-p result)
-                           (funcall try-next-clause)
-                         (let* ((result-bindings (eprolog--success-bindings result))
-                                (result-continuation (eprolog--success-continuation result))
-                                (new-continuation (eprolog--merge-continuations result-continuation try-next-clause)))
-                           (make-eprolog--success :bindings result-bindings :continuation new-continuation)))))))
+                     (make-eprolog--thunk
+                      :function
+                      (lambda ()
+                        (let* ((current-clause (eprolog--insert-choice-point (car clauses-to-try) choice-point))
+                               (remaining-clauses (cdr clauses-to-try))
+                               (try-next-clause (lambda () (try-one-by-one remaining-clauses))))
+                          (eprolog--bind
+                           (eprolog--apply-clause-to-goal goals bindings current-clause)
+                           (lambda (result)
+                             (if (eprolog--failure-p result)
+                                 (funcall try-next-clause)
+                               (let* ((result-bindings (eprolog--success-bindings result))
+                                      (result-continuation (eprolog--success-continuation result))
+                                      (new-continuation (eprolog--merge-continuations result-continuation try-next-clause)))
+                                 (make-eprolog--success :bindings result-bindings :continuation new-continuation)))))))))))
        (try-one-by-one all-clauses)))))
 
 ;;; Debugging & Output
+
+(defun eprolog--debug (msg) (message "DEBUG: %s" msg))
 
 (defun eprolog--printf (format &rest args)
   "Print formatted output using FORMAT and ARGS.
@@ -570,18 +620,17 @@ Returns the result of executing THUNK."
                       (pcase eprolog-spy-state
                         ('always t)
                         ('prompt (eprolog--spy-prompt goal bindings))
-                        (_ nil))))
-         (result nil))
-    (unwind-protect
+                        (_ nil)))))
+    (if show-p
         (progn
-          (when show-p
-            (eprolog--spy-message "CALL" goal bindings))
-          (setq result (funcall thunk)))
-      (when show-p
-        (if (or (not result) (eprolog--failure-p result))
-            (eprolog--spy-message "FAIL" goal bindings)
-          (eprolog--spy-message "EXIT" goal (eprolog--success-bindings result)))))
-    result))
+          (eprolog--spy-message "CALL" goal bindings)
+          (eprolog--bind (funcall thunk)
+                         (lambda (result)
+                           (if (or (not result) (eprolog--failure-p result))
+                               (eprolog--spy-message "FAIL" goal bindings)
+                             (eprolog--spy-message "EXIT" goal (eprolog--success-bindings result)))
+                           result)))
+      (funcall thunk))))
 
 (defun eprolog--display-solution (bindings)
   "Display variable BINDINGS as a solution.
@@ -658,18 +707,19 @@ Examples:
   (let* ((on-success (or (plist-get args :success) (lambda (_))))
          (on-failure (or (plist-get args :failure) (lambda ()))))
     (cl-labels ((initial-continuation ()
-                  (eprolog--call-with-current-choice-point
-                   (lambda (choice-point)
-                     (let* ((prepared-goals (eprolog--replace-anonymous-variables goals))
-                            (cut-goals (eprolog--insert-choice-point prepared-goals choice-point)))
-                       (eprolog--prove-goal-sequence cut-goals '())))))
+                  (eprolog--trampoline
+                   (eprolog--call-with-current-choice-point
+                    (lambda (choice-point)
+                      (let* ((prepared-goals (eprolog--replace-anonymous-variables goals))
+                             (cut-goals (eprolog--insert-choice-point prepared-goals choice-point)))
+                        (eprolog--prove-goal-sequence cut-goals '()))))))
                 (retrieve-success-bindings (result)
                   (let* ((bindings (eprolog--success-bindings result))
                          (query-variables (eprolog--variables-in goals))
                          (make-binding-pair (lambda (v) (cons v (eprolog--substitute-bindings bindings v)))))
                     (mapcar make-binding-pair query-variables)))
                 (execute-success-continuation (result)
-                  (funcall (eprolog--success-continuation result))))
+                  (eprolog--trampoline (funcall (eprolog--success-continuation result)))))
       (cl-do ((result (initial-continuation) (execute-success-continuation result)))
           ((not (eprolog--success-p result)) (funcall on-failure))
         (funcall on-success (retrieve-success-bindings result))))))
@@ -770,8 +820,9 @@ Does not perform unification, only tests existing equality."
   "Cut predicate: !.
 Commits to the current choice, preventing backtracking to alternative clauses
 for the current goal. CHOICE-POINT identifies the choice point to cut."
-  (let ((continuation-result (eprolog--prove-goal-sequence eprolog-remaining-goals eprolog-current-bindings)))
-    (signal 'eprolog-cut-exception (list :tag choice-point :value continuation-result))))
+  (make-eprolog--cut-signal
+   :tag choice-point
+   :value (eprolog--prove-goal-sequence eprolog-remaining-goals eprolog-current-bindings)))
 
 (eprolog-define-lisp-predicate call (pred &rest args)
   "Meta-call predicate: call(PRED, ARGS...).
@@ -805,15 +856,17 @@ Succeeds if TERM is an unbound variable."
   (let* ((original-bindings eprolog-current-bindings)
          (remaining-goals eprolog-remaining-goals)
          (goals-1 (cons `(call ,goal1) remaining-goals))
-         (result-1 (eprolog--prove-goal-sequence goals-1 original-bindings))
          (goals-2 (cons `(call ,goal2) remaining-goals))
          (try-goal-2 (lambda () (eprolog--prove-goal-sequence goals-2 original-bindings))))
-    (if (eprolog--failure-p result-1)
-        (eprolog--prove-goal-sequence goals-2 original-bindings)
-      (let* ((success-bindings-1 (eprolog--success-bindings result-1))
-             (success-continuation-1 (eprolog--success-continuation result-1))
-             (new-continuation (eprolog--merge-continuations success-continuation-1 try-goal-2)))
-        (make-eprolog--success :bindings success-bindings-1 :continuation new-continuation)))))
+    (eprolog--bind
+     (eprolog--prove-goal-sequence goals-1 original-bindings)
+     (lambda (result-1)
+       (if (eprolog--failure-p result-1)
+           (funcall try-goal-2)
+         (let* ((success-bindings-1 (eprolog--success-bindings result-1))
+                (success-continuation-1 (eprolog--success-continuation result-1))
+                (new-continuation (eprolog--merge-continuations success-continuation-1 try-goal-2)))
+           (make-eprolog--success :bindings success-bindings-1 :continuation new-continuation)))))))
 
 (eprolog-define-lisp-predicate or (&rest goals)
   (let* ((or-2-goal (cl-reduce (lambda (expr acc) `(or-2 ,expr ,acc)) goals :initial-value 'false))
@@ -850,8 +903,17 @@ Succeeds if TERM is an unbound variable."
   "Helper function to wrap RESULT with dynamic parameter restoration.
 Ensures that when backtracking occurs, the dynamic parameters are
 restored to NEW-PARAMETERS state."
-  (if (eprolog--failure-p result)
-      (make-eprolog--failure)
+  (cond
+   ((eprolog--thunk-p result)
+    (make-eprolog--thunk
+     :function (lambda ()
+                 (let ((eprolog-dynamic-parameters new-parameters))
+                   (eprolog--with-dynamic-parameter-restoration
+                    new-parameters
+                    (funcall (eprolog--thunk-function result)))))))
+   ((eprolog--failure-p result)
+    (make-eprolog--failure))
+   ((eprolog--success-p result)
     (make-eprolog--success
      :bindings (eprolog--success-bindings result)
      :continuation
@@ -859,7 +921,15 @@ restored to NEW-PARAMETERS state."
        (let ((eprolog-dynamic-parameters new-parameters))
          (eprolog--with-dynamic-parameter-restoration
           new-parameters
-          (funcall (eprolog--success-continuation result))))))))
+          (funcall (eprolog--success-continuation result)))))))
+   ((eprolog--cut-signal-p result)
+    (make-eprolog--cut-signal
+     :tag (eprolog--cut-signal-tag result)
+     :value (let ((eprolog-dynamic-parameters new-parameters))
+              (eprolog--with-dynamic-parameter-restoration
+               new-parameters
+               (eprolog--cut-signal-value result)))))
+   (t result)))
 
 (eprolog-define-lisp-predicate store (variable-symbol value-expression)
   "Dynamic parameter predicate: store(SYMBOL, VALUE).
