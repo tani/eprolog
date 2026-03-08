@@ -82,6 +82,22 @@ the next solution via backtracking."
   bindings
   continuation)
 
+(cl-defstruct eprolog--thunk
+  "Represents a suspended computation (thunk) for the trampoline."
+  function)
+
+(defun eprolog--trampoline (thunk)
+  "Execute THUNK until a non-thunk result is returned."
+  (let ((result thunk))
+    (while (eprolog--thunk-p result)
+      (setq result (funcall (eprolog--thunk-function result))))
+    result))
+
+(defvar eprolog-current-backtrack nil
+  "Current backtrack continuation.
+Dynamic variable used to pass the failure continuation implicitly
+to Lisp predicates.")
+
 (define-error 'eprolog-cut-exception "Cut exception" 'error)
 
 ;; Public configuration variables
@@ -121,10 +137,13 @@ variable assignments during goal resolution.")
 Dynamic variable used internally by the proof engine to track
 the goal stack during resolution.")
 
-(defvar eprolog-dynamic-parameters '()
-  "Dynamic parameter storage for Prolog-Lisp interaction.
-An alist of `symbol-value' pairs used by the store and fetch
-predicates to maintain state across Prolog goals.")
+(defconst eprolog--params-key 'eprolog--dynamic-params)
+
+(defun eprolog--get-dynamic-params (bindings)
+  (cdr (assoc eprolog--params-key bindings)))
+
+(defun eprolog--set-dynamic-params (bindings params)
+  (cons (cons eprolog--params-key params) bindings))
 
 ;;; Variable & Term Operations
 
@@ -365,39 +384,11 @@ preserves the original variable\='s base name."
 
 ;;; Cut & Choice Point Handling
 
-(defun eprolog--wrap-success-with-cut-handler (result tag)
-  "Wrap RESULT so that any future cut with TAG is caught and handled.
-If RESULT is a success, its continuation is wrapped; wrapping is
-applied recursively to all subsequent successes."
-  (if (eprolog--success-p result)
-      (let ((bindings (eprolog--success-bindings result))
-            (cont     (eprolog--success-continuation result)))
-        (make-eprolog--success
-         :bindings bindings
-         :continuation
-         (lambda ()
-           (condition-case err
-               (let ((next (funcall cont)))
-                 (eprolog--wrap-success-with-cut-handler next tag))
-             (eprolog-cut-exception
-              (if (eq tag (plist-get (cdr err) :tag))
-                  (eprolog--wrap-success-with-cut-handler
-                   (plist-get (cdr err) :value) tag)
-                (signal (car err) (cdr err))))))))
-    result))
-
-(defun eprolog--call-with-current-choice-point (proc)
-  "Execute PROC with a fresh choice point tag for cut handling.
-Ensures the cut handler remains active across continuations."
-  (let ((tag (gensym "CHOICE-POINT-")))
-    (condition-case err
-        (let ((result (funcall proc tag)))
-          (eprolog--wrap-success-with-cut-handler result tag))
-      (eprolog-cut-exception
-       (if (eq tag (plist-get (cdr err) :tag))
-           (eprolog--wrap-success-with-cut-handler
-            (plist-get (cdr err) :value) tag)
-         (signal (car err) (cdr err)))))))
+(defun eprolog--fail ()
+  "Fail the current goal, invoking the backtrack continuation if available."
+  (if eprolog-current-backtrack
+      (funcall eprolog-current-backtrack)
+    (make-eprolog--failure)))
 
 (defun eprolog--insert-choice-point (clause choice-point)
   "Insert CHOICE-POINT tag into cut operators (!) within CLAUSE.
@@ -442,22 +433,26 @@ backtracking mechanism that enables trying alternative solutions."
 
 ;;; Proof Engine Core
 
-(defun eprolog--prove-goal-sequence (goals bindings)
+(defun eprolog--prove-goal-sequence (goals bindings &optional backtrack)
   "Prove a sequence of GOALS with the given BINDINGS.
 GOALS is a list of goals to prove in sequence.
 BINDINGS is the current variable binding environment.
+BACKTRACK is the failure continuation.
 
-Returns success with terminal continuation if all goals are proven,
-otherwise delegates to `eprolog--prove-goal' for the goal sequence.
-Base case for empty goal lists returns success with a terminal continuation."
-  (cond
-   ((eprolog--failure-p bindings) (make-eprolog--failure))
-   ((null goals)
-    (let ((terminal-cont (lambda () (make-eprolog--failure))))
-      (make-eprolog--success :bindings bindings :continuation terminal-cont)))
-   (t (eprolog--prove-goal goals bindings))))
+Returns a thunk that continues the proof."
+  (let ((bt (or backtrack eprolog-current-backtrack)))
+    (make-eprolog--thunk
+     :function
+     (lambda ()
+       (cond
+        ((eprolog--failure-p bindings)
+         (if bt (funcall bt) (make-eprolog--failure)))
+        ((null goals)
+         (let ((terminal-cont (or bt (lambda () (make-eprolog--failure)))))
+           (make-eprolog--success :bindings bindings :continuation terminal-cont)))
+        (t (eprolog--prove-goal goals bindings bt)))))))
 
-(defun eprolog--prove-goal (goals bindings)
+(defun eprolog--prove-goal (goals bindings backtrack)
   "Prove the first goal in GOALS with the given BINDINGS.
 GOALS is a list of goals where the first will be proven.
 BINDINGS is the current variable binding environment.
@@ -475,12 +470,16 @@ This is the core resolution function that drives the proof search."
      (lambda ()
        (cond
         ((functionp predicate-handler)
-         (let* ((eprolog-remaining-goals remaining-goals)
-                (eprolog-current-bindings bindings))
-           (apply predicate-handler args)))
-        (t (eprolog--search-matching-clauses goals bindings predicate-handler)))))))
+         (make-eprolog--thunk
+          :function
+          (lambda ()
+            (let* ((eprolog-remaining-goals remaining-goals)
+                   (eprolog-current-bindings bindings)
+                   (eprolog-current-backtrack backtrack))
+              (apply predicate-handler args)))))
+        (t (eprolog--search-matching-clauses goals bindings predicate-handler backtrack)))))))
 
-(defun eprolog--apply-clause-to-goal (goals bindings clause)
+(defun eprolog--apply-clause-to-goal (goals bindings clause backtrack)
   "Apply CLAUSE to prove the first goal in GOALS with BINDINGS.
 GOALS is the list of goals, where the first will be unified with the
 clause head.  BINDINGS is the current variable binding environment.
@@ -489,18 +488,21 @@ CLAUSE is the clause to apply (head + body).
 Attempts to unify the goal with the clause head, then proves the
 clause body plus remaining goals if unification succeeds.
 Returns success object on success, failure object on failure."
-  (let* ((goal (car goals))
-         (remaining-goals (cdr goals))
-         (goal-for-unify (if (consp goal) goal (list goal)))
-         (renamed-clause (eprolog--rename-vars clause))
-         (clause-head (car renamed-clause))
-         (clause-body (cdr renamed-clause))
-         (new-bindings (eprolog--unify goal-for-unify clause-head bindings)))
-    (if (eprolog--failure-p new-bindings)
-        (make-eprolog--failure)
-      (eprolog--prove-goal-sequence (append clause-body remaining-goals) new-bindings))))
+  (make-eprolog--thunk
+   :function
+   (lambda ()
+     (let* ((goal (car goals))
+            (remaining-goals (cdr goals))
+            (goal-for-unify (if (consp goal) goal (list goal)))
+            (renamed-clause (eprolog--rename-vars clause))
+            (clause-head (car renamed-clause))
+            (clause-body (cdr renamed-clause))
+            (new-bindings (eprolog--unify goal-for-unify clause-head bindings)))
+       (if (eprolog--failure-p new-bindings)
+           (if backtrack (funcall backtrack) (make-eprolog--failure))
+         (eprolog--prove-goal-sequence (append clause-body remaining-goals) new-bindings backtrack))))))
 
-(defun eprolog--search-matching-clauses (goals bindings all-clauses)
+(defun eprolog--search-matching-clauses (goals bindings all-clauses backtrack)
   "Search through ALL-CLAUSES to find matches for the first goal in GOALS.
 GOALS is the list of goals to prove.
 BINDINGS is the current variable binding environment.
@@ -509,21 +511,19 @@ ALL-CLAUSES is the list of clauses to try.
 Tries each clause with backtracking.  Uses choice points to handle cut
 operations correctly.  Returns success object with continuation for
 backtracking, or failure if no clauses match."
-  (eprolog--call-with-current-choice-point
-   (lambda (choice-point)
+  (make-eprolog--thunk
+   :function
+   (lambda ()
      (cl-labels ((try-one-by-one (clauses-to-try)
                    (if (null clauses-to-try)
-                       (make-eprolog--failure)
-                     (let* ((current-clause (eprolog--insert-choice-point (car clauses-to-try) choice-point))
+                       (if backtrack (funcall backtrack) (make-eprolog--failure))
+                     (let* ((current-clause (eprolog--insert-choice-point (car clauses-to-try) backtrack))
                             (remaining-clauses (cdr clauses-to-try))
-                            (try-next-clause (lambda () (try-one-by-one remaining-clauses)))
-                            (result (eprolog--apply-clause-to-goal goals bindings current-clause)))
-                       (if (eprolog--failure-p result)
-                           (funcall try-next-clause)
-                         (let* ((result-bindings (eprolog--success-bindings result))
-                                (result-continuation (eprolog--success-continuation result))
-                                (new-continuation (eprolog--merge-continuations result-continuation try-next-clause)))
-                           (make-eprolog--success :bindings result-bindings :continuation new-continuation)))))))
+                            (next-backtrack
+                             (if remaining-clauses
+                                 (lambda () (try-one-by-one remaining-clauses))
+                               backtrack)))
+                       (eprolog--apply-clause-to-goal goals bindings current-clause next-backtrack)))))
        (try-one-by-one all-clauses)))))
 
 ;;; Debugging & Output
@@ -572,16 +572,10 @@ Returns the result of executing THUNK."
                         ('prompt (eprolog--spy-prompt goal bindings))
                         (_ nil))))
          (result nil))
-    (unwind-protect
-        (progn
-          (when show-p
-            (eprolog--spy-message "CALL" goal bindings))
-          (setq result (funcall thunk)))
+    (progn
       (when show-p
-        (if (or (not result) (eprolog--failure-p result))
-            (eprolog--spy-message "FAIL" goal bindings)
-          (eprolog--spy-message "EXIT" goal (eprolog--success-bindings result)))))
-    result))
+        (eprolog--spy-message "CALL" goal bindings))
+      (funcall thunk))))
 
 (defun eprolog--display-solution (bindings)
   "Display variable BINDINGS as a solution.
@@ -625,7 +619,7 @@ interactive queries initiated by `eprolog-query\='."
   "Evaluate EXPRESSIONS as Lisp code for Prolog integration.
 RESULT-HANDLER processes the evaluation result if provided."
   (if (not (eprolog--ground-p expressions))
-      (make-eprolog--failure)
+      (eprolog--fail)
     (let* ((lisp-expression (eprolog--substitute-bindings eprolog-current-bindings `(progn ,@expressions)))
            (evaluated-result (eval lisp-expression)))
       (if result-handler
@@ -658,11 +652,10 @@ Examples:
   (let* ((on-success (or (plist-get args :success) (lambda (_))))
          (on-failure (or (plist-get args :failure) (lambda ()))))
     (cl-labels ((initial-continuation ()
-                  (eprolog--call-with-current-choice-point
-                   (lambda (choice-point)
-                     (let* ((prepared-goals (eprolog--replace-anonymous-variables goals))
-                            (cut-goals (eprolog--insert-choice-point prepared-goals choice-point)))
-                       (eprolog--prove-goal-sequence cut-goals '())))))
+                  (let* ((prepared-goals (eprolog--replace-anonymous-variables goals))
+                         ;; Top-level cut cuts to nil (failure)
+                         (cut-goals (eprolog--insert-choice-point prepared-goals nil)))
+                    (eprolog--prove-goal-sequence cut-goals '())))
                 (retrieve-success-bindings (result)
                   (let* ((bindings (eprolog--success-bindings result))
                          (query-variables (eprolog--variables-in goals))
@@ -670,7 +663,8 @@ Examples:
                     (mapcar make-binding-pair query-variables)))
                 (execute-success-continuation (result)
                   (funcall (eprolog--success-continuation result))))
-      (cl-do ((result (initial-continuation) (execute-success-continuation result)))
+      (cl-do ((result (eprolog--trampoline (initial-continuation))
+                      (eprolog--trampoline (execute-success-continuation result))))
           ((not (eprolog--success-p result)) (funcall on-failure))
         (funcall on-success (retrieve-success-bindings result))))))
 
@@ -752,7 +746,7 @@ Attempts to unify TERM1 and TERM2, updating the binding environment.
 Succeeds if unification is possible, fails otherwise."
   (let ((new-bindings (eprolog--unify term1 term2 eprolog-current-bindings)))
     (if (eprolog--failure-p new-bindings)
-        (make-eprolog--failure)
+        (eprolog--fail)
       (eprolog--prove-goal-sequence eprolog-remaining-goals new-bindings))))
 
 (eprolog-define-lisp-predicate == (term1 term2)
@@ -763,57 +757,54 @@ Does not perform unification, only tests existing equality."
          (substituted-term2 (eprolog--substitute-bindings eprolog-current-bindings term2)))
     (if (equal substituted-term1 substituted-term2)
         (eprolog--prove-goal-sequence eprolog-remaining-goals eprolog-current-bindings)
-      (make-eprolog--failure))))
+      (eprolog--fail))))
 
 ;; Control predicates
-(eprolog-define-lisp-predicate ! (choice-point)
+(eprolog-define-lisp-predicate ! (choice-point-backtrack)
   "Cut predicate: !.
-Commits to the current choice, preventing backtracking to alternative clauses
-for the current goal. CHOICE-POINT identifies the choice point to cut."
-  (let ((continuation-result (eprolog--prove-goal-sequence eprolog-remaining-goals eprolog-current-bindings)))
-    (signal 'eprolog-cut-exception (list :tag choice-point :value continuation-result))))
+Commits to the current choice. CHOICE-POINT-BACKTRACK is the backtracking
+continuation to restore if failure occurs after this point."
+  (eprolog--prove-goal-sequence eprolog-remaining-goals eprolog-current-bindings choice-point-backtrack))
 
 (eprolog-define-lisp-predicate call (pred &rest args)
   "Meta-call predicate: call(PRED, ARGS...).
 Dynamically calls PRED with additional ARGS appended.
 PRED can be an atom or a compound term."
-  (eprolog--call-with-current-choice-point
-   (lambda (choice-point)
-     (let* ((substituted-pred (eprolog--substitute-bindings eprolog-current-bindings pred))
-            (substituted-args (eprolog--substitute-bindings eprolog-current-bindings args))
-            (goal (pcase (cons substituted-pred substituted-args)
-                    (`(,pred . nil) pred)
-                    (`(,(pred symbolp) . ,args) (cons substituted-pred args))
-                    (`(,(pred consp) . ,args) (append substituted-pred args))
-                    (_ (error "call: Invalid form %S" (cons substituted-pred substituted-args)))))
-            (cut-goals (eprolog--insert-choice-point (list goal) choice-point))
-            (next-goals (append cut-goals eprolog-remaining-goals)))
-       (eprolog--prove-goal-sequence next-goals eprolog-current-bindings)))))
+  (let* ((substituted-pred (eprolog--substitute-bindings eprolog-current-bindings pred))
+         (substituted-args (eprolog--substitute-bindings eprolog-current-bindings args))
+         (goal (pcase (cons substituted-pred substituted-args)
+                 (`(,pred . nil) pred)
+                 (`(,(pred symbolp) . ,args) (cons substituted-pred args))
+                 (`(,(pred consp) . ,args) (append substituted-pred args))
+                 (_ (error "call: Invalid form %S" (cons substituted-pred substituted-args)))))
+         (cut-goals (eprolog--insert-choice-point (list goal) eprolog-current-backtrack))
+         (next-goals (append cut-goals eprolog-remaining-goals)))
+    (eprolog--prove-goal-sequence next-goals eprolog-current-bindings)))
 
 (eprolog-define-lisp-predicate var (term)
   "Type predicate: var(TERM).
 Succeeds if TERM is an unbound variable."
   (if (eprolog--variable-p (eprolog--substitute-bindings eprolog-current-bindings term))
       (eprolog--prove-goal-sequence eprolog-remaining-goals eprolog-current-bindings)
-    (make-eprolog--failure)))
+    (eprolog--fail)))
 
 (eprolog-define-lisp-predicate and (&rest goals)
   (let* ((next-goals (append goals eprolog-remaining-goals)))
     (eprolog--prove-goal-sequence next-goals eprolog-current-bindings)))
 
 (eprolog-define-lisp-predicate or-2 (goal1 goal2)
-  (let* ((original-bindings eprolog-current-bindings)
-         (remaining-goals eprolog-remaining-goals)
-         (goals-1 (cons `(call ,goal1) remaining-goals))
-         (result-1 (eprolog--prove-goal-sequence goals-1 original-bindings))
-         (goals-2 (cons `(call ,goal2) remaining-goals))
-         (try-goal-2 (lambda () (eprolog--prove-goal-sequence goals-2 original-bindings))))
-    (if (eprolog--failure-p result-1)
-        (eprolog--prove-goal-sequence goals-2 original-bindings)
-      (let* ((success-bindings-1 (eprolog--success-bindings result-1))
-             (success-continuation-1 (eprolog--success-continuation result-1))
-             (new-continuation (eprolog--merge-continuations success-continuation-1 try-goal-2)))
-        (make-eprolog--success :bindings success-bindings-1 :continuation new-continuation)))))
+  (let ((outer-backtrack eprolog-current-backtrack)
+        (current-bindings eprolog-current-bindings)
+        (remaining eprolog-remaining-goals))
+    (eprolog--prove-goal-sequence
+     (cons goal1 remaining)
+     current-bindings
+     (lambda ()
+       (let ((eprolog-current-backtrack outer-backtrack))
+         (eprolog--prove-goal-sequence
+          (cons goal2 remaining)
+          current-bindings
+          outer-backtrack))))))
 
 (eprolog-define-lisp-predicate or (&rest goals)
   (let* ((or-2-goal (cl-reduce (lambda (expr acc) `(or-2 ,expr ,acc)) goals :initial-value 'false))
@@ -829,7 +820,7 @@ Succeeds if TERM is an unbound variable."
      (let* ((result-term (eprolog--substitute-bindings eprolog-current-bindings result-variable))
             (new-bindings (eprolog--unify result-term evaluated-result eprolog-current-bindings)))
        (if (eprolog--failure-p new-bindings)
-           (make-eprolog--failure)
+           (eprolog--fail)
          (eprolog--prove-goal-sequence eprolog-remaining-goals new-bindings))))))
 
 (eprolog-define-lisp-predicate lisp! (&rest expressions)
@@ -842,24 +833,8 @@ Succeeds if TERM is an unbound variable."
    expressions
    (lambda (evaluated-result)
      (if (not evaluated-result)
-         (make-eprolog--failure)
+         (eprolog--fail)
        (eprolog--prove-goal-sequence eprolog-remaining-goals eprolog-current-bindings)))))
-
-;; Dynamic parameter predicates
-(defun eprolog--with-dynamic-parameter-restoration (new-parameters result)
-  "Helper function to wrap RESULT with dynamic parameter restoration.
-Ensures that when backtracking occurs, the dynamic parameters are
-restored to NEW-PARAMETERS state."
-  (if (eprolog--failure-p result)
-      (make-eprolog--failure)
-    (make-eprolog--success
-     :bindings (eprolog--success-bindings result)
-     :continuation
-     (lambda ()
-       (let ((eprolog-dynamic-parameters new-parameters))
-         (eprolog--with-dynamic-parameter-restoration
-          new-parameters
-          (funcall (eprolog--success-continuation result))))))))
 
 (eprolog-define-lisp-predicate store (variable-symbol value-expression)
   "Dynamic parameter predicate: store(SYMBOL, VALUE).
@@ -868,27 +843,24 @@ VALUE-EXPRESSION is stored directly without evaluation.
 
 This binding persists across backtracking and is automatically
 restored when execution backtracks above this store operation."
-  (let* ((substituted-value (eprolog--substitute-bindings
+  (let* ((params (eprolog--get-dynamic-params eprolog-current-bindings))
+         (substituted-value (eprolog--substitute-bindings
                              eprolog-current-bindings
                              value-expression))
-         (updated-parameters (cons (cons variable-symbol substituted-value)
-                                   eprolog-dynamic-parameters)))
-    ;; Execute remaining goals with updated parameters
-    (let ((eprolog-dynamic-parameters updated-parameters))
-      (eprolog--with-dynamic-parameter-restoration
-       updated-parameters
-       (eprolog--prove-goal-sequence eprolog-remaining-goals
-                                     eprolog-current-bindings)))))
+         (new-params (cons (cons variable-symbol substituted-value) params))
+         (new-bindings (eprolog--set-dynamic-params eprolog-current-bindings new-params)))
+    (eprolog--prove-goal-sequence eprolog-remaining-goals new-bindings)))
 
 (eprolog-define-lisp-predicate fetch (variable-symbol prolog-variable)
   "Dynamic parameter predicate: fetch(SYMBOL, VAR).
 Retrieves the value associated with SYMBOL and unifies it with VAR."
-  (let ((key-value (assoc variable-symbol eprolog-dynamic-parameters)))
+  (let* ((params (eprolog--get-dynamic-params eprolog-current-bindings))
+         (key-value (assoc variable-symbol params)))
     (if (null key-value)
-        (make-eprolog--failure)
+        (eprolog--fail)
       (let ((new-bindings (eprolog--unify prolog-variable (cdr key-value) eprolog-current-bindings)))
         (if (eprolog--failure-p new-bindings)
-            (make-eprolog--failure)
+            (eprolog--fail)
           (eprolog--prove-goal-sequence eprolog-remaining-goals new-bindings))))))
 
 ;;; Built-in Prolog Predicates
