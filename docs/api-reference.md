@@ -35,9 +35,13 @@ Define a predicate implemented in Emacs Lisp.
 
 ```
 (eprolog-define-lisp-predicate name (arg1 arg2 ...)
-  ;; Lisp code returning success or failure object
+  ;; Lisp code returning :ok or :fail
   )
 ```
+
+The body runs inside the iterative engine and must return `:ok` for success
+or `:fail` for failure. Built-ins can access `engine` and `frame`, followed
+by the declared predicate arguments.
 
 ## Query Execution
 
@@ -194,19 +198,15 @@ Note: Some tests are disabled as they test APIs that don't exist or are unstable
     (should (= (length solutions) 1))
     (should (equal (cdr (assoc '_x (car solutions))) 'c))))
 
-;; NOTE: Lisp predicate test disabled due to implementation complexities
-;; (ert-deftest eprolog-api-define-lisp-predicate ()
-;;   "Test Lisp predicate definition API."
-;;   (eprolog-test--restore-builtins)
-;;   
-;;   ;; Define a simple Lisp predicate
-;;   (eprolog-define-lisp-predicate test-lisp-pred (x)
-;;     (if (eq x 'success)
-;;         (make-eprolog--success :bindings eprolog-current-bindings :continuation eprolog-remaining-goals)
-;;       (make-eprolog--failure)))
-;;   
-;;   (should (eprolog-test--has-solution-p '((test-lisp-pred success))))
-;;   (should-not (eprolog-test--has-solution-p '((test-lisp-pred failure)))))
+(ert-deftest eprolog-api-define-lisp-predicate ()
+  "Test Lisp predicate definition API."
+  (eprolog-test--restore-builtins)
+
+  (eprolog-define-lisp-predicate test-lisp-pred (x)
+    (if (eq x 'success) :ok :fail))
+
+  (should (eprolog-test--has-solution-p '((test-lisp-pred success))))
+  (should-not (eprolog-test--has-solution-p '((test-lisp-pred failure)))))
 ```
 
 ### Query Execution Tests
@@ -366,4 +366,3 @@ The modular documentation structure allows focused exploration of specific topic
 The journey through these examples illustrates a fundamental truth about Prolog: it's not just a programming language, but a different way of thinking about computation. Instead of telling the computer how to solve problems, we describe what we know and what relationships exist, then let logical inference find the solutions.
 
 This document serves multiple purposes: it's a learning resource for understanding ε-prolog's capabilities, a comprehensive test suite ensuring system reliability, and a demonstration of how logical programming can elegantly solve complex problems. Each example has been carefully crafted to be both educational and executable, ensuring that theory and practice remain tightly coupled.
-

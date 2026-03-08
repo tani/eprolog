@@ -83,6 +83,9 @@ the next solution via backtracking."
   continuation)
 
 (define-error 'eprolog-cut-exception "Cut exception" 'error)
+(define-error 'eprolog-step-limit-exceeded
+  "Prolog engine step limit exceeded"
+  'error)
 
 ;; Public configuration variables
 
@@ -112,7 +115,8 @@ if a variable occurs within the term it's being unified with.")
 (defvar eprolog-max-steps 10000
   "Maximum number of engine dispatch steps for a single solve.
 Nil disables the limit.  This prevents runaway non-terminating queries
-from hanging Emacs indefinitely.")
+from hanging Emacs indefinitely.  Reaching the limit signals
+`eprolog-step-limit-exceeded'.")
 
 ;; Internal variables
 
@@ -664,9 +668,10 @@ Return non-nil on success, nil on immediate failure."
                 (1+ (eprolog--engine-step-count engine)))
           (when (and eprolog-max-steps
                      (> (eprolog--engine-step-count engine) eprolog-max-steps))
-            (setf (eprolog--engine-finished-p engine) t)
-            (setf (eprolog--engine-failed-p engine) t)
-            (setq success-p nil))
+            (signal 'eprolog-step-limit-exceeded
+                    (list :max-steps eprolog-max-steps
+                          :goal goal
+                          :step-count (eprolog--engine-step-count engine))))
           (eprolog--spy-after-goal goal
                                    before-bindings
                                    (eprolog--engine-bindings engine)

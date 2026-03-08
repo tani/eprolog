@@ -78,4 +78,14 @@ This module adds focused regression coverage for the explicit-stack evaluator.
 
   (let ((input (append (make-list 60 'item) '(stop))))
     (should (eprolog-test--has-solution-p `((phrase tokens ,input (stop)))))))
+
+(ert-deftest eprolog-engine-step-limit-signals-error ()
+  "Step limit exhaustion should signal an explicit engine error."
+  (eprolog-test--restore-builtins)
+
+  (let ((eprolog-max-steps 50))
+    (eprolog-define-predicate! (infinite _x) (infinite _x))
+    (should-error
+     (eprolog-test--has-solution-p '((infinite a)))
+     :type 'eprolog-step-limit-exceeded)))
 ```
