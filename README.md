@@ -38,10 +38,11 @@
 -   Dynamic parameters (`store/2`, `fetch/2`) with backtracking-aware state management
 -   Anonymous variable handling
 -   Variable renaming for clause application
+-   Explicit-stack proof engine for deep search without Lisp stack growth
 
 # Requirements
 
-ε-prolog requires Emacs 27.2 or later. While the package is functional from version 27.2, **Emacs 29+ is recommended** for optimal performance due to improved stack frame handling that enables deeper recursion.
+ε-prolog requires Emacs 27.2 or later. Emacs 29+ is still recommended for general performance, but deep proof search no longer depends on recursive Lisp control flow.
 
 # Installation
 
@@ -116,12 +117,14 @@ See the docs/ directory for comprehensive debugging examples and techniques.
 ε-prolog implements a complete Prolog engine with:
 
 -   Unification: Standard unification algorithm with optional occurs check
--   Proof Search: Depth-first search with backtracking via continuations
--   Cut Implementation: Proper cut semantics using exception handling
+-   Proof Search: Depth-first search with explicit goal and choice-point stacks
+-   Cut Implementation: Proper cut semantics by trimming choice points
 -   Variable Scoping: Automatic variable renaming for clause application
--   Success/Failure Types: Explicit representation of computation results
+-   Runtime Safety: Optional engine step limit that signals an explicit error
 
-The engine uses continuation-passing style for backtracking, making the implementation both elegant and efficient within Emacs Lisp's constraints.
+The engine evaluates queries with a `while`-driven state machine. Solutions are enumerated by resuming saved engine state instead of chaining continuations, which keeps deep `repeat/0`, `member/2`, `append/3`, and DCG searches off the Lisp call stack.
+
+Lisp predicates defined with `eprolog-define-lisp-predicate` run inside that engine and must return `:ok` or `:fail`. If `eprolog-max-steps` is non-nil and a query exceeds it, ε-prolog signals `eprolog-step-limit-exceeded` instead of reporting logical failure.
 
 # License
 
@@ -146,4 +149,3 @@ Masaya Taniguchi
 # Acknowledgments
 
 This implementation draws inspiration from classical Prolog systems and modern functional programming techniques, adapted specifically for the Emacs Lisp environment.
-

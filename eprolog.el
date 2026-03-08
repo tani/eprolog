@@ -73,16 +73,6 @@
   "Represents a failed Prolog computation.
 Used throughout the engine to indicate when unification, goal proving,
 or other operations cannot succeed.")
-
-(cl-defstruct eprolog--success
-  "Represents a successful Prolog computation.
-BINDINGS is an alist of variable-value pairs from unification.
-CONTINUATION is a function that, when called, attempts to find
-the next solution via backtracking."
-  bindings
-  continuation)
-
-(define-error 'eprolog-cut-exception "Cut exception" 'error)
 (define-error 'eprolog-step-limit-exceeded
   "Prolog engine step limit exceeded"
   'error)
@@ -459,7 +449,6 @@ preserves the original variable\='s base name."
   query-variables
   step-count
   finished-p
-  failed-p
   yielded-p)
 
 (defvar eprolog-current-engine nil
@@ -504,7 +493,6 @@ preserves the original variable\='s base name."
      :query-variables query-variables
      :step-count 0
      :finished-p nil
-     :failed-p nil
      :yielded-p nil)))
 
 (defun eprolog--collect-query-bindings (engine)
@@ -595,9 +583,24 @@ Return non-nil if execution can continue."
 (defun eprolog--engine-fail (engine)
   "Move ENGINE to the next backtracking alternative."
   (unless (eprolog--resume-from-choice-point engine)
-    (setf (eprolog--engine-finished-p engine) t)
-    (setf (eprolog--engine-failed-p engine) t))
+    (setf (eprolog--engine-finished-p engine) t))
   engine)
+
+(defun eprolog--engine-push-goals (engine goals cut-base)
+  "Prepend GOALS to ENGINE's pending goals using CUT-BASE."
+  (setf (eprolog--engine-goals engine)
+        (eprolog--prepend-goals goals
+                                cut-base
+                                (eprolog--engine-goals engine))))
+
+(defun eprolog--engine-unify! (engine left right)
+  "Unify LEFT and RIGHT against ENGINE's bindings.
+Return :ok on success and update ENGINE, otherwise return :fail."
+  (let ((new-bindings (eprolog--unify left right (eprolog--engine-bindings engine))))
+    (if (eprolog--failure-p new-bindings)
+        :fail
+      (setf (eprolog--engine-bindings engine) new-bindings)
+      :ok)))
 
 (defun eprolog--spy-before-goal (goal bindings)
   "Display spy CALL trace for GOAL with BINDINGS.
@@ -867,11 +870,7 @@ Example: (eprolog-query (parent _x _y)) finds all parent relationships."
   "Unification predicate: TERM1 = TERM2.
 Attempts to unify TERM1 and TERM2, updating the binding environment.
 Succeeds if unification is possible, fails otherwise."
-  (let ((new-bindings (eprolog--unify term1 term2 (eprolog--engine-bindings engine))))
-    (if (eprolog--failure-p new-bindings)
-        :fail
-      (setf (eprolog--engine-bindings engine) new-bindings)
-      :ok)))
+  (eprolog--engine-unify! engine term1 term2))
 
 (eprolog-define-lisp-predicate == (term1 term2)
   "Strict equality predicate: TERM1 == TERM2.
@@ -905,10 +904,7 @@ PRED can be an atom or a compound term."
                  (`(,(pred consp) . ,goal-args) (append substituted-pred goal-args))
                  (_ (error "call: Invalid form %S" (cons substituted-pred substituted-args)))))
          (cut-base (length (eprolog--engine-choice-points engine))))
-    (setf (eprolog--engine-goals engine)
-          (eprolog--prepend-goals (list goal)
-                                  cut-base
-                                  (eprolog--engine-goals engine)))
+    (eprolog--engine-push-goals engine (list goal) cut-base)
     :ok))
 
 (eprolog-define-lisp-predicate var (term)
@@ -919,10 +915,7 @@ Succeeds if TERM is an unbound variable."
     :fail))
 
 (eprolog-define-lisp-predicate and (&rest goals)
-  (setf (eprolog--engine-goals engine)
-        (eprolog--prepend-goals goals
-                                (eprolog--goal-frame-cut-base frame)
-                                (eprolog--engine-goals engine)))
+  (eprolog--engine-push-goals engine goals (eprolog--goal-frame-cut-base frame))
   :ok)
 
 (eprolog-define-lisp-predicate or-2 (goal1 goal2)
@@ -971,12 +964,10 @@ Succeeds if TERM is an unbound variable."
   (eprolog--eval-lisp-expressions
    expressions
    (lambda (evaluated-result)
-     (let* ((result-term (eprolog--substitute-bindings (eprolog--engine-bindings engine) result-variable))
-            (new-bindings (eprolog--unify result-term evaluated-result (eprolog--engine-bindings engine))))
-       (if (eprolog--failure-p new-bindings)
-           :fail
-         (setf (eprolog--engine-bindings engine) new-bindings)
-         :ok)))))
+     (let ((result-term (eprolog--substitute-bindings
+                         (eprolog--engine-bindings engine)
+                         result-variable)))
+       (eprolog--engine-unify! engine result-term evaluated-result)))))
 
 (eprolog-define-lisp-predicate lisp! (&rest expressions)
   "Evaluate EXPRESSIONS as Lisp for side effects, always succeeds."
@@ -1012,13 +1003,7 @@ Retrieves the value associated with SYMBOL and unifies it with VAR."
   (let ((key-value (assoc variable-symbol (eprolog--engine-dynamic-parameters engine))))
     (if (null key-value)
         :fail
-      (let ((new-bindings (eprolog--unify prolog-variable
-                                          (cdr key-value)
-                                          (eprolog--engine-bindings engine))))
-        (if (eprolog--failure-p new-bindings)
-            :fail
-          (setf (eprolog--engine-bindings engine) new-bindings)
-          :ok)))))
+      (eprolog--engine-unify! engine prolog-variable (cdr key-value)))))
 
 ;;; Built-in Prolog Predicates
 
