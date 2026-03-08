@@ -359,6 +359,10 @@ These predicates bridge Prolog search and Emacs Lisp evaluation.
 - `store`: push a dynamic parameter binding
 - `fetch`: read a stored parameter and unify it
 
+Each Lisp predicate returns either `eprolog--make-success` with the next
+engine state or `eprolog--make-failure`. The evaluator stays iterative; the
+result object only carries state and does not reintroduce continuations.
+
 ### Dynamic parameter semantics
 
 Dynamic parameters are restored by ordinary backtracking because each choice point saves its own snapshot of `dynamic-parameters`.

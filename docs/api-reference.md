@@ -35,13 +35,14 @@ Define a predicate implemented in Emacs Lisp.
 
 ```
 (eprolog-define-lisp-predicate name (arg1 arg2 ...)
-  ;; Lisp code returning :ok or :fail
+  ;; Lisp code returning eprolog--make-success / eprolog--make-failure
   )
 ```
 
-The body runs inside the iterative engine and must return `:ok` for success
-or `:fail` for failure. Built-ins can access `engine` and `frame`, followed
-by the declared predicate arguments.
+The body runs inside the iterative engine and must return
+`eprolog--make-success` with the next engine state or
+`eprolog--make-failure` on failure. Built-ins can access `engine` and
+`frame`, followed by the declared predicate arguments.
 
 ## Query Execution
 
@@ -203,10 +204,22 @@ Note: Some tests are disabled as they test APIs that don't exist or are unstable
   (eprolog-test--restore-builtins)
 
   (eprolog-define-lisp-predicate test-lisp-pred (x)
-    (if (eq x 'success) :ok :fail))
+    (if (eq x 'success)
+        (eprolog--make-success engine)
+      (eprolog--make-failure)))
 
   (should (eprolog-test--has-solution-p '((test-lisp-pred success))))
   (should-not (eprolog-test--has-solution-p '((test-lisp-pred failure)))))
+
+(ert-deftest eprolog-api-define-lisp-predicate-invalid-return ()
+  "Lisp predicates must return success/failure objects."
+  (eprolog-test--restore-builtins)
+
+  (eprolog-define-lisp-predicate invalid-return-predicate ()
+    'invalid)
+
+  (should-error
+   (eprolog-test--has-solution-p '((invalid-return-predicate)))))
 ```
 
 ### Query Execution Tests

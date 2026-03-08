@@ -73,6 +73,19 @@
   "Represents a failed Prolog computation.
 Used throughout the engine to indicate when unification, goal proving,
 or other operations cannot succeed.")
+
+(cl-defstruct eprolog--success
+  "Represents a successful Prolog computation.
+ENGINE is the next iterative engine state."
+  engine)
+
+(defun eprolog--make-success (engine)
+  "Wrap ENGINE in a success object."
+  (make-eprolog--success :engine engine))
+
+(defun eprolog--make-failure ()
+  "Create a failure object."
+  (make-eprolog--failure))
 (define-error 'eprolog-step-limit-exceeded
   "Prolog engine step limit exceeded"
   'error)
@@ -477,9 +490,57 @@ preserves the original variable\='s base name."
                          frames)))))
 
 (defun eprolog--push-choice-point (engine choice-point)
-  "Push CHOICE-POINT onto ENGINE."
-  (setf (eprolog--engine-choice-points engine)
-        (cons choice-point (eprolog--engine-choice-points engine))))
+  "Return ENGINE with CHOICE-POINT pushed."
+  (eprolog--engine-with-choice-points
+   engine
+   (cons choice-point (eprolog--engine-choice-points engine))))
+
+(defun eprolog--engine-update (engine &rest changes)
+  "Update a shallow copy of ENGINE and return it.
+Argument CHANGES is a plist using keys like :goals and :bindings."
+  (let ((copy (copy-eprolog--engine engine)))
+    (while changes
+      (let ((key (pop changes))
+            (value (pop changes)))
+        (pcase key
+          (:goals (setf (eprolog--engine-goals copy) value))
+          (:bindings (setf (eprolog--engine-bindings copy) value))
+          (:choice-points (setf (eprolog--engine-choice-points copy) value))
+          (:dynamic-parameters (setf (eprolog--engine-dynamic-parameters copy) value))
+          (:query-variables (setf (eprolog--engine-query-variables copy) value))
+          (:step-count (setf (eprolog--engine-step-count copy) value))
+          (:finished-p (setf (eprolog--engine-finished-p copy) value))
+          (:yielded-p (setf (eprolog--engine-yielded-p copy) value))
+          (_ (error "Unknown engine slot %S" key)))))
+    copy))
+
+(defun eprolog--engine-with-goals (engine goals)
+  "Return ENGINE with GOALS."
+  (eprolog--engine-update engine :goals goals))
+
+(defun eprolog--engine-with-bindings (engine bindings)
+  "Return ENGINE with BINDINGS."
+  (eprolog--engine-update engine :bindings bindings))
+
+(defun eprolog--engine-with-choice-points (engine choice-points)
+  "Return ENGINE with CHOICE-POINTS."
+  (eprolog--engine-update engine :choice-points choice-points))
+
+(defun eprolog--engine-with-dynamic-parameters (engine dynamic-parameters)
+  "Return ENGINE with DYNAMIC-PARAMETERS."
+  (eprolog--engine-update engine :dynamic-parameters dynamic-parameters))
+
+(defun eprolog--engine-with-step-count (engine step-count)
+  "Return ENGINE with STEP-COUNT."
+  (eprolog--engine-update engine :step-count step-count))
+
+(defun eprolog--engine-with-finished-p (engine finished-p)
+  "Return ENGINE with FINISHED-P."
+  (eprolog--engine-update engine :finished-p finished-p))
+
+(defun eprolog--engine-with-yielded-p (engine yielded-p)
+  "Return ENGINE with YIELDED-P."
+  (eprolog--engine-update engine :yielded-p yielded-p))
 
 (defun eprolog--make-engine (goals)
   "Create an iterative engine for GOALS."
@@ -506,9 +567,9 @@ preserves the original variable\='s base name."
 
 (defun eprolog--try-clauses (engine goal clauses pending-goals bindings dynamic-parameters cut-base)
   "Try CLAUSES for GOAL on ENGINE.
-Return non-nil if a clause matched and updated ENGINE."
-  (let ((matched nil))
-    (while (and clauses (not matched))
+Return a success/failure object."
+  (catch 'result
+    (while clauses
       (let* ((current-clause (eprolog--rename-vars (car clauses)))
              (clause-head (car current-clause))
              (clause-body (cdr current-clause))
@@ -518,89 +579,107 @@ Return non-nil if a clause matched and updated ENGINE."
         (if (eprolog--failure-p new-bindings)
             (setq clauses (cdr clauses))
           (let ((remaining-clauses (cdr clauses)))
-            (when remaining-clauses
-              (eprolog--push-choice-point
-               engine
-               (make-eprolog--choice-point
-                :kind :clauses
-                :goal goal
-                :alternatives remaining-clauses
-                :pending-goals pending-goals
-                :bindings bindings
-                :dynamic-parameters dynamic-parameters
-                :cut-base cut-base)))
-            (setf (eprolog--engine-bindings engine) new-bindings)
-            (setf (eprolog--engine-dynamic-parameters engine) dynamic-parameters)
-            (setf (eprolog--engine-goals engine)
-                  (eprolog--prepend-goals clause-body cut-base pending-goals))
-            (setq matched t)))))
-    matched))
+            (let* ((engine-with-choice
+                    (if remaining-clauses
+                        (eprolog--push-choice-point
+                         engine
+                         (make-eprolog--choice-point
+                          :kind :clauses
+                          :goal goal
+                          :alternatives remaining-clauses
+                          :pending-goals pending-goals
+                          :bindings bindings
+                          :dynamic-parameters dynamic-parameters
+                          :cut-base cut-base))
+                      engine))
+                   (next-engine
+                    (eprolog--engine-update
+                     engine-with-choice
+                     :bindings new-bindings
+                     :dynamic-parameters dynamic-parameters
+                     :goals (eprolog--prepend-goals clause-body cut-base pending-goals))))
+              (throw 'result (eprolog--make-success next-engine)))))))
+    (eprolog--make-failure)))
 
 (defun eprolog--resume-from-choice-point (engine)
   "Resume ENGINE from its most recent choice point.
-Return non-nil if execution can continue."
+Return a success/failure object."
   (catch 'resumed
-    (while (eprolog--engine-choice-points engine)
-      (let* ((choice-point (pop (eprolog--engine-choice-points engine)))
-             (kind (eprolog--choice-point-kind choice-point))
-             (pending-goals (eprolog--choice-point-pending-goals choice-point))
-             (bindings (eprolog--choice-point-bindings choice-point))
-             (dynamic-parameters (eprolog--choice-point-dynamic-parameters choice-point))
-             (cut-base (eprolog--choice-point-cut-base choice-point))
-             (alternatives (eprolog--choice-point-alternatives choice-point)))
-        (setf (eprolog--engine-bindings engine) bindings)
-        (setf (eprolog--engine-dynamic-parameters engine) dynamic-parameters)
-        (setf (eprolog--engine-goals engine) pending-goals)
-        (pcase kind
-          (:clauses
-           (when (eprolog--try-clauses engine
-                                       (eprolog--choice-point-goal choice-point)
-                                       alternatives
-                                       pending-goals
-                                       bindings
-                                       dynamic-parameters
-                                       cut-base)
-             (throw 'resumed t)))
-          (:goals
-           (when alternatives
-             (let ((goal-sequence (car alternatives))
-                   (remaining (cdr alternatives)))
-               (when remaining
-                 (eprolog--push-choice-point
-                  engine
-                  (make-eprolog--choice-point
-                   :kind :goals
-                   :alternatives remaining
-                   :pending-goals pending-goals
-                   :bindings bindings
-                   :dynamic-parameters dynamic-parameters
-                   :cut-base cut-base)))
-               (setf (eprolog--engine-goals engine)
-                     (eprolog--prepend-goals goal-sequence cut-base pending-goals))
-               (throw 'resumed t)))))))
-    nil))
+    (let ((choice-points (eprolog--engine-choice-points engine)))
+      (while choice-points
+        (let* ((choice-point (car choice-points))
+               (remaining-choice-points (cdr choice-points))
+               (kind (eprolog--choice-point-kind choice-point))
+               (pending-goals (eprolog--choice-point-pending-goals choice-point))
+               (bindings (eprolog--choice-point-bindings choice-point))
+               (dynamic-parameters (eprolog--choice-point-dynamic-parameters choice-point))
+               (cut-base (eprolog--choice-point-cut-base choice-point))
+               (alternatives (eprolog--choice-point-alternatives choice-point))
+               (restored-engine
+                (eprolog--engine-update
+                 engine
+                 :choice-points remaining-choice-points
+                 :bindings bindings
+                 :dynamic-parameters dynamic-parameters
+                 :goals pending-goals)))
+          (pcase kind
+            (:clauses
+             (let ((result (eprolog--try-clauses restored-engine
+                                                 (eprolog--choice-point-goal choice-point)
+                                                 alternatives
+                                                 pending-goals
+                                                 bindings
+                                                 dynamic-parameters
+                                                 cut-base)))
+               (when (eprolog--success-p result)
+                 (throw 'resumed result))))
+            (:goals
+             (when alternatives
+               (let* ((goal-sequence (car alternatives))
+                      (remaining (cdr alternatives))
+                      (engine-with-choice
+                       (if remaining
+                           (eprolog--push-choice-point
+                            restored-engine
+                            (make-eprolog--choice-point
+                             :kind :goals
+                             :alternatives remaining
+                             :pending-goals pending-goals
+                             :bindings bindings
+                             :dynamic-parameters dynamic-parameters
+                             :cut-base cut-base))
+                         restored-engine))
+                      (next-engine
+                       (eprolog--engine-with-goals
+                        engine-with-choice
+                        (eprolog--prepend-goals goal-sequence cut-base pending-goals))))
+                 (throw 'resumed (eprolog--make-success next-engine))))))
+          (setq choice-points remaining-choice-points))))
+    (eprolog--make-failure)))
 
 (defun eprolog--engine-fail (engine)
-  "Move ENGINE to the next backtracking alternative."
-  (unless (eprolog--resume-from-choice-point engine)
-    (setf (eprolog--engine-finished-p engine) t))
-  engine)
+  "Return ENGINE moved to the next backtracking alternative."
+  (let ((result (eprolog--resume-from-choice-point engine)))
+    (if (eprolog--success-p result)
+        (eprolog--success-engine result)
+      (eprolog--engine-with-finished-p engine t))))
 
 (defun eprolog--engine-push-goals (engine goals cut-base)
-  "Prepend GOALS to ENGINE's pending goals using CUT-BASE."
-  (setf (eprolog--engine-goals engine)
-        (eprolog--prepend-goals goals
-                                cut-base
-                                (eprolog--engine-goals engine))))
+  "Return ENGINE with GOALS prepended using CUT-BASE."
+  (eprolog--engine-with-goals
+   engine
+   (eprolog--prepend-goals goals
+                           cut-base
+                           (eprolog--engine-goals engine))))
 
-(defun eprolog--engine-unify! (engine left right)
+(defun eprolog--engine-unify (engine left right)
   "Unify LEFT and RIGHT against ENGINE's bindings.
-Return :ok on success and update ENGINE, otherwise return :fail."
+Return a success/failure object."
   (let ((new-bindings (eprolog--unify left right (eprolog--engine-bindings engine))))
     (if (eprolog--failure-p new-bindings)
-        :fail
-      (setf (eprolog--engine-bindings engine) new-bindings)
-      :ok)))
+        (eprolog--make-failure)
+      (eprolog--make-success
+       (eprolog--engine-with-bindings engine new-bindings)))))
 
 (defun eprolog--spy-before-goal (goal bindings)
   "Display spy CALL trace for GOAL with BINDINGS.
@@ -627,7 +706,7 @@ SUCCESS-P selects EXIT vs FAIL, and SHOW-P gates emission."
 
 (defun eprolog--dispatch-goal (engine frame)
   "Dispatch FRAME on ENGINE.
-Return non-nil on success, nil on immediate failure."
+Return a success/failure object."
   (let* ((goal (eprolog--goal-frame-goal frame))
          (predicate-symbol (eprolog--goal-predicate-symbol goal))
          (predicate-handler (eprolog--get-clauses predicate-symbol))
@@ -640,8 +719,12 @@ Return non-nil on success, nil on immediate failure."
              (eprolog-remaining-goals (mapcar #'eprolog--goal-frame-goal
                                              (eprolog--engine-goals engine)))
              (eprolog-dynamic-parameters (eprolog--engine-dynamic-parameters engine))
-             (status (apply predicate-handler engine frame args)))
-        (eq status :ok)))
+             (result (apply predicate-handler engine frame args)))
+        (cond
+         ((eprolog--success-p result) result)
+         ((eprolog--failure-p result) result)
+         (t (error "Lisp predicate %S returned invalid result %S"
+                   predicate-symbol result)))))
      ((and (listp predicate-handler) predicate-handler)
       (let ((cut-base (length (eprolog--engine-choice-points engine))))
         (eprolog--try-clauses engine
@@ -651,26 +734,34 @@ Return non-nil on success, nil on immediate failure."
                               (eprolog--engine-bindings engine)
                               (eprolog--engine-dynamic-parameters engine)
                               cut-base)))
-     (t nil))))
+     (t (eprolog--make-failure)))))
 
 (defun eprolog--engine-next-solution (engine)
-  "Return ENGINE's next solution, or nil if exhausted."
+  "Return (SOLUTION . ENGINE), with SOLUTION nil when ENGINE is exhausted."
   (when (eprolog--engine-yielded-p engine)
-    (setf (eprolog--engine-yielded-p engine) nil)
-    (eprolog--engine-fail engine))
+    (setq engine (eprolog--engine-fail
+                  (eprolog--engine-with-yielded-p engine nil))))
   (catch 'solution
     (while (not (eprolog--engine-finished-p engine))
       (if (null (eprolog--engine-goals engine))
-          (progn
-            (setf (eprolog--engine-yielded-p engine) t)
-            (throw 'solution (eprolog--collect-query-bindings engine)))
-        (let* ((frame (pop (eprolog--engine-goals engine)))
+          (let ((next-engine (eprolog--engine-with-yielded-p engine t)))
+            (throw 'solution
+                   (cons (eprolog--collect-query-bindings next-engine)
+                         next-engine)))
+        (let* ((remaining-goals (cdr (eprolog--engine-goals engine)))
+               (frame (car (eprolog--engine-goals engine)))
                (goal (eprolog--goal-frame-goal frame))
-               (before-bindings (eprolog--engine-bindings engine))
+               (engine-with-pop (eprolog--engine-with-goals engine remaining-goals))
+               (before-bindings (eprolog--engine-bindings engine-with-pop))
                (show-p (eprolog--spy-before-goal goal before-bindings))
-               (success-p (eprolog--dispatch-goal engine frame)))
-          (setf (eprolog--engine-step-count engine)
-                (1+ (eprolog--engine-step-count engine)))
+               (dispatch-result (eprolog--dispatch-goal engine-with-pop frame))
+               (success-p (eprolog--success-p dispatch-result))
+               (after-dispatch-engine (if success-p
+                                          (eprolog--success-engine dispatch-result)
+                                        engine-with-pop)))
+          (setq engine (eprolog--engine-with-step-count
+                        after-dispatch-engine
+                        (1+ (eprolog--engine-step-count after-dispatch-engine))))
           (when (and eprolog-max-steps
                      (> (eprolog--engine-step-count engine) eprolog-max-steps))
             (signal 'eprolog-step-limit-exceeded
@@ -683,8 +774,8 @@ Return non-nil on success, nil on immediate failure."
                                    success-p
                                    show-p)
           (unless success-p
-            (eprolog--engine-fail engine)))))
-    nil))
+            (setq engine (eprolog--engine-fail engine))))))
+    (cons nil engine)))
 
 ;;; Debugging & Output
 
@@ -753,16 +844,17 @@ interactive queries initiated by `eprolog-query\='."
 
 ;;; Lisp Integration Helper
 
-(defun eprolog--eval-lisp-expressions (expressions &optional result-handler)
+(defun eprolog--eval-lisp-expressions (engine expressions &optional result-handler)
   "Evaluate EXPRESSIONS as Lisp code for Prolog integration.
+ENGINE supplies the current search state.
 RESULT-HANDLER processes the evaluation result if provided."
   (if (not (eprolog--ground-p expressions))
-      :fail
+      (eprolog--make-failure)
     (let* ((lisp-expression (eprolog--substitute-bindings eprolog-current-bindings `(progn ,@expressions)))
            (evaluated-result (eval lisp-expression)))
       (if result-handler
-          (funcall result-handler evaluated-result)
-        :ok))))
+          (funcall result-handler engine evaluated-result)
+        (eprolog--make-success engine)))))
 
 ;;; Public API
 
@@ -792,7 +884,9 @@ Examples:
          (engine (eprolog--make-engine goals))
          (done nil))
     (while (not done)
-      (let ((solution (eprolog--engine-next-solution engine)))
+      (pcase-let ((`(,solution . ,next-engine)
+                   (eprolog--engine-next-solution engine)))
+        (setq engine next-engine)
         (if (eprolog--engine-yielded-p engine)
             (funcall on-success solution)
           (setq done t))))
@@ -802,7 +896,7 @@ Examples:
   "Define a predicate implemented as an Emacs Lisp function.
 NAME is the predicate symbol.
 ARGS is the list of formal parameters for the predicate.
-BODY is the Lisp implementation that should return :ok or :fail.
+BODY is the Lisp implementation that should return a success/failure object.
 
 Built-in predicate implementations may access `eprolog-current-engine\=' and
 `eprolog-current-frame\='."
@@ -876,7 +970,7 @@ Example: (eprolog-query (parent _x _y)) finds all parent relationships."
   "Unification predicate: TERM1 = TERM2.
 Attempts to unify TERM1 and TERM2, updating the binding environment.
 Succeeds if unification is possible, fails otherwise."
-  (eprolog--engine-unify! engine term1 term2))
+  (eprolog--engine-unify engine term1 term2))
 
 (eprolog-define-lisp-predicate == (term1 term2)
   "Strict equality predicate: TERM1 == TERM2.
@@ -885,8 +979,8 @@ Does not perform unification, only tests existing equality."
   (let* ((substituted-term1 (eprolog--substitute-bindings (eprolog--engine-bindings engine) term1))
          (substituted-term2 (eprolog--substitute-bindings (eprolog--engine-bindings engine) term2)))
     (if (equal substituted-term1 substituted-term2)
-        :ok
-      :fail)))
+        (eprolog--make-success engine)
+      (eprolog--make-failure))))
 
 ;; Control predicates
 (eprolog-define-lisp-predicate ! ()
@@ -895,8 +989,8 @@ Commits to the current choice, preventing backtracking to discarded alternatives
   (let* ((cut-base (eprolog--goal-frame-cut-base frame))
          (choice-points (eprolog--engine-choice-points engine))
          (drop-count (max 0 (- (length choice-points) cut-base))))
-    (setf (eprolog--engine-choice-points engine) (nthcdr drop-count choice-points))
-    :ok))
+    (eprolog--make-success
+     (eprolog--engine-with-choice-points engine (nthcdr drop-count choice-points)))))
 
 (eprolog-define-lisp-predicate call (pred &rest args)
   "Meta-call predicate: call(PRED, ARGS...).
@@ -910,83 +1004,88 @@ PRED can be an atom or a compound term."
                  (`(,(pred consp) . ,goal-args) (append substituted-pred goal-args))
                  (_ (error "call: Invalid form %S" (cons substituted-pred substituted-args)))))
          (cut-base (length (eprolog--engine-choice-points engine))))
-    (eprolog--engine-push-goals engine (list goal) cut-base)
-    :ok))
+    (eprolog--make-success
+     (eprolog--engine-push-goals engine (list goal) cut-base))))
 
 (eprolog-define-lisp-predicate var (term)
   "Type predicate: var(TERM).
 Succeeds if TERM is an unbound variable."
   (if (eprolog--variable-p (eprolog--substitute-bindings (eprolog--engine-bindings engine) term))
-      :ok
-    :fail))
+      (eprolog--make-success engine)
+    (eprolog--make-failure)))
 
 (eprolog-define-lisp-predicate and (&rest goals)
-  (eprolog--engine-push-goals engine goals (eprolog--goal-frame-cut-base frame))
-  :ok)
+  (eprolog--make-success
+   (eprolog--engine-push-goals engine goals (eprolog--goal-frame-cut-base frame))))
 
 (eprolog-define-lisp-predicate or-2 (goal1 goal2)
   (let ((cut-base (eprolog--goal-frame-cut-base frame))
         (pending-goals (eprolog--engine-goals engine))
         (bindings (eprolog--engine-bindings engine))
         (dynamic-parameters (eprolog--engine-dynamic-parameters engine)))
-    (eprolog--push-choice-point
-     engine
-     (make-eprolog--choice-point
-      :kind :goals
-      :alternatives (list (list goal2))
-      :pending-goals pending-goals
-      :bindings bindings
-      :dynamic-parameters dynamic-parameters
-      :cut-base cut-base))
-    (setf (eprolog--engine-goals engine)
-          (eprolog--prepend-goals (list goal1) cut-base pending-goals))
-    :ok))
+    (eprolog--make-success
+     (eprolog--engine-with-goals
+      (eprolog--push-choice-point
+       engine
+       (make-eprolog--choice-point
+        :kind :goals
+        :alternatives (list (list goal2))
+        :pending-goals pending-goals
+        :bindings bindings
+        :dynamic-parameters dynamic-parameters
+        :cut-base cut-base))
+      (eprolog--prepend-goals (list goal1) cut-base pending-goals)))))
 
 (eprolog-define-lisp-predicate or (&rest goals)
   (let ((branches (mapcar #'list goals)))
     (if (null branches)
-        :fail
+        (eprolog--make-failure)
       (let ((cut-base (eprolog--goal-frame-cut-base frame))
             (pending-goals (eprolog--engine-goals engine))
             (bindings (eprolog--engine-bindings engine))
             (dynamic-parameters (eprolog--engine-dynamic-parameters engine)))
-        (when (cdr branches)
-          (eprolog--push-choice-point
-           engine
-           (make-eprolog--choice-point
-            :kind :goals
-            :alternatives (cdr branches)
-            :pending-goals pending-goals
-            :bindings bindings
-            :dynamic-parameters dynamic-parameters
-            :cut-base cut-base)))
-        (setf (eprolog--engine-goals engine)
-              (eprolog--prepend-goals (car branches) cut-base pending-goals))
-        :ok))))
+        (let ((engine-with-choice
+               (if (cdr branches)
+                   (eprolog--push-choice-point
+                    engine
+                    (make-eprolog--choice-point
+                     :kind :goals
+                     :alternatives (cdr branches)
+                     :pending-goals pending-goals
+                     :bindings bindings
+                     :dynamic-parameters dynamic-parameters
+                     :cut-base cut-base))
+                 engine)))
+          (eprolog--make-success
+           (eprolog--engine-with-goals
+            engine-with-choice
+            (eprolog--prepend-goals (car branches) cut-base pending-goals))))))))
 
 ;; Lisp integration predicates
 (eprolog-define-lisp-predicate lisp (result-variable &rest expressions)
   "Evaluate EXPRESSIONS as Lisp and unify result with RESULT-VARIABLE."
   (eprolog--eval-lisp-expressions
+   engine
    expressions
-   (lambda (evaluated-result)
+   (lambda (current-engine evaluated-result)
      (let ((result-term (eprolog--substitute-bindings
-                         (eprolog--engine-bindings engine)
+                         (eprolog--engine-bindings current-engine)
                          result-variable)))
-       (eprolog--engine-unify! engine result-term evaluated-result)))))
+       (eprolog--engine-unify current-engine result-term evaluated-result)))))
 
 (eprolog-define-lisp-predicate lisp! (&rest expressions)
   "Evaluate EXPRESSIONS as Lisp for side effects, always succeeds."
-  (eprolog--eval-lisp-expressions expressions))
+  (eprolog--eval-lisp-expressions engine expressions))
 
 (eprolog-define-lisp-predicate lispp (&rest expressions)
   "Evaluate EXPRESSIONS as Lisp and succeed if result is non-nil."
   (eprolog--eval-lisp-expressions
+   engine
    expressions
-   (lambda (evaluated-result)
+   (lambda (current-engine evaluated-result)
      (if (not evaluated-result)
-         :fail
-       :ok))))
+         (eprolog--make-failure)
+       (eprolog--make-success current-engine)))))
 
 (eprolog-define-lisp-predicate store (variable-symbol value-expression)
   "Dynamic parameter predicate: store(SYMBOL, VALUE).
@@ -1000,16 +1099,16 @@ restored when execution backtracks above this store operation."
                              value-expression))
          (updated-parameters (cons (cons variable-symbol substituted-value)
                                    (eprolog--engine-dynamic-parameters engine))))
-    (setf (eprolog--engine-dynamic-parameters engine) updated-parameters)
-    :ok))
+    (eprolog--make-success
+     (eprolog--engine-with-dynamic-parameters engine updated-parameters))))
 
 (eprolog-define-lisp-predicate fetch (variable-symbol prolog-variable)
   "Dynamic parameter predicate: fetch(SYMBOL, VAR).
 Retrieves the value associated with SYMBOL and unifies it with VAR."
   (let ((key-value (assoc variable-symbol (eprolog--engine-dynamic-parameters engine))))
     (if (null key-value)
-        :fail
-      (eprolog--engine-unify! engine prolog-variable (cdr key-value)))))
+        (eprolog--make-failure)
+      (eprolog--engine-unify engine prolog-variable (cdr key-value)))))
 
 ;;; Built-in Prolog Predicates
 

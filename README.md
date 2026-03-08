@@ -124,7 +124,7 @@ See the docs/ directory for comprehensive debugging examples and techniques.
 
 The engine evaluates queries with a `while`-driven state machine. Solutions are enumerated by resuming saved engine state instead of chaining continuations, which keeps deep `repeat/0`, `member/2`, `append/3`, and DCG searches off the Lisp call stack.
 
-Lisp predicates defined with `eprolog-define-lisp-predicate` run inside that engine and must return `:ok` or `:fail`. If `eprolog-max-steps` is non-nil and a query exceeds it, ε-prolog signals `eprolog-step-limit-exceeded` instead of reporting logical failure.
+Lisp predicates defined with `eprolog-define-lisp-predicate` run inside that engine and must return `eprolog--make-success` with the next engine state or `eprolog--make-failure`. If `eprolog-max-steps` is non-nil and a query exceeds it, ε-prolog signals `eprolog-step-limit-exceeded` instead of reporting logical failure.
 
 # License
 
